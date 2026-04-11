@@ -1,0 +1,10 @@
+include: package:very_good_analysis/analysis_options.yaml
+
+analyzer:
+  exclude:
+    - '**/*.g.dart'
+
+linter:
+  rules:
+    # pub treats the Flutter SDK entry specially; strict A–Z differs from pub get.
+    sort_pub_dependencies: false
