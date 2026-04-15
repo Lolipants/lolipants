@@ -1,34 +1,20 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
-import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
 
 /// Compact garment preview tile for home grids.
 class StyleCard extends StatelessWidget {
-  /// Qatari thobe preset.
-  const StyleCard.qatariThobe({super.key})
-      : title = AppStrings.styleQatariThobe,
-        subtitle = AppStrings.originGulf,
-        imageColor = const Color(0xFF3D2B4F);
-
-  /// Saudi bisht preset.
-  const StyleCard.saudiBisht({super.key})
-      : title = AppStrings.styleSaudiBisht,
-        subtitle = AppStrings.originGulf,
-        imageColor = const Color(0xFF1F4D3A);
-
-  /// UAE kandura preset.
-  const StyleCard.uaeKandura({super.key})
-      : title = AppStrings.styleUaeKandura,
-        subtitle = AppStrings.originGulf,
-        imageColor = const Color(0xFFB08D3A);
-
-  /// Omani dishdasha preset.
-  const StyleCard.omaniDishdasha({super.key})
-      : title = AppStrings.styleOmaniDishdasha,
-        subtitle = AppStrings.originGulf,
-        imageColor = const Color(0xFF1B4A42);
+  /// Creates a style tile with optional tap (e.g. open Browse).
+  const StyleCard({
+    required this.title,
+    required this.subtitle,
+    required this.imageColor,
+    this.onTap,
+    super.key,
+  });
 
   /// Primary garment title.
   final String title;
@@ -36,12 +22,15 @@ class StyleCard extends StatelessWidget {
   /// Secondary origin or region line.
   final String subtitle;
 
-  /// Placeholder swatch behind the image strip.
+  /// Base swatch behind the arch motif.
   final Color imageColor;
+
+  /// Optional navigation or preview action.
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final card = Container(
       decoration: BoxDecoration(
         color: AppColors.stone,
         borderRadius: BorderRadius.circular(AppRadius.md),
@@ -50,12 +39,15 @@ class StyleCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            height: 58,
-            decoration: BoxDecoration(
-              color: imageColor,
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(AppRadius.md),
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(AppRadius.md),
+            ),
+            child: SizedBox(
+              height: 58,
+              width: double.infinity,
+              child: CustomPaint(
+                painter: _MiniArchStripPainter(base: imageColor),
               ),
             ),
           ),
@@ -73,5 +65,51 @@ class StyleCard extends StatelessWidget {
         ],
       ),
     );
+
+    if (onTap == null) {
+      return card;
+    }
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        child: card,
+      ),
+    );
   }
+}
+
+class _MiniArchStripPainter extends CustomPainter {
+  _MiniArchStripPainter({required this.base});
+
+  final Color base;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final fill = Paint()..color = base;
+    canvas.drawRect(Offset.zero & size, fill);
+
+    final line = Paint()
+      ..color = AppColors.gold.withValues(alpha: 0.35)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.1;
+
+    const count = 4;
+    final step = size.width / count;
+    for (var i = 0; i < count; i++) {
+      final cx = step * (i + 0.5);
+      final arcRect = Rect.fromCenter(
+        center: Offset(cx, size.height * 1.05),
+        width: step * 0.95,
+        height: size.height * 1.35,
+      );
+      canvas.drawArc(arcRect, math.pi * 1.05, math.pi * 0.9, false, line);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _MiniArchStripPainter oldDelegate) =>
+      oldDelegate.base != base;
 }

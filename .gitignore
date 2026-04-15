@@ -46,3 +46,7 @@ app.*.map.json
 
 # Environment
 .env
+
+# Node worker (Better Auth)
+/server/better-auth-worker/node_modules/
+/server/better-auth-worker/.dev.vars

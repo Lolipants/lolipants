@@ -5,6 +5,8 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 import 'package:lolipants/app.dart';
+import 'package:lolipants/core/preferences/shared_preferences_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Application entrypoint: loads env, logging, and starts Flutter.
 Future<void> main() async {
@@ -30,7 +32,15 @@ CLOUDFLARE_R2_BASE_URL=
     );
   }
 
-  runApp(const ProviderScope(child: LolipantsApp()));
+  final prefs = await SharedPreferences.getInstance();
+  runApp(
+    ProviderScope(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+      ],
+      child: const LolipantsApp(),
+    ),
+  );
 }
 
 void _configureLogging() {

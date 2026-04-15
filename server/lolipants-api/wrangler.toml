@@ -1,0 +1,21 @@
+name = "lolipants-api"
+main = "src/index.ts"
+compatibility_date = "2026-04-14"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "lolipants-db"
+database_id = "78043871-ef4e-40c9-8133-a2677352ddc5"
+
+[[r2_buckets]]
+binding = "R2"
+bucket_name = "lolipants-media"
+
+[[services]]
+binding = "AUTH_SERVICE"
+service = "lolipants-better-auth"
+
+[vars]
+ENVIRONMENT = "development"
+BETTER_AUTH_BASE_URL = "https://lolipants-better-auth.lolipants.workers.dev"

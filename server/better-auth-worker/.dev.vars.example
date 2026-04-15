@@ -1,0 +1,4 @@
+BETTER_AUTH_SECRET=replace-with-a-long-random-secret-at-least-32-chars
+AWS_ACCESS_KEY_ID=AKIAxxxxxxxxxxxxxxxx
+AWS_SECRET_ACCESS_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+AWS_SESSION_TOKEN=

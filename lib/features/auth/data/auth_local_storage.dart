@@ -29,5 +29,5 @@ class AuthLocalStorage {
   }
 
   static const String _sessionKey = 'lolipants_session_token';
-  static const String _userKey = 'lolipants_user_json';
+  static const String _userKey = 'lolipants_user';
 }

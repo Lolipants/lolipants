@@ -1,0 +1,122 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+import 'package:lolipants/core/constants/app_colors.dart';
+import 'package:lolipants/core/constants/app_spacing.dart';
+
+/// Right-side quick colour swatches for editor.
+class ColourStrip extends StatelessWidget {
+  const ColourStrip({
+    required this.selectedColour,
+    required this.onSelected,
+    super.key,
+  });
+
+  final Color selectedColour;
+  final ValueChanged<Color> onSelected;
+
+  static const _swatches = <Color>[
+    Color(0xFF162F28),
+    AppColors.gold,
+    Color(0xFF1A1040),
+    Color(0xFF6B1A1A),
+    AppColors.sand,
+    AppColors.ink,
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.xs,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.stone,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: AppColors.borderSubtle),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final swatch in _swatches)
+            _Swatch(
+              color: swatch,
+              isSelected: swatch.value == selectedColour.value,
+              onTap: () => onSelected(swatch),
+            ),
+          _Swatch(
+            color: AppColors.smoke,
+            isSelected: false,
+            child: const Icon(Icons.add, size: 12, color: AppColors.gold),
+            onTap: () => _openPicker(context),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _openPicker(BuildContext context) async {
+    var temp = selectedColour;
+    final picked = await showModalBottomSheet<Color>(
+      context: context,
+      backgroundColor: AppColors.stone,
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              BlockPicker(
+                pickerColor: selectedColour,
+                onColorChanged: (color) => temp = color,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(temp),
+                child: const Text('Apply'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (picked != null) onSelected(picked);
+  }
+}
+
+class _Swatch extends StatelessWidget {
+  const _Swatch({
+    required this.color,
+    required this.isSelected,
+    required this.onTap,
+    this.child,
+  });
+
+  final Color color;
+  final bool isSelected;
+  final VoidCallback onTap;
+  final Widget? child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 18,
+          height: 18,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: color,
+            border: Border.all(
+              color: isSelected ? AppColors.gold : AppColors.borderDefault,
+              width: isSelected ? 2 : 1,
+            ),
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
+}

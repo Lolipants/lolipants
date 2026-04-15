@@ -1,0 +1,5 @@
+OPENAI_API_KEY=your_openai_api_key
+TAP_SECRET_KEY=your_tap_secret_key
+ONESIGNAL_API_KEY=your_onesignal_api_key
+ONESIGNAL_APP_ID=your_onesignal_app_id
+CLOUDFLARE_R2_BASE_URL=https://pub-xxxxxxxxxxxxxxxx.r2.dev

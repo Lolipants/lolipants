@@ -3,20 +3,22 @@ import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
 
-/// Bottom navigation: Home, Browse, Orders, Profile (Phase 1 scope).
+/// Bottom navigation: Home, Browse, Orders, Community, Profile.
 class LolipantsBottomNavBar extends StatelessWidget {
   /// Creates the tab bar with the active index.
   const LolipantsBottomNavBar({
     required this.currentIndex,
     required this.onChanged,
+    required this.onDesignTap,
     super.key,
   });
 
-  /// Selected tab index (0–3).
+  /// Selected tab index (0–4).
   final int currentIndex;
 
   /// Notifies when a tab is tapped.
   final ValueChanged<int> onChanged;
+  final VoidCallback onDesignTap;
 
   @override
   Widget build(BuildContext context) {
@@ -37,6 +39,11 @@ class LolipantsBottomNavBar extends StatelessWidget {
         icon: Icons.receipt_long_outlined,
       ),
       _NavSpec(
+        labelEn: AppStrings.navCommunity,
+        labelAr: AppStrings.navCommunityAr,
+        icon: Icons.people_outline,
+      ),
+      _NavSpec(
         labelEn: AppStrings.navProfile,
         labelAr: AppStrings.navProfileAr,
         icon: Icons.person_outline,
@@ -53,19 +60,40 @@ class LolipantsBottomNavBar extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: SizedBox(
-          height: 64,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: List.generate(items.length, (index) {
-              final selected = index == currentIndex;
-              return Expanded(
-                child: _NavEntry(
-                  spec: items[index],
-                  selected: selected,
-                  onTap: () => onChanged(index),
+          height: 76,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Positioned.fill(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: List.generate(items.length, (index) {
+                    final selected = index == currentIndex;
+                    return Expanded(
+                      child: _NavEntry(
+                        spec: items[index],
+                        selected: selected,
+                        onTap: () => onChanged(index),
+                      ),
+                    );
+                  }),
                 ),
-              );
-            }),
+              ),
+              Positioned(
+                left: 0,
+                right: 0,
+                top: -16,
+                child: Center(
+                  child: FloatingActionButton(
+                    heroTag: 'design_cta',
+                    onPressed: onDesignTap,
+                    backgroundColor: AppColors.gold,
+                    foregroundColor: AppColors.ink,
+                    child: const Icon(Icons.design_services_outlined),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -137,7 +165,7 @@ class _NavEntry extends StatelessWidget {
           const SizedBox(height: 4),
           AnimatedContainer(
             duration: const Duration(milliseconds: 180),
-            height: 4,
+            height: 3,
             width: selected ? 22 : 6,
             decoration: BoxDecoration(
               color: AppColors.gold.withValues(alpha: selected ? 1 : 0.22),
