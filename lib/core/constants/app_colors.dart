@@ -5,53 +5,56 @@ class AppColors {
   AppColors._();
 
   /// Primary background.
-  static const Color ink = Color(0xFF0A0806);
+  static const Color ink = Color(0xFF120E14);
 
   /// Card background.
-  static const Color stone = Color(0xFF14110D);
+  static const Color stone = Color(0xFF1B1621);
 
   /// Elevated surface.
-  static const Color ember = Color(0xFF1C1810);
+  static const Color ember = Color(0xFF241D2C);
 
   /// Input background.
-  static const Color smoke = Color(0xFF252016);
+  static const Color smoke = Color(0xFF2D2334);
 
   /// Primary accent.
-  static const Color gold = Color(0xFFC9A84C);
+  static const Color gold = Color(0xFFB86BA1);
 
   /// Hover / highlight accent.
-  static const Color goldLight = Color(0xFFE2C06A);
+  static const Color goldLight = Color(0xFFD889BC);
 
   /// Pressed accent.
-  static const Color goldDark = Color(0xFF7A6022);
+  static const Color goldDark = Color(0xFF8A4A79);
 
   /// Primary text.
-  static const Color sand = Color(0xFFF0E6D0);
+  static const Color sand = Color(0xFFF5EAF2);
 
   /// Secondary text.
-  static const Color dust = Color(0xFFB8A882);
+  static const Color dust = Color(0xFFC9AFC5);
 
   /// Hint / disabled text.
-  static const Color fog = Color(0xFF6A5E48);
+  static const Color fog = Color(0xFF806B83);
 
   /// Semantic teal base.
-  static const Color teal = Color(0xFF1B4A42);
+  static const Color teal = Color(0xFF285A54);
 
   /// Success / delivered.
-  static const Color tealLight = Color(0xFF4DAA8E);
+  static const Color tealLight = Color(0xFF63B79D);
 
   /// Semantic ruby base.
-  static const Color ruby = Color(0xFF6B1A1A);
+  static const Color ruby = Color(0xFF7A2E48);
 
   /// Error / destructive.
-  static const Color rubyLight = Color(0xFFCC4444);
+  static const Color rubyLight = Color(0xFFE76C8B);
 
-  /// Subtle gold border (10% opacity).
-  static const Color borderSubtle = Color(0x1AC9A84C);
+  /// Soft pink accent for highlights and decorative touches.
+  static const Color blush = Color(0xFFFF9ECF);
 
-  /// Default gold border (20% opacity).
-  static const Color borderDefault = Color(0x33C9A84C);
+  /// Subtle accent border (10% opacity).
+  static const Color borderSubtle = Color(0x1AB86BA1);
 
-  /// Strong gold border (40% opacity).
-  static const Color borderStrong = Color(0x66C9A84C);
+  /// Default accent border (20% opacity).
+  static const Color borderDefault = Color(0x33B86BA1);
+
+  /// Strong accent border (40% opacity).
+  static const Color borderStrong = Color(0x66B86BA1);
 }

@@ -3,6 +3,7 @@ import 'package:lolipants/core/errors/app_exception.dart';
 import 'package:lolipants/core/errors/app_exception_message_mapper.dart';
 import 'package:lolipants/features/auth/providers/auth_providers.dart';
 import 'package:lolipants/features/editor/data/designs_repository.dart';
+import 'package:lolipants/features/editor/data/render_preview_repository.dart';
 import 'package:lolipants/features/editor/models/garment_design.dart';
 import 'package:lolipants/features/orders/providers/orders_providers.dart';
 
@@ -12,6 +13,11 @@ final designsRepositoryProvider = Provider<DesignsRepository>(
     dio: ref.watch(apiDioProvider),
     storage: ref.watch(authLocalStorageProvider),
   ),
+);
+
+/// API-backed preview render repository.
+final renderPreviewRepositoryProvider = Provider<RenderPreviewRepository>(
+  (ref) => RenderPreviewRepository(dio: ref.watch(apiDioProvider)),
 );
 
 /// User's saved designs list state.

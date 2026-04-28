@@ -1,41 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
-import 'package:lolipants/features/home/widgets/style_card.dart';
+import 'package:lolipants/features/browse/data/region_presets.dart';
+import 'package:lolipants/features/browse/providers/preset_providers.dart';
+import 'package:lolipants/features/browse/widgets/region_style_button.dart';
 
-/// Section header + grid of traditional style tiles.
-class StyleGrid extends StatelessWidget {
-  /// Creates the traditional styles block.
+/// Section header + vertical list of traditional style long-buttons.
+class StyleGrid extends ConsumerWidget {
   const StyleGrid({super.key});
 
-  static const _items = <({String title, String subtitle, Color color})>[
-    (
-      title: AppStrings.styleQatariThobe,
-      subtitle: AppStrings.originGulf,
-      color: Color(0xFF3D2B4F),
-    ),
-    (
-      title: AppStrings.styleSaudiBisht,
-      subtitle: AppStrings.originGulf,
-      color: Color(0xFF1F4D3A),
-    ),
-    (
-      title: AppStrings.styleUaeKandura,
-      subtitle: AppStrings.originGulf,
-      color: Color(0xFFB08D3A),
-    ),
-    (
-      title: AppStrings.styleOmaniDishdasha,
-      subtitle: AppStrings.originGulf,
-      color: Color(0xFF1B4A42),
-    ),
-  ];
+  static const int _maxOnHome = 4;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final presetsAsync = ref.watch(presetCatalogProvider);
+    final presets = presetsAsync.valueOrNull ?? regionPresetsForHomeGrid();
+    final shown = presets.take(_maxOnHome).toList(growable: false);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -74,26 +58,10 @@ class StyleGrid extends StatelessWidget {
           ],
         ),
         const SizedBox(height: AppSpacing.md),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: AppSpacing.md,
-            mainAxisSpacing: AppSpacing.md,
-            childAspectRatio: 0.92,
-          ),
-          itemCount: _items.length,
-          itemBuilder: (context, i) {
-            final e = _items[i];
-            return StyleCard(
-              title: e.title,
-              subtitle: e.subtitle,
-              imageColor: e.color,
-              onTap: () => context.go('/browse'),
-            );
-          },
-        ),
+        for (final preset in shown) ...[
+          RegionStyleButton(preset: preset),
+          const SizedBox(height: AppSpacing.md),
+        ],
       ],
     );
   }

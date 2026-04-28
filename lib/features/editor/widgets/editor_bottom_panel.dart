@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:lolipants/core/config/app_features.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/features/editor/providers/editor_provider.dart';
 import 'package:lolipants/features/editor/widgets/ai_prompt_bar.dart';
+import 'package:lolipants/features/editor/widgets/fabric_selector.dart';
 import 'package:lolipants/features/editor/widgets/text_tool_panel.dart';
 
 /// Bottom tab panel for the editor shell.
@@ -35,6 +37,7 @@ class EditorBottomPanel extends StatelessWidget {
     String? fontFamily,
     double? fontSize,
     Color? colour,
+    double? rotation,
   }) onUpdateSelectedText;
   final VoidCallback onRemoveSelectedText;
 
@@ -44,7 +47,8 @@ class EditorBottomPanel extends StatelessWidget {
       height: 280,
       decoration: BoxDecoration(
         color: AppColors.stone,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
+        borderRadius:
+            const BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
         border: const Border(top: BorderSide(color: AppColors.borderStrong)),
       ),
       child: Column(
@@ -78,13 +82,16 @@ class _TabRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const tabs = <(EditorTab, String)>[
+    const allTabs = <(EditorTab, String)>[
       (EditorTab.fabric, AppStrings.editorTabFabric),
       (EditorTab.pattern, AppStrings.editorTabPattern),
       (EditorTab.embroidery, AppStrings.editorTabEmbroidery),
       (EditorTab.text, AppStrings.editorTabText),
       (EditorTab.ai, AppStrings.editorTabAi),
     ];
+    final tabs = kFeatureAiEditorTab
+        ? allTabs
+        : allTabs.where((e) => e.$1 != EditorTab.ai).toList();
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
@@ -102,7 +109,8 @@ class _TabRow extends StatelessWidget {
                     Text(
                       tab.$2,
                       style: AppTextStyles.titleSmall.copyWith(
-                        color: active == tab.$1 ? AppColors.gold : AppColors.fog,
+                        color:
+                            active == tab.$1 ? AppColors.gold : AppColors.fog,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -147,13 +155,14 @@ class _PanelBody extends StatelessWidget {
     String? fontFamily,
     double? fontSize,
     Color? colour,
+    double? rotation,
   }) onUpdateSelectedText;
   final VoidCallback onRemoveSelectedText;
 
   @override
   Widget build(BuildContext context) {
     return switch (state.activeTab) {
-      EditorTab.fabric => _FabricPanel(
+      EditorTab.fabric => FabricSelector(
           selectedFabric: state.selectedFabricId,
           availableFabrics: state.availableFabrics,
           quality: state.fabricQuality,
@@ -161,7 +170,14 @@ class _PanelBody extends StatelessWidget {
           onQualitySelected: onQualitySelected,
         ),
       EditorTab.pattern => _SelectionPanel(
-          options: const ['geometric', 'stripe', 'plain', 'arabesque', 'floral', 'embroidered'],
+          options: const [
+            'geometric',
+            'stripe',
+            'plain',
+            'arabesque',
+            'floral',
+            'embroidered'
+          ],
           selected: state.selectedPatternId,
           onSelected: onPatternSelected,
         ),
@@ -178,7 +194,15 @@ class _PanelBody extends StatelessWidget {
           onUpdateSelected: onUpdateSelectedText,
           onRemoveSelected: onRemoveSelectedText,
         ),
-      EditorTab.ai => const AiPromptBar(embedInEditor: true),
+      EditorTab.ai => kFeatureAiEditorTab
+          ? const AiPromptBar(embedInEditor: true)
+          : FabricSelector(
+              selectedFabric: state.selectedFabricId,
+              availableFabrics: state.availableFabrics,
+              quality: state.fabricQuality,
+              onFabricSelected: onFabricSelected,
+              onQualitySelected: onQualitySelected,
+            ),
     };
   }
 
@@ -189,60 +213,6 @@ class _PanelBody extends StatelessWidget {
       if (layer.id == id) return layer;
     }
     return null;
-  }
-}
-
-class _FabricPanel extends StatelessWidget {
-  const _FabricPanel({
-    required this.selectedFabric,
-    required this.availableFabrics,
-    required this.quality,
-    required this.onFabricSelected,
-    required this.onQualitySelected,
-  });
-
-  final String selectedFabric;
-  final List<String> availableFabrics;
-  final String quality;
-  final ValueChanged<String> onFabricSelected;
-  final ValueChanged<String> onQualitySelected;
-
-  @override
-  Widget build(BuildContext context) {
-    const qualities = <String>['standard', 'premium', 'suit_grade'];
-
-    return Padding(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
-            children: [
-              for (final fabric in availableFabrics)
-                ChoiceChip(
-                  label: Text(fabric),
-                  selected: selectedFabric == fabric,
-                  onSelected: (_) => onFabricSelected(fabric),
-                ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Wrap(
-            spacing: AppSpacing.sm,
-            children: [
-              for (final q in qualities)
-                ChoiceChip(
-                  label: Text(q.replaceAll('_', '-')),
-                  selected: quality == q,
-                  onSelected: (_) => onQualitySelected(q),
-                ),
-            ],
-          ),
-        ],
-      ),
-    );
   }
 }
 

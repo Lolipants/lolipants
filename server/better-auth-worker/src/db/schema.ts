@@ -2,6 +2,8 @@ import { relations } from "drizzle-orm";
 import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 // Better Auth user table.
+// `role` and `adminScopes` are additionalFields declared on the auth
+// configuration so the session JSON carries them (see auth.ts).
 export const user = sqliteTable("user", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
@@ -10,6 +12,8 @@ export const user = sqliteTable("user", {
     .default(false)
     .notNull(),
   image: text("image"),
+  role: text("role").default("user").notNull(),
+  adminScopes: text("adminScopes").default("[]").notNull(),
   createdAt: integer("createdAt", { mode: "timestamp_ms" }).notNull(),
   updatedAt: integer("updatedAt", { mode: "timestamp_ms" }).notNull(),
 });

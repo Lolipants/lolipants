@@ -1,8 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:lolipants/core/config/app_features.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
+import 'package:lolipants/features/editor/models/design_text_layer.dart';
+import 'package:lolipants/features/editor/models/editor_preset_args.dart';
+import 'package:lolipants/features/editor/models/fabric_option.dart';
+import 'package:lolipants/features/editor/models/garment_design.dart';
 import 'package:lolipants/features/editor/models/garment_design_suggestion.dart';
 import 'package:lolipants/features/editor/providers/designs_providers.dart';
+
+export 'package:lolipants/features/editor/models/design_text_layer.dart';
 
 /// Editor interaction tools shown in the side rail.
 enum EditorTool { colour, text, image, sizing }
@@ -13,51 +20,21 @@ enum EditorTab { fabric, pattern, embroidery, text, ai }
 /// Image print placement presets.
 enum PrintPlacement { chest, back, fullFront }
 
-/// Text layer model for editor canvas overlays.
-class EditorTextLayer {
-  const EditorTextLayer({
-    required this.id,
-    required this.text,
-    required this.fontFamily,
-    required this.fontSize,
-    required this.colour,
-    required this.placement,
-  });
-
-  final String id;
-  final String text;
-  final String fontFamily;
-  final double fontSize;
-  final Color colour;
-  final Offset placement;
-
-  EditorTextLayer copyWith({
-    String? text,
-    String? fontFamily,
-    double? fontSize,
-    Color? colour,
-    Offset? placement,
-  }) {
-    return EditorTextLayer(
-      id: id,
-      text: text ?? this.text,
-      fontFamily: fontFamily ?? this.fontFamily,
-      fontSize: fontSize ?? this.fontSize,
-      colour: colour ?? this.colour,
-      placement: placement ?? this.placement,
-    );
-  }
-}
+/// Legacy alias for the canonical [DesignTextLayer] model. Kept so existing
+/// call sites keep compiling; new code should use [DesignTextLayer] directly.
+typedef EditorTextLayer = DesignTextLayer;
 
 /// Result payload for editor save attempts.
 class SaveDesignResult {
   const SaveDesignResult({
     required this.success,
     this.message,
+    this.designId,
   });
 
   final bool success;
   final String? message;
+  final String? designId;
 }
 
 /// Local state for Phase 3A editor interactions.
@@ -80,29 +57,49 @@ class EditorState {
     required this.printImagePath,
     required this.customMannequinImagePath,
     required this.printPlacement,
+    required this.printOffsetX,
+    required this.printOffsetY,
     required this.printScale,
     required this.isSaving,
   });
 
   factory EditorState.initial() {
-    return const EditorState(
+    final useMensDefaults = kFeatureMens;
+    return EditorState(
       designName: '',
-      mannequinId: 'standard_male',
-      garmentType: 'thobe',
+      mannequinId: useMensDefaults ? 'standard_male' : 'standard_female',
+      garmentType: useMensDefaults ? 'thobe' : 'abaya',
       primaryColour: AppColors.teal,
       accentColour: AppColors.gold,
       activeTool: EditorTool.colour,
       activeTab: EditorTab.fabric,
       fabricQuality: 'standard',
       selectedFabricId: 'cotton',
-      availableFabrics: <String>['cotton', 'linen', 'silk', 'crepe', 'chiffon'],
+      availableFabrics: const <FabricOption>[
+        FabricOption(
+          id: 'cotton',
+          name: 'Cotton',
+          nameAr: 'قطن',
+          quality: 'standard',
+          isAvailable: true,
+        ),
+        FabricOption(
+          id: 'linen',
+          name: 'Linen',
+          nameAr: 'كتان',
+          quality: 'standard',
+          isAvailable: true,
+        ),
+      ],
       selectedPatternId: 'plain',
       selectedEmbroideryId: 'motif_1',
-      textLayers: <EditorTextLayer>[],
+      textLayers: const <DesignTextLayer>[],
       selectedTextLayerId: null,
       printImagePath: null,
       customMannequinImagePath: null,
       printPlacement: PrintPlacement.chest,
+      printOffsetX: 0,
+      printOffsetY: 0,
       printScale: 40,
       isSaving: false,
     );
@@ -117,14 +114,16 @@ class EditorState {
   final EditorTab activeTab;
   final String fabricQuality;
   final String selectedFabricId;
-  final List<String> availableFabrics;
+  final List<FabricOption> availableFabrics;
   final String selectedPatternId;
   final String selectedEmbroideryId;
-  final List<EditorTextLayer> textLayers;
+  final List<DesignTextLayer> textLayers;
   final String? selectedTextLayerId;
   final String? printImagePath;
   final String? customMannequinImagePath;
   final PrintPlacement printPlacement;
+  final double printOffsetX;
+  final double printOffsetY;
   final double printScale;
   final bool isSaving;
 
@@ -138,14 +137,16 @@ class EditorState {
     EditorTab? activeTab,
     String? fabricQuality,
     String? selectedFabricId,
-    List<String>? availableFabrics,
+    List<FabricOption>? availableFabrics,
     String? selectedPatternId,
     String? selectedEmbroideryId,
-    List<EditorTextLayer>? textLayers,
+    List<DesignTextLayer>? textLayers,
     String? selectedTextLayerId,
     String? printImagePath,
     String? customMannequinImagePath,
     PrintPlacement? printPlacement,
+    double? printOffsetX,
+    double? printOffsetY,
     double? printScale,
     bool? isSaving,
   }) {
@@ -168,6 +169,8 @@ class EditorState {
       customMannequinImagePath:
           customMannequinImagePath ?? this.customMannequinImagePath,
       printPlacement: printPlacement ?? this.printPlacement,
+      printOffsetX: printOffsetX ?? this.printOffsetX,
+      printOffsetY: printOffsetY ?? this.printOffsetY,
       printScale: printScale ?? this.printScale,
       isSaving: isSaving ?? this.isSaving,
     );
@@ -217,7 +220,11 @@ class EditorNotifier extends StateNotifier<EditorState> {
   }
 
   void setTab(EditorTab tab) {
-    state = state.copyWith(activeTab: tab);
+    var next = tab;
+    if (tab == EditorTab.ai && !kFeatureAiEditorTab) {
+      next = EditorTab.fabric;
+    }
+    state = state.copyWith(activeTab: next);
   }
 
   void setFabricQuality(String quality) {
@@ -228,6 +235,44 @@ class EditorNotifier extends StateNotifier<EditorState> {
     state = state.copyWith(selectedFabricId: fabricId);
   }
 
+  /// Applies a regional preset (garment + palette + optional fabric/pattern)
+  /// to live editor state, then refreshes fabrics for the new garment type.
+  void loadPreset(EditorPresetArgs args) {
+    state = state.copyWith(
+      designName: args.designName ?? state.designName,
+      garmentType: args.garmentType ?? state.garmentType,
+      primaryColour: args.primaryColour ?? state.primaryColour,
+      accentColour: args.accentColour ?? state.accentColour,
+      selectedFabricId: args.fabricId ?? state.selectedFabricId,
+      selectedPatternId: args.patternId ?? state.selectedPatternId,
+      mannequinId: args.mannequinId ?? state.mannequinId,
+      activeTool: EditorTool.colour,
+      activeTab: EditorTab.fabric,
+    );
+    loadFabrics();
+  }
+
+  /// Hydrates editor state from a previously saved [GarmentDesign] so the
+  /// user can edit it again.
+  void loadDesign(GarmentDesign design) {
+    state = state.copyWith(
+      designName: design.name,
+      garmentType: design.garmentType,
+      primaryColour: _parseHexColor(design.primaryColour),
+      accentColour: design.accentColour != null && design.accentColour!.isNotEmpty
+          ? _parseHexColor(design.accentColour!)
+          : state.accentColour,
+      selectedFabricId: design.fabricId ?? state.selectedFabricId,
+      fabricQuality: design.fabricQuality ?? state.fabricQuality,
+      selectedPatternId: design.patternId ?? state.selectedPatternId,
+      printImagePath: design.printImageUrl,
+      mannequinId: design.mannequinId ?? state.mannequinId,
+      activeTool: EditorTool.colour,
+      activeTab: EditorTab.fabric,
+    );
+    loadFabrics();
+  }
+
   Future<void> loadFabrics() async {
     final repo = ref.read(designsRepositoryProvider);
     final result = await repo.getFabricsForGarmentType(state.garmentType);
@@ -235,9 +280,10 @@ class EditorNotifier extends StateNotifier<EditorState> {
       (_) {},
       (fabrics) {
         if (fabrics.isEmpty) return;
-        final selected = fabrics.contains(state.selectedFabricId)
+        final fabricIds = fabrics.map((e) => e.id).toList(growable: false);
+        final selected = fabricIds.contains(state.selectedFabricId)
             ? state.selectedFabricId
-            : fabrics.first;
+            : fabricIds.first;
         state = state.copyWith(
           availableFabrics: fabrics,
           selectedFabricId: selected,
@@ -262,7 +308,8 @@ class EditorNotifier extends StateNotifier<EditorState> {
         ? _parseHexColor(suggestion.accentColour!)
         : state.accentColour;
 
-    const fabrics = <String>['cotton', 'linen', 'silk', 'crepe', 'chiffon'];
+    final fabrics =
+        state.availableFabrics.map((e) => e.id).toList(growable: false);
     const fabricAliases = <String, String>{
       'cotton': 'cotton',
       'cotton blend': 'cotton',
@@ -382,7 +429,7 @@ class EditorNotifier extends StateNotifier<EditorState> {
   void addTextLayer(String text) {
     final trimmed = text.trim();
     if (trimmed.isEmpty) return;
-    final layer = EditorTextLayer(
+    final layer = DesignTextLayer(
       id: DateTime.now().microsecondsSinceEpoch.toString(),
       text: trimmed,
       fontFamily: 'Poppins',
@@ -407,10 +454,11 @@ class EditorNotifier extends StateNotifier<EditorState> {
     double? fontSize,
     Color? colour,
     Offset? placement,
+    double? rotation,
   }) {
     final selectedId = state.selectedTextLayerId;
     if (selectedId == null) return;
-    final updated = <EditorTextLayer>[];
+    final updated = <DesignTextLayer>[];
     for (final layer in state.textLayers) {
       if (layer.id == selectedId) {
         updated.add(
@@ -419,6 +467,7 @@ class EditorNotifier extends StateNotifier<EditorState> {
             fontSize: fontSize,
             colour: colour,
             placement: placement,
+            rotation: rotation,
           ),
         );
       } else {
@@ -443,6 +492,14 @@ class EditorNotifier extends StateNotifier<EditorState> {
 
   void setPrintPlacement(PrintPlacement placement) {
     state = state.copyWith(printPlacement: placement);
+  }
+
+  void setPrintOffsetX(double value) {
+    state = state.copyWith(printOffsetX: value);
+  }
+
+  void setPrintOffsetY(double value) {
+    state = state.copyWith(printOffsetY: value);
   }
 
   void setPrintScale(double value) {
@@ -487,8 +544,40 @@ class EditorNotifier extends StateNotifier<EditorState> {
       'fabricQuality': state.fabricQuality,
       'patternId': state.selectedPatternId,
       'printImageUrl': printImageUrl,
-      'mannequinId': state.mannequinId,
+      'printPlacement': state.printPlacement.name,
+      'printOffsetX': state.printOffsetX,
+      'printOffsetY': state.printOffsetY,
+      'printScale': state.printScale,
+      'mannequinId': _normalizedMannequinIdForApi(),
       'customMannequinImagePath': state.customMannequinImagePath,
+      'renderMetadata': {
+        'mannequinTemplateId': _resolveMannequinTemplateId(),
+        'garmentType': state.garmentType,
+        'primaryColour': _colorToHex(state.primaryColour),
+        'accentColour': _colorToHex(state.accentColour),
+        'fabricProfile': state.fabricQuality,
+        'printImageUrl': printImageUrl,
+        'printTransform': {
+          'placement': state.printPlacement.name,
+          'x': state.printOffsetX,
+          'y': state.printOffsetY,
+          'scale': state.printScale,
+        },
+        'textLayers': state.textLayers
+            .map(
+              (layer) => {
+                'text': layer.text,
+                'fontFamily': layer.fontFamily,
+                'fontSize': layer.fontSize,
+                'colour': _colorToHex(layer.colour),
+                'x': layer.placement.dx,
+                'y': layer.placement.dy,
+                'rotation': layer.rotation,
+              },
+            )
+            .toList(growable: false),
+        'exportTier': 'editor',
+      },
       'textLayers': state.textLayers
           .map(
             (layer) => {
@@ -498,6 +587,7 @@ class EditorNotifier extends StateNotifier<EditorState> {
               'colour': _colorToHex(layer.colour),
               'x': layer.placement.dx,
               'y': layer.placement.dy,
+              'rotation': layer.rotation,
             },
           )
           .toList(growable: false),
@@ -509,15 +599,44 @@ class EditorNotifier extends StateNotifier<EditorState> {
         success: false,
         message: designErrorMessage(e, fallback: 'Could not save design.'),
       ),
-      (_) {
+      (design) {
         ref.read(myDesignsProvider.notifier).reload();
-        return const SaveDesignResult(success: true);
+        return SaveDesignResult(
+          success: true,
+          designId: design.id,
+        );
       },
     );
   }
 
+  String? _normalizedMannequinIdForApi() {
+    const localFallbackIds = <String>{
+      'standard_female',
+      'curvy_female',
+      'petite_female',
+      'standard_male',
+      'tall_male',
+      'child',
+      'custom_photo',
+    };
+    final id = state.mannequinId.trim();
+    if (id.isEmpty || localFallbackIds.contains(id)) {
+      return null;
+    }
+    return id;
+  }
+
   String _colorToHex(Color color) {
     return '#${color.toARGB32().toRadixString(16).substring(2).toUpperCase()}';
+  }
+
+  String _resolveMannequinTemplateId() {
+    final id = state.mannequinId.toLowerCase();
+    final garment = state.garmentType.toLowerCase();
+    if (garment == 'abaya' || id.contains('female')) return 'female_abaya_v1';
+    if (garment == 'bisht') return 'unisex_bisht_v1';
+    if (id.contains('male')) return 'male_thobe_v1';
+    return 'default_thobe_v1';
   }
 }
 

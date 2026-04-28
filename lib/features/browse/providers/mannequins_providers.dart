@@ -15,5 +15,11 @@ final mannequinOptionsProvider =
     FutureProvider<List<MannequinOption>>((ref) async {
   final repo = ref.watch(mannequinsRepositoryProvider);
   final result = await repo.getMannequins();
-  return result.fold((_) => const <MannequinOption>[], (list) => list);
+  return result.fold((e) => throw MannequinOptionsProviderException(e), (list) => list);
 });
+
+class MannequinOptionsProviderException implements Exception {
+  const MannequinOptionsProviderException(this.cause);
+
+  final Object cause;
+}

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:developer' as developer;
 
 import 'package:flutter/widgets.dart';
@@ -6,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 import 'package:lolipants/app.dart';
 import 'package:lolipants/core/preferences/shared_preferences_provider.dart';
+import 'package:lolipants/core/push/onesignal_bootstrap.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Application entrypoint: loads env, logging, and starts Flutter.
@@ -41,6 +43,10 @@ CLOUDFLARE_R2_BASE_URL=
       child: const LolipantsApp(),
     ),
   );
+
+  // Initialise OneSignal after `runApp` so the first frame isn't blocked by
+  // the plugin's network handshake. Failures log and no-op.
+  unawaited(initOneSignal());
 }
 
 void _configureLogging() {

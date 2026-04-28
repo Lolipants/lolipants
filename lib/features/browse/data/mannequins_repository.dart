@@ -5,6 +5,20 @@ import 'package:lolipants/core/network/api_endpoints.dart';
 import 'package:lolipants/features/auth/data/auth_local_storage.dart';
 import 'package:lolipants/features/browse/models/mannequin_option.dart';
 
+class MannequinGenerationResult {
+  const MannequinGenerationResult({
+    required this.jobId,
+    required this.status,
+    this.mannequin,
+    this.errorMessage,
+  });
+
+  final String jobId;
+  final String status;
+  final MannequinOption? mannequin;
+  final String? errorMessage;
+}
+
 /// Loads mannequin options and triggers Meshy generation through backend.
 class MannequinsRepository {
   MannequinsRepository({
@@ -37,7 +51,8 @@ class MannequinsRepository {
   }
 
   /// Calls backend endpoint that proxies Meshy API generation.
-  Future<Either<AppException, MannequinOption>> generateFromPhoto({
+  /// Starts mannequin generation and returns job metadata.
+  Future<Either<AppException, MannequinGenerationResult>> startGeneration({
     required String photoPath,
   }) async {
     try {
@@ -50,7 +65,25 @@ class MannequinsRepository {
         options: await _authOptions(contentType: 'multipart/form-data'),
       );
       final body = response.data ?? const <String, dynamic>{};
-      return right(MannequinOption.fromApi(body));
+      return right(_parseGenerationResult(body));
+    } on DioException catch (e) {
+      return left(_mapDio(e));
+    } on Exception {
+      return left(const UnknownException());
+    }
+  }
+
+  /// Polls generation status for a job.
+  Future<Either<AppException, MannequinGenerationResult>> getGenerationStatus({
+    required String jobId,
+  }) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        '${ApiEndpoints.aiMannequin}/$jobId',
+        options: await _authOptions(),
+      );
+      final body = response.data ?? const <String, dynamic>{};
+      return right(_parseGenerationResult(body));
     } on DioException catch (e) {
       return left(_mapDio(e));
     } on Exception {
@@ -74,8 +107,13 @@ class MannequinsRepository {
     final status = e.response?.statusCode ?? 0;
     final body = e.response?.data;
     var message = e.message ?? 'network';
-    if (body is Map && body['error'] != null) {
-      message = body['error'].toString();
+    if (body is Map) {
+      final nestedError = body['error'];
+      if (nestedError is Map && nestedError['message'] != null) {
+        message = nestedError['message'].toString();
+      } else if (body['error'] != null) {
+        message = body['error'].toString();
+      }
     }
     if (e.type == DioExceptionType.connectionTimeout ||
         e.type == DioExceptionType.receiveTimeout ||
@@ -85,5 +123,23 @@ class MannequinsRepository {
     if (status == 401 || status == 403) return AuthException(message);
     if (status >= 400) return ServerException(status, message);
     return NetworkException(message);
+  }
+
+  MannequinGenerationResult _parseGenerationResult(Map<String, dynamic> body) {
+    final mannequin = body['mannequin'] is Map<String, dynamic>
+        ? MannequinOption.fromApi(body['mannequin'] as Map<String, dynamic>)
+        : null;
+    final rawError = body['error'];
+    final errorMessage = switch (rawError) {
+      Map<String, dynamic>() => rawError['message']?.toString(),
+      String() => rawError,
+      _ => null,
+    };
+    return MannequinGenerationResult(
+      jobId: body['jobId']?.toString() ?? '',
+      status: body['status']?.toString() ?? 'processing',
+      mannequin: mannequin,
+      errorMessage: errorMessage,
+    );
   }
 }

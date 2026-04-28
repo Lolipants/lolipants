@@ -439,6 +439,44 @@ class AppStrings {
   static const String errorAuthGeneric =
       'Something went wrong. Please try again.';
 
+  /// Sign-in: wrong email or password (English).
+  static const String errorInvalidCredentials =
+      'Email or password is incorrect.';
+
+  /// Authenticated action not allowed (English).
+  static const String errorForbidden =
+      'You do not have permission to do that.';
+
+  /// Network: no connection / host unreachable (English).
+  static const String errorNetworkUnreachable =
+      'Could not reach the server. Check your internet connection and try '
+      'again.';
+
+  /// Network: request timed out (English).
+  static const String errorNetworkTimeout =
+      'The request timed out. Check your connection and try again.';
+
+  /// HTTP 502 (English).
+  static const String errorHttpBadGateway =
+      'Could not reach the authentication service. Try again in a moment.';
+
+  /// HTTP 503 (English).
+  static const String errorHttpServiceUnavailable =
+      'Sign-in is temporarily unavailable. Please try again shortly.';
+
+  /// HTTP 504 (English).
+  static const String errorHttpGatewayTimeout =
+      'The server took too long to respond. Please try again.';
+
+  /// HTTP 5xx generic (English).
+  static const String errorHttpServerError =
+      'Something went wrong on our side. Please try again later.';
+
+  /// `.env` missing `BETTER_AUTH_BASE_URL` (English).
+  static const String errorAuthBaseUrlMissing =
+      'Sign-in is not configured: add BETTER_AUTH_BASE_URL to your .env '
+      'file (see .env.example).';
+
   /// Onboarding slide 1 body (English).
   static const String onboardingSlide1Body =
       'Create custom garments on a 3D mannequin';

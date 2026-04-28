@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 /// Saved user design coming from `/designs`.
 class GarmentDesign {
   /// Creates a design snapshot.
@@ -13,11 +15,25 @@ class GarmentDesign {
     this.printImageUrl,
     this.presetStyleId,
     this.mannequinId,
+    this.renderMetadata,
     this.isPublic = false,
   });
 
   /// Parses API payload.
   factory GarmentDesign.fromApi(Map<String, dynamic> json) {
+    Map<String, dynamic>? parseRenderMetadata(dynamic value) {
+      if (value is Map<String, dynamic>) return value;
+      if (value is String && value.trim().isNotEmpty) {
+        try {
+          final decoded = jsonDecode(value);
+          if (decoded is Map<String, dynamic>) return decoded;
+        } on FormatException {
+          return null;
+        }
+      }
+      return null;
+    }
+
     return GarmentDesign(
       id: json['id']?.toString() ?? '',
       name: json['name']?.toString() ?? 'Untitled',
@@ -40,6 +56,7 @@ class GarmentDesign {
           json['presetStyleId']?.toString(),
       mannequinId:
           json['mannequin_id']?.toString() ?? json['mannequinId']?.toString(),
+      renderMetadata: parseRenderMetadata(json['render_metadata'] ?? json['renderMetadata']),
       isPublic: (json['is_public'] == 1) || json['isPublic'] == true,
     );
   }
@@ -76,6 +93,9 @@ class GarmentDesign {
 
   /// Optional mannequin option id.
   final String? mannequinId;
+
+  /// Canonical renderer metadata payload from the API.
+  final Map<String, dynamic>? renderMetadata;
 
   /// Public showcase flag.
   final bool isPublic;

@@ -1,8 +1,9 @@
 import 'package:dio/dio.dart';
-import 'package:fpdart/fpdart.dart' show Either, left, right;
+import 'package:fpdart/fpdart.dart' show Either, Unit, left, right, unit;
 import 'package:lolipants/core/errors/app_exception.dart';
 import 'package:lolipants/core/network/api_endpoints.dart';
 import 'package:lolipants/features/auth/data/auth_local_storage.dart';
+import 'package:lolipants/features/editor/models/fabric_option.dart';
 import 'package:lolipants/features/editor/models/garment_design.dart';
 
 /// Repository for listing and creating user designs.
@@ -37,8 +38,8 @@ class DesignsRepository {
     }
   }
 
-  /// Returns available fabric ids for a garment type.
-  Future<Either<AppException, List<String>>> getFabricsForGarmentType(
+  /// Returns available fabric metadata for a garment type.
+  Future<Either<AppException, List<FabricOption>>> getFabricsForGarmentType(
     String garmentType,
   ) async {
     try {
@@ -48,16 +49,24 @@ class DesignsRepository {
         options: await _authOptions(),
       );
       final items = response.data ?? const <dynamic>[];
-      final ids = <String>[];
+      final options = <FabricOption>[];
       for (final item in items) {
         if (item is Map<String, dynamic>) {
-          final id = item['id']?.toString().trim() ?? '';
-          if (id.isNotEmpty) ids.add(id);
+          final fabric = FabricOption.fromApi(item);
+          if (fabric.id.isNotEmpty) options.add(fabric);
         } else if (item is String && item.trim().isNotEmpty) {
-          ids.add(item.trim());
+          options.add(
+            FabricOption(
+              id: item.trim(),
+              name: item.trim(),
+              nameAr: item.trim(),
+              quality: 'standard',
+              isAvailable: true,
+            ),
+          );
         }
       }
-      return right(ids);
+      return right(options);
     } on DioException catch (e) {
       return left(_mapDio(e));
     } on Exception {
@@ -80,6 +89,21 @@ class DesignsRepository {
         return left(const ServerException(500, 'Missing design payload'));
       }
       return right(GarmentDesign.fromApi(data));
+    } on DioException catch (e) {
+      return left(_mapDio(e));
+    } on Exception {
+      return left(const UnknownException());
+    }
+  }
+
+  /// Deletes a design owned by the current user.
+  Future<Either<AppException, Unit>> deleteDesign(String id) async {
+    try {
+      await _dio.delete<dynamic>(
+        '${ApiEndpoints.designs}/$id',
+        options: await _authOptions(),
+      );
+      return right(unit);
     } on DioException catch (e) {
       return left(_mapDio(e));
     } on Exception {
@@ -132,8 +156,13 @@ class DesignsRepository {
     final status = e.response?.statusCode ?? 0;
     final body = e.response?.data;
     var message = e.message ?? 'network';
-    if (body is Map && body['error'] != null) {
-      message = body['error'].toString();
+    if (body is Map) {
+      final nestedError = body['error'];
+      if (nestedError is Map && nestedError['message'] != null) {
+        message = nestedError['message'].toString();
+      } else if (body['error'] != null) {
+        message = body['error'].toString();
+      }
     }
     if (e.type == DioExceptionType.connectionTimeout ||
         e.type == DioExceptionType.receiveTimeout ||

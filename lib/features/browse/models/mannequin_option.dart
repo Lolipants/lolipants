@@ -24,3 +24,11 @@ class MannequinOption {
   final String labelAr;
   final String? previewUrl;
 }
+
+/// True for built-in and typical API labels for male mannequins.
+bool isMaleMannequinOption(MannequinOption o) {
+  final id = o.id.toLowerCase();
+  if (id.endsWith('_male')) return true;
+  if (o.labelEn.toLowerCase().contains('(male)')) return true;
+  return false;
+}

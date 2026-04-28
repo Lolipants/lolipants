@@ -5,15 +5,18 @@ import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/router/role_routing.dart';
+import 'package:lolipants/core/utils/validators.dart';
 import 'package:lolipants/features/auth/providers/auth_providers.dart';
+import 'package:lolipants/features/auth/utils/auth_env.dart';
 import 'package:lolipants/features/auth/utils/auth_error_mapper.dart';
+import 'package:lolipants/features/auth/widgets/social_auth_row.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
 import 'package:lolipants/shared/widgets/error_banner.dart';
 import 'package:lolipants/shared/widgets/gold_divider.dart';
 import 'package:lolipants/shared/widgets/loading_overlay.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
 import 'package:lolipants/shared/widgets/lolipants_text_field.dart';
-import 'package:lolipants/core/utils/validators.dart';
 
 /// Registration screen.
 class SignupScreen extends ConsumerStatefulWidget {
@@ -81,6 +84,11 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     if (!_validate()) {
       return;
     }
+    final envMsg = missingBetterAuthBaseUrlMessage();
+    if (envMsg != null) {
+      setState(() => _banner = envMsg);
+      return;
+    }
     setState(() => _loading = true);
     final result = await ref.read(authProvider.notifier).signUpWithProfile(
           name: _name.text.trim(),
@@ -93,7 +101,11 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     setState(() => _loading = false);
     result.fold(
       (e) => setState(() => _banner = mapAuthExceptionToUserMessage(e)),
-      (_) => context.go('/home'),
+      (user) {
+        final returnTo = ref.read(pendingAuthReturnToProvider);
+        ref.read(pendingAuthReturnToProvider.notifier).state = null;
+        context.go(postAuthLocation(user, returnTo));
+      },
     );
   }
 
@@ -174,6 +186,32 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                     label: AppStrings.createAccountCta,
                     onPressed: _submit,
                     loading: _loading,
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  Row(
+                    children: [
+                      const Expanded(
+                        child: Divider(color: AppColors.borderSubtle),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.md,
+                        ),
+                        child: Text(
+                          'or',
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.fog,
+                          ),
+                        ),
+                      ),
+                      const Expanded(
+                        child: Divider(color: AppColors.borderSubtle),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  SocialAuthRow(
+                    onError: (msg) => setState(() => _banner = msg),
                   ),
                   const SizedBox(height: AppSpacing.xl),
                   Row(

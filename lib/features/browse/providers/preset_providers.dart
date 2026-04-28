@@ -1,0 +1,17 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lolipants/features/browse/data/preset_catalog_repository.dart';
+import 'package:lolipants/features/browse/data/region_presets.dart';
+import 'package:lolipants/features/orders/providers/orders_providers.dart';
+
+final presetCatalogRepositoryProvider = Provider<PresetCatalogRepository>(
+  (ref) => PresetCatalogRepository(dio: ref.watch(apiDioProvider)),
+);
+
+final presetCatalogProvider = FutureProvider<List<RegionStylePreset>>((ref) async {
+  final repo = ref.watch(presetCatalogRepositoryProvider);
+  final result = await repo.getPresets();
+  return result.fold(
+    (_) => regionPresetsForHomeGrid(),
+    (presets) => presets.isEmpty ? regionPresetsForHomeGrid() : presets,
+  );
+});

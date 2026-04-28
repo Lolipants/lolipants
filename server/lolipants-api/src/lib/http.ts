@@ -1,4 +1,5 @@
 import type { Context } from "hono";
+import type { ContentfulStatusCode } from "hono/utils/http-status";
 import type { AppVariables, Env } from "../types";
 
 export function getBearerToken(
@@ -14,5 +15,25 @@ export function badRequest(
   message: string,
   details?: unknown,
 ) {
-  return c.json({ error: message, details }, 400);
+  return apiError(c, 400, "BAD_REQUEST", message, details);
+}
+
+export function apiError(
+  c: Context<{ Bindings: Env; Variables: AppVariables }>,
+  status: ContentfulStatusCode,
+  code: string,
+  message: string,
+  details?: unknown,
+) {
+  return c.json(
+    {
+      error: {
+        code,
+        message,
+        status,
+        details,
+      },
+    },
+    status,
+  );
 }

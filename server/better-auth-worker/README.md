@@ -25,11 +25,19 @@ npx wrangler d1 create lolipants_auth
 
 Copy the returned `database_id` into `wrangler.toml` under `[[d1_databases]]`.
 
-## 3) Apply schema migration
+## 3) Apply schema migrations
 
 ```bash
 npx wrangler d1 execute lolipants_auth --remote --file=./migrations/0001_better_auth.sql
+npx wrangler d1 execute lolipants_auth --remote --file=./migrations/0002_user_roles.sql
 ```
+
+If `0002` is missing, Better Auth’s Drizzle schema does not match D1 and sign-in/sign-up can fail.
+
+## Troubleshooting
+
+- **503 / Cloudflare `error code: 1102` on `/auth/*` POSTs** — The Worker was exceeding CPU time by building a full Better Auth instance on every request. Deploy a version that **caches** `createAuth()` once per isolate (`src/index.ts`). Also ensure `BETTER_AUTH_SECRET` is set (`wrangler secret put BETTER_AUTH_SECRET`).
+- **Flutter must set `BETTER_AUTH_BASE_URL`** in `.env` (see project root `.env.example`) to your deployed worker origin, without `/auth`.
 
 ## 4) Set secrets
 
@@ -40,6 +48,9 @@ npx wrangler secret put AWS_SECRET_ACCESS_KEY
 # Optional (temporary credentials only):
 npx wrangler secret put AWS_SESSION_TOKEN
 ```
+
+The auth worker reads AWS-style secret names (`AWS_ACCESS_KEY_ID`,
+`AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN`) rather than `SES_*` aliases.
 
 Use a long, random value (>= 32 chars) for `BETTER_AUTH_SECRET`.
 Use IAM credentials that can send email with SES.

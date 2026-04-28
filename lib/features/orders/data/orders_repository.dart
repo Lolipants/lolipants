@@ -4,6 +4,7 @@ import 'package:lolipants/core/errors/app_exception.dart';
 import 'package:lolipants/core/network/api_endpoints.dart';
 import 'package:lolipants/features/auth/data/auth_local_storage.dart';
 import 'package:lolipants/features/orders/models/order.dart';
+import 'package:lolipants/features/orders/models/order_quote.dart';
 
 /// API-backed repository for customer orders.
 class OrdersRepository {
@@ -71,6 +72,76 @@ class OrdersRepository {
     }
   }
 
+  /// Fetches a server-authoritative price quote for [designId] in [city].
+  Future<Either<AppException, OrderQuote>> getQuote({
+    required String designId,
+    required String city,
+  }) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        '${ApiEndpoints.orders}/quote',
+        queryParameters: {'designId': designId, 'city': city},
+        options: await _authOptions(),
+      );
+      final data = response.data;
+      if (data == null) {
+        return left(const ServerException(500, 'Missing quote payload'));
+      }
+      return right(OrderQuote.fromApi(data));
+    } on DioException catch (e) {
+      return left(_mapDio(e));
+    } on Exception {
+      return left(const UnknownException());
+    }
+  }
+
+  /// Creates a customer order from a saved design.
+  ///
+  /// Pass [idempotencyKey] to share the same key across retries or sibling
+  /// requests (e.g. payment intent). When omitted a new key is generated.
+  Future<Either<AppException, Order>> createOrder({
+    required String designId,
+    required String deliveryAddress,
+    required String deliveryCity,
+    required String deliveryPhone,
+    String? deliveryNotes,
+    String? idempotencyKey,
+    String? designerId,
+  }) async {
+    try {
+      final key = idempotencyKey ??
+          'order_${DateTime.now().millisecondsSinceEpoch}_$designId';
+      final authOptions = await _authOptions();
+      final response = await _dio.post<Map<String, dynamic>>(
+        ApiEndpoints.orders,
+        data: {
+          'designId': designId,
+          'deliveryAddress': deliveryAddress,
+          'deliveryCity': deliveryCity,
+          'deliveryPhone': deliveryPhone,
+          'deliveryNotes': deliveryNotes,
+          if (designerId != null && designerId.isNotEmpty)
+            'designerId': designerId,
+        },
+        options: authOptions.copyWith(
+          headers: {
+            ...?(authOptions.headers),
+            'X-Idempotency-Key': key,
+          },
+        ),
+      );
+      final data = response.data;
+      if (data == null) {
+        return left(const ServerException(500, 'Missing order payload'));
+      }
+      return right(Order.fromApi(data));
+    } on DioException catch (e) {
+      return left(_mapDio(e));
+    } on Exception {
+      return left(const UnknownException());
+    }
+  }
+
   Future<Options> _authOptions() async {
     final headers = <String, dynamic>{};
     final token = await _storage.readSessionToken();
@@ -84,10 +155,15 @@ class OrdersRepository {
     final status = e.response?.statusCode ?? 0;
     final body = e.response?.data;
     var message = e.message ?? 'network';
-    if (body is Map && body['error'] != null) {
-      message = body['error'].toString();
-    } else if (body is Map && body['message'] != null) {
-      message = body['message'].toString();
+    if (body is Map) {
+      final nestedError = body['error'];
+      if (nestedError is Map && nestedError['message'] != null) {
+        message = nestedError['message'].toString();
+      } else if (body['error'] != null) {
+        message = body['error'].toString();
+      } else if (body['message'] != null) {
+        message = body['message'].toString();
+      }
     }
     if (e.type == DioExceptionType.connectionTimeout ||
         e.type == DioExceptionType.receiveTimeout ||

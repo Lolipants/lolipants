@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
@@ -12,6 +13,7 @@ class MannequinViewer extends StatelessWidget {
     required this.garmentType,
     required this.primaryColour,
     required this.accentColour,
+    this.fabricProfile = 'standard',
     this.textLayers = const <EditorTextLayer>[],
     this.selectedTextLayerId,
     this.onSelectTextLayer,
@@ -20,12 +22,16 @@ class MannequinViewer extends StatelessWidget {
     this.customMannequinImagePath,
     this.printScale = 40,
     this.printPlacement = PrintPlacement.chest,
+    this.printOffsetX = 0,
+    this.printOffsetY = 0,
+    this.onMovePrintImage,
     super.key,
   });
 
   final String garmentType;
   final Color primaryColour;
   final Color accentColour;
+  final String fabricProfile;
   final List<EditorTextLayer> textLayers;
   final String? selectedTextLayerId;
   final ValueChanged<String>? onSelectTextLayer;
@@ -39,6 +45,9 @@ class MannequinViewer extends StatelessWidget {
   final String? customMannequinImagePath;
   final double printScale;
   final PrintPlacement printPlacement;
+  final double printOffsetX;
+  final double printOffsetY;
+  final ValueChanged<Offset>? onMovePrintImage;
 
   @override
   Widget build(BuildContext context) {
@@ -62,6 +71,7 @@ class MannequinViewer extends StatelessWidget {
                           garmentType: garmentType,
                           primaryColour: primaryColour,
                           accentColour: accentColour,
+                          fabricProfile: fabricProfile,
                         ),
                       ),
                     ),
@@ -69,7 +79,8 @@ class MannequinViewer extends StatelessWidget {
                       Positioned.fill(
                         child: Opacity(
                           opacity: 0.2,
-                          child: _AdaptiveImage(path: customMannequinImagePath!),
+                          child:
+                              _AdaptiveImage(path: customMannequinImagePath!),
                         ),
                       ),
                     if (printImagePath != null)
@@ -77,10 +88,15 @@ class MannequinViewer extends StatelessWidget {
                         path: printImagePath!,
                         placement: printPlacement,
                         scalePercent: printScale,
+                        offsetX: printOffsetX,
+                        offsetY: printOffsetY,
+                        onDragUpdate: onMovePrintImage,
                       ),
                     ...textLayers.map((layer) {
-                      final left = (layer.placement.dx.clamp(0.1, 0.9) * width) - 55;
-                      final top = (layer.placement.dy.clamp(0.2, 0.95) * height) - 14;
+                      final left =
+                          (layer.placement.dx.clamp(0.1, 0.9) * width) - 55;
+                      final top =
+                          (layer.placement.dy.clamp(0.2, 0.95) * height) - 14;
                       final selected = layer.id == selectedTextLayerId;
                       return Positioned(
                         left: left,
@@ -92,28 +108,41 @@ class MannequinViewer extends StatelessWidget {
                           onPanUpdate: onMoveTextLayer == null
                               ? null
                               : (details) {
-                                  final nextX = ((left + details.delta.dx + 55) / width)
-                                      .clamp(0.1, 0.9);
-                                  final nextY = ((top + details.delta.dy + 14) / height)
-                                      .clamp(0.2, 0.95);
+                                  final nextX =
+                                      ((left + details.delta.dx + 55) / width)
+                                          .clamp(0.1, 0.9);
+                                  final nextY =
+                                      ((top + details.delta.dy + 14) / height)
+                                          .clamp(0.2, 0.95);
                                   onMoveTextLayer!(
                                     placement: Offset(nextX, nextY),
                                   );
                                 },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                            decoration: selected
-                                ? BoxDecoration(
-                                    border: Border.all(color: AppColors.gold),
-                                    borderRadius: BorderRadius.circular(4),
-                                  )
-                                : null,
-                            child: Text(
-                              layer.text,
-                              style: TextStyle(
-                                fontFamily: layer.fontFamily,
-                                fontSize: layer.fontSize,
-                                color: layer.colour,
+                          child: Transform.rotate(
+                            angle: layer.rotation,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 4, vertical: 2),
+                              decoration: selected
+                                  ? BoxDecoration(
+                                      border: Border.all(color: AppColors.gold),
+                                      borderRadius: BorderRadius.circular(4),
+                                    )
+                                  : null,
+                              child: Text(
+                                layer.text,
+                                style: TextStyle(
+                                  fontFamily: layer.fontFamily,
+                                  fontSize: layer.fontSize,
+                                  color: layer.colour,
+                                  shadows: const [
+                                    Shadow(
+                                      color: Colors.black26,
+                                      blurRadius: 2,
+                                      offset: Offset(0.8, 0.8),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
@@ -136,11 +165,13 @@ class _MannequinPainter extends CustomPainter {
     required this.garmentType,
     required this.primaryColour,
     required this.accentColour,
+    required this.fabricProfile,
   });
 
   final String garmentType;
   final Color primaryColour;
   final Color accentColour;
+  final String fabricProfile;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -162,19 +193,26 @@ class _MannequinPainter extends CustomPainter {
     canvas.drawOval(headRect, fillPaint..color = AppColors.smoke);
     canvas.drawOval(headRect, outlinePaint);
 
+    final profile = fabricProfile.toLowerCase().trim();
+    final gloss = switch (profile) {
+      'premium' => 0.20,
+      'luxury' => 0.26,
+      _ => 0.14,
+    };
+
     switch (garmentType.toLowerCase()) {
       case 'abaya':
-        _paintAbaya(canvas, size, fillPaint, accentPaint, outlinePaint);
+        _paintAbaya(canvas, size, fillPaint, accentPaint, outlinePaint, gloss);
       case 'bisht':
-        _paintThobe(canvas, size, fillPaint, accentPaint, outlinePaint);
-        _paintBishtCloak(canvas, size, fillPaint, accentPaint, outlinePaint);
+        _paintThobe(canvas, size, fillPaint, accentPaint, outlinePaint, gloss);
+        _paintBishtCloak(canvas, size, fillPaint, accentPaint, outlinePaint, gloss);
       case 'kandura':
-        _paintKandura(canvas, size, fillPaint, accentPaint, outlinePaint);
+        _paintKandura(canvas, size, fillPaint, accentPaint, outlinePaint, gloss);
       case 'suit':
-        _paintSuit(canvas, size, fillPaint, accentPaint, outlinePaint);
+        _paintSuit(canvas, size, fillPaint, accentPaint, outlinePaint, gloss);
       case 'thobe':
       default:
-        _paintThobe(canvas, size, fillPaint, accentPaint, outlinePaint);
+        _paintThobe(canvas, size, fillPaint, accentPaint, outlinePaint, gloss);
     }
   }
 
@@ -184,6 +222,7 @@ class _MannequinPainter extends CustomPainter {
     Paint fill,
     Paint accent,
     Paint outline,
+    double gloss,
   ) {
     final body = RRect.fromRectAndRadius(
       Rect.fromLTRB(
@@ -196,6 +235,12 @@ class _MannequinPainter extends CustomPainter {
     );
     fill.color = primaryColour;
     canvas.drawRRect(body, fill);
+    _paintFabricLighting(
+      canvas,
+      size,
+      Path()..addRRect(body),
+      gloss: gloss,
+    );
     canvas.drawRRect(body, outline);
     _paintSleeves(canvas, size, fill, outline);
     canvas.drawLine(
@@ -213,6 +258,11 @@ class _MannequinPainter extends CustomPainter {
       Offset(size.width * 0.5, size.height * 0.25),
       accent,
     );
+    _paintSeamLine(
+      canvas,
+      Offset(size.width * 0.5, size.height * 0.24),
+      Offset(size.width * 0.5, size.height * 0.86),
+    );
   }
 
   void _paintAbaya(
@@ -221,6 +271,7 @@ class _MannequinPainter extends CustomPainter {
     Paint fill,
     Paint accent,
     Paint outline,
+    double gloss,
   ) {
     fill.color = primaryColour;
     final path = Path()
@@ -230,6 +281,7 @@ class _MannequinPainter extends CustomPainter {
       ..lineTo(size.width * 0.17, size.height * 0.9)
       ..close();
     canvas.drawPath(path, fill);
+    _paintFabricLighting(canvas, size, path, gloss: gloss);
     canvas.drawPath(path, outline);
     _paintSleeves(canvas, size, fill, outline);
     canvas.drawLine(
@@ -250,6 +302,7 @@ class _MannequinPainter extends CustomPainter {
     Paint fill,
     Paint accent,
     Paint outline,
+    double gloss,
   ) {
     fill.color = primaryColour.withValues(alpha: 0.6);
     final cloak = Path()
@@ -259,6 +312,7 @@ class _MannequinPainter extends CustomPainter {
       ..lineTo(size.width * 0.14, size.height * 0.88)
       ..close();
     canvas.drawPath(cloak, fill);
+    _paintFabricLighting(canvas, size, cloak, gloss: gloss * 0.8);
     canvas.drawPath(cloak, outline);
     for (var i = 0; i < 7; i++) {
       final y = size.height * (0.28 + i * 0.08);
@@ -276,6 +330,7 @@ class _MannequinPainter extends CustomPainter {
     Paint fill,
     Paint accent,
     Paint outline,
+    double gloss,
   ) {
     fill.color = primaryColour;
     final body = RRect.fromRectAndRadius(
@@ -288,6 +343,12 @@ class _MannequinPainter extends CustomPainter {
       const Radius.circular(16),
     );
     canvas.drawRRect(body, fill);
+    _paintFabricLighting(
+      canvas,
+      size,
+      Path()..addRRect(body),
+      gloss: gloss,
+    );
     canvas.drawRRect(body, outline);
     _paintSleeves(canvas, size, fill, outline, lower: 0.62);
     canvas.drawArc(
@@ -309,6 +370,7 @@ class _MannequinPainter extends CustomPainter {
     Paint fill,
     Paint accent,
     Paint outline,
+    double gloss,
   ) {
     fill.color = primaryColour;
     final jacket = RRect.fromRectAndRadius(
@@ -321,6 +383,12 @@ class _MannequinPainter extends CustomPainter {
       const Radius.circular(14),
     );
     canvas.drawRRect(jacket, fill);
+    _paintFabricLighting(
+      canvas,
+      size,
+      Path()..addRRect(jacket),
+      gloss: gloss,
+    );
     canvas.drawRRect(jacket, outline);
     _paintSleeves(canvas, size, fill, outline, lower: 0.62);
     final tie = Path()
@@ -388,15 +456,72 @@ class _MannequinPainter extends CustomPainter {
     );
     canvas.drawRRect(leftSleeve, fill);
     canvas.drawRRect(rightSleeve, fill);
+    _paintFabricLighting(
+      canvas,
+      size,
+      Path()
+        ..addRRect(leftSleeve)
+        ..addRRect(rightSleeve),
+      gloss: 0.10,
+    );
     canvas.drawRRect(leftSleeve, outline);
     canvas.drawRRect(rightSleeve, outline);
+  }
+
+  void _paintFabricLighting(
+    Canvas canvas,
+    Size size,
+    Path clipPath, {
+    required double gloss,
+  }) {
+    // Cheap "material" depth: multiply shadow + subtle highlight stripe.
+    final bounds = clipPath.getBounds();
+    canvas.save();
+    canvas.clipPath(clipPath);
+
+    final shadowPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          Colors.black.withValues(alpha: 0.00),
+          Colors.black.withValues(alpha: 0.10 + gloss),
+        ],
+      ).createShader(bounds)
+      ..blendMode = BlendMode.multiply;
+    canvas.drawRect(bounds, shadowPaint);
+
+    final highlightPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.centerLeft,
+        end: Alignment.centerRight,
+        colors: [
+          Colors.white.withValues(alpha: 0.00),
+          Colors.white.withValues(alpha: gloss),
+          Colors.white.withValues(alpha: 0.00),
+        ],
+        stops: const [0.25, 0.5, 0.75],
+      ).createShader(bounds)
+      ..blendMode = BlendMode.screen;
+    canvas.drawRect(bounds, highlightPaint);
+
+    canvas.restore();
+  }
+
+  void _paintSeamLine(Canvas canvas, Offset a, Offset b) {
+    final seam = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1
+      ..color = Colors.black.withValues(alpha: 0.10);
+    canvas.drawLine(a, b, seam);
   }
 
   @override
   bool shouldRepaint(covariant _MannequinPainter oldDelegate) {
     return oldDelegate.garmentType != garmentType ||
         oldDelegate.primaryColour != primaryColour ||
-        oldDelegate.accentColour != accentColour;
+        oldDelegate.accentColour != accentColour ||
+        oldDelegate.fabricProfile != fabricProfile;
   }
 }
 
@@ -420,6 +545,7 @@ class MiniMannequin extends StatelessWidget {
           garmentType: 'thobe',
           primaryColour: primaryColour,
           accentColour: accentColour,
+          fabricProfile: 'standard',
         ),
       ),
     );
@@ -448,11 +574,17 @@ class _PrintOverlay extends StatelessWidget {
     required this.path,
     required this.placement,
     required this.scalePercent,
+    required this.offsetX,
+    required this.offsetY,
+    this.onDragUpdate,
   });
 
   final String path;
   final PrintPlacement placement;
   final double scalePercent;
+  final double offsetX;
+  final double offsetY;
+  final ValueChanged<Offset>? onDragUpdate;
 
   @override
   Widget build(BuildContext context) {
@@ -468,15 +600,31 @@ class _PrintOverlay extends StatelessWidget {
     return Align(
       alignment: alignment,
       child: Padding(
-        padding: EdgeInsets.only(top: placement == PrintPlacement.chest ? 90 : 120),
-        child: Opacity(
-          opacity: 0.9,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: _AdaptiveImage(
-              path: path,
-              width: size,
-              height: size,
+        padding: EdgeInsets.only(
+          top: (placement == PrintPlacement.chest ? 90 : 120) + offsetY,
+        ),
+        child: GestureDetector(
+          onPanUpdate:
+              onDragUpdate == null ? null : (details) => onDragUpdate!(details.delta),
+          child: Transform.translate(
+            offset: Offset(offsetX, 0),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: ColorFiltered(
+                // Slight modulate helps the print feel like it sits on fabric.
+                colorFilter: ColorFilter.mode(
+                  Colors.white.withValues(alpha: 0.92),
+                  BlendMode.modulate,
+                ),
+                child: Opacity(
+                  opacity: 0.88,
+                  child: _AdaptiveImage(
+                    path: path,
+                    width: size,
+                    height: size,
+                  ),
+                ),
+              ),
             ),
           ),
         ),
@@ -500,12 +648,12 @@ class _AdaptiveImage extends StatelessWidget {
   Widget build(BuildContext context) {
     final isRemote = path.startsWith('http://') || path.startsWith('https://');
     if (isRemote) {
-      return Image.network(
-        path,
+      return CachedNetworkImage(
+        imageUrl: path,
         width: width,
         height: height,
         fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => _fallback(),
+        errorWidget: (_, __, ___) => _fallback(),
       );
     }
     return Image.file(

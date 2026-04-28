@@ -5,15 +5,18 @@ import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/router/role_routing.dart';
+import 'package:lolipants/core/utils/validators.dart';
 import 'package:lolipants/features/auth/providers/auth_providers.dart';
+import 'package:lolipants/features/auth/utils/auth_env.dart';
 import 'package:lolipants/features/auth/utils/auth_error_mapper.dart';
+import 'package:lolipants/features/auth/widgets/social_auth_row.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
 import 'package:lolipants/shared/widgets/error_banner.dart';
 import 'package:lolipants/shared/widgets/gold_divider.dart';
 import 'package:lolipants/shared/widgets/loading_overlay.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
 import 'package:lolipants/shared/widgets/lolipants_text_field.dart';
-import 'package:lolipants/core/utils/validators.dart';
 
 /// Email/password login.
 class LoginScreen extends ConsumerStatefulWidget {
@@ -54,6 +57,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (_emailError != null || _passwordError != null) {
       return;
     }
+    final envMsg = missingBetterAuthBaseUrlMessage();
+    if (envMsg != null) {
+      setState(() => _banner = envMsg);
+      return;
+    }
     setState(() => _loading = true);
     final result = await ref.read(authProvider.notifier).signInWithPassword(
           email: _email.text.trim(),
@@ -65,12 +73,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     setState(() => _loading = false);
     result.fold(
       (e) => setState(() => _banner = mapAuthExceptionToUserMessage(e)),
-      (_) => context.go('/home'),
+      (user) {
+        final returnTo = ref.read(pendingAuthReturnToProvider);
+        ref.read(pendingAuthReturnToProvider.notifier).state = null;
+        context.go(postAuthLocation(user, returnTo));
+      },
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final recoveryMessage = ref.watch(authRecoveryMessageProvider);
     return Scaffold(
       body: Stack(
         children: [
@@ -106,12 +119,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   const SizedBox(height: AppSpacing.md),
                   const GoldDivider(width: 40),
                   const SizedBox(height: AppSpacing.xl),
-                  if (_banner != null)
+                  if (recoveryMessage != null || _banner != null)
                     Padding(
                       padding: const EdgeInsets.only(bottom: AppSpacing.md),
                       child: ErrorBanner(
-                        message: _banner!,
-                        onDismiss: () => setState(() => _banner = null),
+                        message: recoveryMessage ?? _banner!,
+                        onDismiss: () {
+                          ref.read(authRecoveryMessageProvider.notifier).state =
+                              null;
+                          setState(() => _banner = null);
+                        },
                       ),
                     ),
                   LolipantsTextField(
@@ -147,6 +164,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     onPressed: _submit,
                     loading: _loading,
                   ),
+                  const SizedBox(height: AppSpacing.lg),
+                  const _OrDivider(),
+                  const SizedBox(height: AppSpacing.lg),
+                  SocialAuthRow(
+                    onError: (msg) => setState(() => _banner = msg),
+                  ),
                   const SizedBox(height: AppSpacing.xl),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -173,6 +196,27 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           LoadingOverlay(visible: _loading),
         ],
       ),
+    );
+  }
+}
+
+class _OrDivider extends StatelessWidget {
+  const _OrDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        const Expanded(child: Divider(color: AppColors.borderSubtle)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+          child: Text(
+            'or',
+            style: AppTextStyles.bodySmall.copyWith(color: AppColors.fog),
+          ),
+        ),
+        const Expanded(child: Divider(color: AppColors.borderSubtle)),
+      ],
     );
   }
 }

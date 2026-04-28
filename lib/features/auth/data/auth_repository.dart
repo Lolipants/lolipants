@@ -1,11 +1,21 @@
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:lolipants/core/errors/app_exception.dart';
 import 'package:lolipants/core/network/api_endpoints.dart';
 import 'package:lolipants/features/auth/data/auth_local_storage.dart';
 import 'package:lolipants/features/auth/models/user.dart';
+
+/// Custom URL scheme used as the OAuth redirect target. Matches the intent
+/// filter on Android and the CFBundleURLTypes entry on iOS.
+const String kAuthCallbackScheme = 'lolipants';
+const String kAuthCallbackUrl = '$kAuthCallbackScheme://auth/callback';
+
+/// Social identity providers wired up in better-auth.
+enum SocialProvider { google, apple }
 
 /// Better Auth REST client returning [Either] for all operations.
 class AuthRepository {
@@ -56,6 +66,44 @@ class AuthRepository {
     }
   }
 
+  /// Deletes the current user on better-auth and clears local credentials.
+  Future<Either<AppException, void>> deleteAccount() async {
+    try {
+      await _dio.post<void>(ApiEndpoints.authDeleteAccount, data: const {});
+    } on DioException catch (e) {
+      if ((e.response?.statusCode ?? 0) >= 500) {
+        return left(_mapDio(e));
+      }
+    } on Exception {
+      // Swallow transport errors; session is cleared below regardless.
+    }
+    await _storage.clearAll();
+    return right(null);
+  }
+
+  /// Patches the current user's display name via better-auth.
+  Future<Either<AppException, User>> updateProfile({
+    required String name,
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        ApiEndpoints.authUpdateUser,
+        data: {'name': name},
+      );
+      final user = _parseUser(response.data);
+      if (user != null) {
+        final merged = await _tryMergeAppProfile(user);
+        await _storage.writeUserJson(merged.toJsonString());
+        return right(merged);
+      }
+      return left(const UnknownException());
+    } on DioException catch (e) {
+      return left(_mapDio(e));
+    } on Exception {
+      return left(const UnknownException());
+    }
+  }
+
   /// Ends the session on the server and clears local credentials.
   Future<Either<AppException, void>> signOut() async {
     try {
@@ -69,21 +117,13 @@ class AuthRepository {
     return right(null);
   }
 
-  /// Validates the stored token with the server when possible.
+  /// Loads the current user, preferring a live [ApiEndpoints.authGetSession] call
+  /// so [User.role] matches the server (e.g. after promotion). Uses cached user
+  /// only when the token exists and the request fails with a transport-style error.
   Future<Either<AppException, User?>> getSession() async {
     final token = await _storage.readSessionToken();
     if (token == null || token.isEmpty) {
       return right(null);
-    }
-    final cached = await _storage.readUserJson();
-    if (cached != null && cached.isNotEmpty) {
-      try {
-        final map = jsonDecode(cached) as Map<String, dynamic>;
-        return right(User.fromJson(map));
-      } on Exception {
-        await _storage.clearAll();
-        return right(null);
-      }
     }
     try {
       final response = await _dio.get<Map<String, dynamic>>(
@@ -91,18 +131,179 @@ class AuthRepository {
       );
       final user = _parseUser(response.data);
       if (user != null) {
-        await _storage.writeUserJson(user.toJsonString());
-        return right(user);
+        final merged = await _tryMergeAppProfile(user);
+        await _storage.writeUserJson(merged.toJsonString());
+        return right(merged);
       }
       await _storage.clearAll();
       return right(null);
     } on DioException catch (e) {
       if (e.response?.statusCode == 401) {
         await _storage.clearAll();
+        return left(_mapDio(e));
+      }
+      if (_dioErrorAllowsStaleCache(e)) {
+        final cached = await _storage.readUserJson();
+        if (cached != null && cached.isNotEmpty) {
+          try {
+            final map = jsonDecode(cached) as Map<String, dynamic>;
+            return right(User.fromJson(map));
+          } on Exception {
+            await _storage.clearAll();
+            return left(_mapDio(e));
+          }
+        }
       }
       return left(_mapDio(e));
     } on Exception {
       return left(const UnknownException());
+    }
+  }
+
+  static bool _dioErrorAllowsStaleCache(DioException e) {
+    return e.type == DioExceptionType.connectionError ||
+        e.type == DioExceptionType.connectionTimeout ||
+        e.type == DioExceptionType.receiveTimeout ||
+        e.type == DioExceptionType.sendTimeout;
+  }
+
+  /// [lolipants-api] D1 row wins over Better Auth for RBAC. Call after session parse.
+  Future<User> _tryMergeAppProfile(User authUser) async {
+    final base = dotenv.env['API_BASE_URL']?.trim() ?? '';
+    if (base.isEmpty) {
+      return authUser;
+    }
+    final token = await _storage.readSessionToken();
+    if (token == null || token.isEmpty) {
+      return authUser;
+    }
+    try {
+      final d = Dio(
+        BaseOptions(
+          baseUrl: base,
+          connectTimeout: const Duration(seconds: 10),
+          receiveTimeout: const Duration(seconds: 15),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+        ),
+      );
+      final res = await d.get<Map<String, dynamic>>('${ApiEndpoints.users}/me');
+      final data = res.data;
+      if (data == null) {
+        return authUser;
+      }
+      return authUser.copyWithAppMe(data);
+    } on DioException {
+      return authUser;
+    } on Exception {
+      return authUser;
+    }
+  }
+
+  /// Starts the OAuth flow for [provider] by asking better-auth for the
+  /// provider-hosted authorize URL, opens it in a native web-auth session,
+  /// then persists the bearer token that better-auth returns on the
+  /// `lolipants://auth/callback` redirect.
+  Future<Either<AppException, User>> signInWithSocial(
+    SocialProvider provider,
+  ) async {
+    try {
+      final providerPath = switch (provider) {
+        SocialProvider.google => ApiEndpoints.authSignInGoogle,
+        SocialProvider.apple => ApiEndpoints.authSignInApple,
+      };
+      final response = await _dio.post<Map<String, dynamic>>(
+        providerPath,
+        data: {
+          'provider': switch (provider) {
+            SocialProvider.google => 'google',
+            SocialProvider.apple => 'apple',
+          },
+          'callbackURL': kAuthCallbackUrl,
+        },
+      );
+      final authorizeUrl = response.data?['url']?.toString() ??
+          response.data?['redirect']?.toString() ??
+          '';
+      if (authorizeUrl.isEmpty) {
+        return left(const AuthException('missing_authorize_url'));
+      }
+      final callback = await FlutterWebAuth2.authenticate(
+        url: authorizeUrl,
+        callbackUrlScheme: kAuthCallbackScheme,
+      );
+      final uri = Uri.parse(callback);
+      final token = uri.queryParameters['token'] ??
+          uri.queryParameters['sessionToken'] ??
+          uri.queryParameters['session_token'];
+      if (token == null || token.isEmpty) {
+        return left(const AuthException('missing_session_token'));
+      }
+      await _storage.writeSessionToken(token);
+      final sessionUser = await _fetchAndCacheSession();
+      if (sessionUser == null) {
+        await _storage.clearAll();
+        return left(const AuthException('invalid_session'));
+      }
+      final merged = await _tryMergeAppProfile(sessionUser);
+      await _storage.writeUserJson(merged.toJsonString());
+      return right(merged);
+    } on DioException catch (e) {
+      return left(_mapDio(e));
+    } on Exception {
+      return left(const UnknownException());
+    }
+  }
+
+  /// Asks better-auth to email a 6-digit OTP to [email].
+  Future<Either<AppException, Unit>> sendEmailOtp(String email) async {
+    try {
+      await _dio.post<Map<String, dynamic>>(
+        ApiEndpoints.authSendOtp,
+        data: {'email': email, 'type': 'sign-in'},
+      );
+      return right(unit);
+    } on DioException catch (e) {
+      return left(_mapDio(e));
+    } on Exception {
+      return left(const UnknownException());
+    }
+  }
+
+  /// Exchanges an emailed OTP for a session.
+  Future<Either<AppException, User>> verifyEmailOtp({
+    required String email,
+    required String otp,
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        ApiEndpoints.authSignInOtp,
+        data: {'email': email, 'otp': otp},
+      );
+      return _persistSessionFromResponse(response.data);
+    } on DioException catch (e) {
+      return left(_mapDio(e));
+    } on Exception {
+      return left(const UnknownException());
+    }
+  }
+
+  Future<User?> _fetchAndCacheSession() async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        ApiEndpoints.authGetSession,
+      );
+      final user = _parseUser(response.data);
+      if (user != null) {
+        await _storage.writeUserJson(user.toJsonString());
+      }
+      return user;
+    } on DioException {
+      return null;
+    } on Exception {
+      return null;
     }
   }
 
@@ -131,8 +332,9 @@ class AuthRepository {
     }
     try {
       await _storage.writeSessionToken(token);
-      await _storage.writeUserJson(user.toJsonString());
-      return right(user);
+      final merged = await _tryMergeAppProfile(user);
+      await _storage.writeUserJson(merged.toJsonString());
+      return right(merged);
     } on Exception {
       return left(const UnknownException());
     }
@@ -173,24 +375,67 @@ class AuthRepository {
   AppException _mapDio(DioException e) {
     final status = e.response?.statusCode ?? 0;
     final body = e.response?.data;
-    var message = e.message ?? 'network';
-    if (body is Map && body['message'] != null) {
-      message = body['message'].toString();
-    }
+
     if (e.type == DioExceptionType.connectionTimeout ||
-        e.type == DioExceptionType.receiveTimeout ||
-        e.type == DioExceptionType.connectionError) {
-      return NetworkException(message);
+        e.type == DioExceptionType.sendTimeout ||
+        e.type == DioExceptionType.receiveTimeout) {
+      return const NetworkException('timeout');
+    }
+    if (e.type == DioExceptionType.connectionError) {
+      return const NetworkException('unreachable');
+    }
+    if (e.type == DioExceptionType.cancel) {
+      return const UnknownException();
+    }
+
+    final parsed = _parseApiErrorMessage(body);
+
+    if (status >= 500) {
+      return ServerException(status, parsed ?? '');
     }
     if (status == 401 || status == 403) {
-      return AuthException(message);
-    }
-    if (status >= 500) {
-      return ServerException(status, message);
+      return AuthException(
+        parsed ?? (status == 401 ? 'invalid_credentials' : 'forbidden'),
+      );
     }
     if (status >= 400) {
-      return AuthException(message);
+      return AuthException(parsed ?? 'request_failed');
     }
-    return NetworkException(message);
+    if (status == 0) {
+      return const NetworkException('unreachable');
+    }
+
+    final raw = e.message ?? '';
+    if (_looksLikeRawDioError(raw)) {
+      return const NetworkException('unreachable');
+    }
+    return NetworkException(raw.isEmpty ? 'unreachable' : raw);
+  }
+
+  /// Short, safe message from JSON body (never Dio's internal error text).
+  String? _parseApiErrorMessage(dynamic body) {
+    if (body is! Map) {
+      return null;
+    }
+    final dynamic m = body['message'] ?? body['error'];
+    if (m is! String || m.isEmpty) {
+      return null;
+    }
+    if (m.length > 200) {
+      return null;
+    }
+    if (_looksLikeRawDioError(m)) {
+      return null;
+    }
+    return m;
+  }
+
+  bool _looksLikeRawDioError(String s) {
+    final lower = s.toLowerCase();
+    return lower.contains('dioexception') ||
+        lower.contains('validatestatus') ||
+        lower.contains('status code of') ||
+        lower.contains('requestoptions') ||
+        lower.contains('xmlhttprequest');
   }
 }

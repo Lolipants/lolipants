@@ -5,14 +5,15 @@ import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/utils/validators.dart';
 import 'package:lolipants/features/auth/providers/auth_providers.dart';
+import 'package:lolipants/features/auth/utils/auth_env.dart';
 import 'package:lolipants/features/auth/utils/auth_error_mapper.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
 import 'package:lolipants/shared/widgets/error_banner.dart';
 import 'package:lolipants/shared/widgets/loading_overlay.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
 import 'package:lolipants/shared/widgets/lolipants_text_field.dart';
-import 'package:lolipants/core/utils/validators.dart';
 
 /// Password reset request screen.
 class ForgotPasswordScreen extends ConsumerStatefulWidget {
@@ -48,6 +49,11 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
       };
     });
     if (_emailError != null) {
+      return;
+    }
+    final envMsg = missingBetterAuthBaseUrlMessage();
+    if (envMsg != null) {
+      setState(() => _banner = envMsg);
       return;
     }
     setState(() => _loading = true);

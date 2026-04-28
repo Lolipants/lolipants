@@ -10,7 +10,10 @@ class DioClient {
   DioClient._();
 
   /// Creates a [Dio] with timeouts, JSON headers, and interceptors.
-  static Dio create() {
+  static Dio create({
+    Future<String?> Function()? readSessionToken,
+    Future<void> Function()? onUnauthorized,
+  }) {
     final baseUrl = dotenv.env['API_BASE_URL'] ?? '';
     final dio = Dio(
       BaseOptions(
@@ -21,7 +24,12 @@ class DioClient {
       ),
     );
 
-    dio.interceptors.add(AuthInterceptor());
+    dio.interceptors.add(
+      AuthInterceptor(
+        readSessionToken: readSessionToken,
+        onUnauthorized: onUnauthorized,
+      ),
+    );
     if (kDebugMode) {
       dio.interceptors.add(
         LogInterceptor(
@@ -38,19 +46,46 @@ class DioClient {
 }
 
 /// Attaches the Better Auth session bearer token when present.
-///
-/// Phase 2 will read the token from secure storage.
 class AuthInterceptor extends Interceptor {
+  /// Creates an auth interceptor for token attach and 401 handling.
+  AuthInterceptor({
+    this.readSessionToken,
+    this.onUnauthorized,
+  });
+
+  /// Token reader invoked before every request.
+  final Future<String?> Function()? readSessionToken;
+
+  /// Callback invoked once when a 401 response is received.
+  final Future<void> Function()? onUnauthorized;
+  bool _isHandlingUnauthorized = false;
+
   @override
-  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
-    // Token wiring is implemented in Phase 2.
+  Future<void> onRequest(
+    RequestOptions options,
+    RequestInterceptorHandler handler,
+  ) async {
+    final token = await readSessionToken?.call();
+    if (token != null && token.isNotEmpty) {
+      options.headers['Authorization'] = 'Bearer $token';
+    }
     handler.next(options);
   }
 
   @override
-  void onError(DioException err, ErrorInterceptorHandler handler) {
+  Future<void> onError(
+    DioException err,
+    ErrorInterceptorHandler handler,
+  ) async {
     if (err.response?.statusCode == 401) {
-      // Phase 2: clear token and redirect to /login.
+      if (!_isHandlingUnauthorized) {
+        _isHandlingUnauthorized = true;
+        try {
+          await onUnauthorized?.call();
+        } finally {
+          _isHandlingUnauthorized = false;
+        }
+      }
     }
     handler.next(err);
   }

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/features/editor/models/garment_design.dart';
 import 'package:lolipants/features/editor/providers/designs_providers.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
 import 'package:lolipants/shared/widgets/loading_overlay.dart';
@@ -12,7 +14,6 @@ import 'package:lolipants/shared/widgets/lolipants_text_field.dart';
 
 /// Lists saved user designs from the backend.
 class MyDesignsScreen extends ConsumerStatefulWidget {
-  /// Creates my-designs screen.
   const MyDesignsScreen({super.key});
 
   @override
@@ -25,14 +26,14 @@ class _MyDesignsScreenState extends ConsumerState<MyDesignsScreen> {
   @override
   Widget build(BuildContext context) {
     final designsState = ref.watch(myDesignsProvider);
-    final designs = designsState.valueOrNull ?? const [];
+    final designs = designsState.valueOrNull ?? const <GarmentDesign>[];
 
     return Scaffold(
       appBar: AppBar(title: const Text(AppStrings.myDesigns)),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _isCreating ? null : () => _openCreateDesignSheet(context),
-        icon: const Icon(Icons.add),
-        label: const Text('Save draft'),
+        icon: const Icon(Icons.add_circle_outline),
+        label: const Text('New design'),
       ),
       body: Stack(
         children: [
@@ -47,7 +48,14 @@ class _MyDesignsScreenState extends ConsumerState<MyDesignsScreen> {
                     ],
                   )
                 : GridView.builder(
-                    padding: const EdgeInsets.all(AppSpacing.xl),
+                    // Bottom padding reserves space for the extended FAB so
+                    // the last row is not hidden behind it.
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.xl,
+                      AppSpacing.xl,
+                      AppSpacing.xl,
+                      96,
+                    ),
                     itemCount: designs.length,
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
@@ -58,43 +66,10 @@ class _MyDesignsScreenState extends ConsumerState<MyDesignsScreen> {
                     ),
                     itemBuilder: (context, index) {
                       final design = designs[index];
-                      return Container(
-                        padding: const EdgeInsets.all(AppSpacing.sm),
-                        decoration: BoxDecoration(
-                          color: AppColors.stone,
-                          borderRadius: BorderRadius.circular(AppRadius.md),
-                          border: Border.all(color: AppColors.borderSubtle),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: AppColors.ember,
-                                  borderRadius:
-                                      BorderRadius.circular(AppRadius.sm),
-                                ),
-                                alignment: Alignment.center,
-                                child: const Icon(
-                                  Icons.design_services_outlined,
-                                  color: AppColors.gold,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: AppSpacing.sm),
-                            Text(
-                              design.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppTextStyles.titleSmall,
-                            ),
-                            Text(
-                              design.garmentType,
-                              style: AppTextStyles.bodySmall,
-                            ),
-                          ],
-                        ),
+                      return _DesignTile(
+                        design: design,
+                        onTap: () => _openDesign(design),
+                        onLongPress: () => _confirmDelete(design),
                       );
                     },
                   ),
@@ -102,6 +77,54 @@ class _MyDesignsScreenState extends ConsumerState<MyDesignsScreen> {
           LoadingOverlay(visible: designsState.isLoading && designs.isNotEmpty),
         ],
       ),
+    );
+  }
+
+  void _openDesign(GarmentDesign design) {
+    context.push('/editor', extra: design);
+  }
+
+  Future<void> _confirmDelete(GarmentDesign design) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Delete design?'),
+          content: Text(
+            'This will permanently delete "${design.name}". This cannot be undone.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+    if (confirmed != true) return;
+    if (!mounted) return;
+    final repo = ref.read(designsRepositoryProvider);
+    final result = await repo.deleteDesign(design.id);
+    if (!mounted) return;
+    result.fold(
+      (error) => ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            designErrorMessage(error, fallback: 'Could not delete design.'),
+          ),
+        ),
+      ),
+      (_) {
+        ref.read(myDesignsProvider.notifier).reload();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Design deleted')),
+        );
+      },
     );
   }
 
@@ -126,7 +149,7 @@ class _MyDesignsScreenState extends ConsumerState<MyDesignsScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Save design draft', style: AppTextStyles.titleMedium),
+              Text('New design draft', style: AppTextStyles.titleMedium),
               const SizedBox(height: AppSpacing.md),
               LolipantsTextField(
                 label: 'Design name',
@@ -144,7 +167,7 @@ class _MyDesignsScreenState extends ConsumerState<MyDesignsScreen> {
               ),
               const SizedBox(height: AppSpacing.md),
               LolipantsButton(
-                label: 'Save',
+                label: 'Create',
                 loading: _isCreating,
                 onPressed: () async {
                   final name = nameController.text.trim();
@@ -208,6 +231,68 @@ class _MyDesignsScreenState extends ConsumerState<MyDesignsScreen> {
           const SnackBar(content: Text('Design draft saved')),
         );
       },
+    );
+  }
+}
+
+class _DesignTile extends StatelessWidget {
+  const _DesignTile({
+    required this.design,
+    required this.onTap,
+    required this.onLongPress,
+  });
+
+  final GarmentDesign design;
+  final VoidCallback onTap;
+  final VoidCallback onLongPress;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        onLongPress: onLongPress,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        child: Ink(
+          padding: const EdgeInsets.all(AppSpacing.sm),
+          decoration: BoxDecoration(
+            color: AppColors.stone,
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            border: Border.all(color: AppColors.borderSubtle),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: AppColors.ember,
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
+                  ),
+                  child: const Center(
+                    child: Icon(
+                      Icons.design_services_outlined,
+                      color: AppColors.gold,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                design.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.titleSmall,
+              ),
+              Text(
+                design.garmentType,
+                style: AppTextStyles.bodySmall,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

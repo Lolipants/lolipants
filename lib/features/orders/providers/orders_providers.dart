@@ -1,14 +1,34 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:lolipants/core/errors/app_exception.dart';
 import 'package:lolipants/core/errors/app_exception_message_mapper.dart';
 import 'package:lolipants/core/network/dio_client.dart';
+import 'package:lolipants/core/router/app_router.dart';
 import 'package:lolipants/features/auth/providers/auth_providers.dart';
 import 'package:lolipants/features/orders/data/orders_repository.dart';
+import 'package:lolipants/features/orders/data/payments_repository.dart';
 import 'package:lolipants/features/orders/models/order.dart';
 
 /// Shared app API dio instance.
-final apiDioProvider = Provider<Dio>((ref) => DioClient.create());
+final apiDioProvider = Provider<Dio>((ref) {
+  final storage = ref.watch(authLocalStorageProvider);
+  return DioClient.create(
+    readSessionToken: storage.readSessionToken,
+    onUnauthorized: () async {
+      final context = rootNavigatorKey.currentContext;
+      final location = context == null ? null : GoRouterState.of(context).uri.toString();
+      await ref
+          .read(authProvider.notifier)
+          .handleUnauthorized(returnTo: location);
+      if (context != null && context.mounted) {
+        context.go('/login');
+      }
+    },
+  );
+});
 
 /// Orders repository wired to API dio + secure token storage.
 final ordersRepositoryProvider = Provider<OrdersRepository>(
@@ -17,6 +37,45 @@ final ordersRepositoryProvider = Provider<OrdersRepository>(
     storage: ref.watch(authLocalStorageProvider),
   ),
 );
+
+/// Payments repository shares the same Dio + secure storage.
+final paymentsRepositoryProvider = Provider<PaymentsRepository>(
+  (ref) => PaymentsRepository(
+    dio: ref.watch(apiDioProvider),
+    storage: ref.watch(authLocalStorageProvider),
+  ),
+);
+
+/// Polling interval for [watchOrderProvider]. Exposed for tests to override.
+final orderPollingIntervalProvider = Provider<Duration>(
+  (ref) => const Duration(seconds: 60),
+);
+
+/// Live order stream that refetches every [orderPollingIntervalProvider]
+/// while any listener is active. Cancels the timer on dispose.
+final watchOrderProvider =
+    StreamProvider.autoDispose.family<Order, String>((ref, orderId) {
+  final controller = StreamController<Order>();
+  final interval = ref.watch(orderPollingIntervalProvider);
+
+  Future<void> fetch() async {
+    final repo = ref.read(ordersRepositoryProvider);
+    final result = await repo.getOrderById(orderId);
+    if (controller.isClosed) return;
+    result.fold(
+      (e) => controller.addError(OrdersProviderException(e)),
+      controller.add,
+    );
+  }
+
+  fetch();
+  final timer = Timer.periodic(interval, (_) => fetch());
+  ref.onDispose(() {
+    timer.cancel();
+    controller.close();
+  });
+  return controller.stream;
+});
 
 /// Orders list state source for the orders screen.
 final myOrdersProvider =

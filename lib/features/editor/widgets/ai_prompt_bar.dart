@@ -102,7 +102,7 @@ class _AiPromptBarState extends ConsumerState<AiPromptBar> {
               children: _quickPrompts
                   .map(
                     (prompt) => Padding(
-                      padding: const EdgeInsets.only(right: AppSpacing.xs),
+                      padding: const EdgeInsetsDirectional.only(end: AppSpacing.xs),
                       child: ActionChip(
                         label: Text(prompt),
                         onPressed: () => _promptController.text = prompt,

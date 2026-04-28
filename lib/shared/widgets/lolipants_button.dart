@@ -84,13 +84,17 @@ class LolipantsButton extends StatelessWidget {
         );
     }
 
-    if (!fullWidth) {
-      return materialButton;
-    }
-
-    return SizedBox(
-      width: double.infinity,
-      child: materialButton,
+    final wrapped = fullWidth
+        ? SizedBox(
+            width: double.infinity,
+            child: materialButton,
+          )
+        : materialButton;
+    return Semantics(
+      label: label,
+      button: true,
+      enabled: effectiveOnPressed != null,
+      child: wrapped,
     );
   }
 

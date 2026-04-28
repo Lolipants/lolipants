@@ -11,8 +11,15 @@ database_id = "6114c978-2a5a-4be1-b7f8-f440d6951634"
 [vars]
 # For production, set this to your deployed worker origin.
 BETTER_AUTH_URL = "https://lolipants-better-auth.lolipants.workers.dev"
-# Comma-separated list of origins allowed to call Better Auth.
-TRUSTED_ORIGINS = "https://lolipants-better-auth.lolipants.workers.dev,http://localhost:3000"
+# Comma-separated list of origins allowed to call Better Auth. Includes the
+# mobile custom scheme `lolipants://auth` used as the OAuth callback target.
+TRUSTED_ORIGINS = "https://lolipants-better-auth.lolipants.workers.dev,http://localhost:3000,lolipants://auth"
 AWS_SES_REGION = "us-east-1"
 APP_NAME = "LOLIPANTS"
 RESET_FROM_EMAIL = "LOLIPANTS <no-reply@lolipants.com>"
+# Social login credentials are provided via `wrangler secret put`:
+#   GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
+#   APPLE_CLIENT_ID, APPLE_TEAM_ID, APPLE_KEY_ID, APPLE_PRIVATE_KEY
+# Shared HMAC secret used by lolipants-api admin routes to sync role/scope
+# changes via POST /internal/user/:id/role:
+#   INTERNAL_SYNC_SECRET

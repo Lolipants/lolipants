@@ -13,19 +13,37 @@ class ImagePrintPanel extends StatelessWidget {
   const ImagePrintPanel({
     required this.imagePath,
     required this.placement,
+    required this.offsetX,
+    required this.offsetY,
     required this.scale,
     required this.onImageSelected,
     required this.onPlacementChanged,
+    required this.onOffsetXChanged,
+    required this.onOffsetYChanged,
     required this.onScaleChanged,
+    this.offsetXRange = 60,
+    this.offsetYRange = 80,
+    this.minScale = 20,
+    this.maxScale = 80,
+    required this.onApply,
     super.key,
   });
 
   final String? imagePath;
   final PrintPlacement placement;
+  final double offsetX;
+  final double offsetY;
   final double scale;
   final ValueChanged<String?> onImageSelected;
   final ValueChanged<PrintPlacement> onPlacementChanged;
+  final ValueChanged<double> onOffsetXChanged;
+  final ValueChanged<double> onOffsetYChanged;
   final ValueChanged<double> onScaleChanged;
+  final double offsetXRange;
+  final double offsetYRange;
+  final double minScale;
+  final double maxScale;
+  final VoidCallback onApply;
 
   @override
   Widget build(BuildContext context) {
@@ -41,7 +59,10 @@ class ImagePrintPanel extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('Print on garment / طباعة على الملبس', style: AppTextStyles.titleMedium),
+          Text(
+            'Print on garment / طباعة على الملبس',
+            style: AppTextStyles.titleMedium,
+          ),
           const SizedBox(height: AppSpacing.sm),
           GestureDetector(
             onTap: () => _pickImage(context),
@@ -95,20 +116,35 @@ class ImagePrintPanel extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
+          Text('Horizontal offset ${offsetX.toStringAsFixed(0)}px'),
+          Slider(
+            value: offsetX.clamp(-offsetXRange, offsetXRange),
+            min: -offsetXRange,
+            max: offsetXRange,
+            divisions: 24,
+            onChanged: onOffsetXChanged,
+          ),
+          Text('Vertical offset ${offsetY.toStringAsFixed(0)}px'),
+          Slider(
+            value: offsetY.clamp(-offsetYRange, offsetYRange),
+            min: -offsetYRange,
+            max: offsetYRange,
+            divisions: 32,
+            onChanged: onOffsetYChanged,
+          ),
+          const SizedBox(height: AppSpacing.xs),
           Text('Size ${scale.toStringAsFixed(0)}%'),
           Slider(
-            value: scale.clamp(20, 80),
-            min: 20,
-            max: 80,
+            value: scale.clamp(minScale, maxScale),
+            min: minScale,
+            max: maxScale,
             divisions: 12,
             onChanged: onScaleChanged,
           ),
           const SizedBox(height: AppSpacing.sm),
           LolipantsButton(
             label: 'Apply to design',
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
+            onPressed: onApply,
           ),
         ],
       ),

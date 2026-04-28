@@ -28,6 +28,19 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>Camera access is needed for AI measurement estimation.</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.lolipants.auth</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>lolipants</string>
+			</array>
+		</dict>
+	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

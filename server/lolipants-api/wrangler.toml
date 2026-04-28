@@ -19,3 +19,6 @@ service = "lolipants-better-auth"
 [vars]
 ENVIRONMENT = "development"
 BETTER_AUTH_BASE_URL = "https://lolipants-better-auth.lolipants.workers.dev"
+# Shared HMAC secrets set via `wrangler secret put`:
+#   ADMIN_HMAC_SECRET     - signs external /admin/commissions/:id calls
+#   INTERNAL_SYNC_SECRET  - signs /internal/user/:id/role sync calls to the better-auth worker

@@ -25,6 +25,7 @@ class TextToolPanel extends StatefulWidget {
     String? fontFamily,
     double? fontSize,
     Color? colour,
+    double? rotation,
   }) onUpdateSelected;
   final VoidCallback onRemoveSelected;
 
@@ -110,7 +111,7 @@ class _TextToolPanelState extends State<TextToolPanel> {
             children: [
               for (final font in _fonts)
                 Padding(
-                  padding: const EdgeInsets.only(right: AppSpacing.xs),
+                  padding: const EdgeInsetsDirectional.only(end: AppSpacing.xs),
                   child: ChoiceChip(
                     label: Text(font, style: TextStyle(fontFamily: font)),
                     selected: selected?.fontFamily == font,
@@ -132,6 +133,17 @@ class _TextToolPanelState extends State<TextToolPanel> {
           onChanged: selected == null
               ? null
               : (value) => widget.onUpdateSelected(fontSize: value),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Text('Rotation ${(selected?.rotation ?? 0).toStringAsFixed(2)} rad'),
+        Slider(
+          value: (selected?.rotation ?? 0).clamp(-3.14, 3.14),
+          min: -3.14,
+          max: 3.14,
+          divisions: 64,
+          onChanged: selected == null
+              ? null
+              : (value) => widget.onUpdateSelected(rotation: value),
         ),
         const SizedBox(height: AppSpacing.sm),
         Wrap(

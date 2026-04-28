@@ -24,7 +24,7 @@ class OrderDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final orderState = ref.watch(orderByIdProvider(orderId));
+    final orderState = ref.watch(watchOrderProvider(orderId));
     if (orderState.hasError) {
       return Scaffold(
         appBar: AppBar(title: const Text(AppStrings.myOrders)),
@@ -56,9 +56,13 @@ class OrderDetailScreen extends ConsumerWidget {
                       onPressed: () => context.pop(),
                       icon: const Icon(Icons.chevron_left),
                     ),
-                    Text(
-                      '${AppStrings.orderPrefix}$orderId',
-                      style: AppTextStyles.titleLarge,
+                    Expanded(
+                      child: Text(
+                        '${AppStrings.orderPrefix}$orderId',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.titleLarge,
+                      ),
                     ),
                   ],
                 ),
@@ -110,6 +114,7 @@ class OrderDetailScreen extends ConsumerWidget {
 
     try {
       await ref.read(myOrdersProvider.notifier).cancel(orderId);
+      ref.invalidate(watchOrderProvider(orderId));
       ref.invalidate(orderByIdProvider(orderId));
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

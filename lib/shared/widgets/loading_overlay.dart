@@ -21,16 +21,20 @@ class LoadingOverlay extends StatelessWidget {
     }
 
     return Positioned.fill(
-      child: AbsorbPointer(
-        child: ColoredBox(
-          color: AppColors.ink.withValues(alpha: 0.88),
-          child: const Center(
-            child: SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: AppColors.gold,
+      child: Semantics(
+        label: 'Loading',
+        liveRegion: true,
+        child: AbsorbPointer(
+          child: ColoredBox(
+            color: AppColors.ink.withValues(alpha: 0.88),
+            child: const Center(
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: AppColors.gold,
+                ),
               ),
             ),
           ),

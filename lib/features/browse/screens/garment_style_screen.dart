@@ -1,0 +1,181 @@
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:lolipants/core/constants/app_colors.dart';
+import 'package:lolipants/core/constants/app_spacing.dart';
+import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/features/browse/data/region_presets.dart';
+import 'package:lolipants/features/browse/widgets/region_style_button.dart';
+import 'package:lolipants/features/editor/models/editor_preset_args.dart';
+import 'package:lolipants/shared/widgets/arabesque_background.dart';
+import 'package:lolipants/shared/widgets/lolipants_button.dart';
+
+/// Phase 3 `/browse/style/:id` detail screen. Shows the ornament patch for the
+/// selected regional preset plus a primary "Design this" CTA that hands the
+/// editor an [EditorPresetArgs] so it seeds palette, garment, and fabric.
+class GarmentStyleScreen extends StatelessWidget {
+  /// Creates the screen.
+  const GarmentStyleScreen({required this.styleId, super.key});
+
+  /// The preset id from the route.
+  final String styleId;
+
+  @override
+  Widget build(BuildContext context) {
+    RegionStylePreset? preset;
+    for (final candidate in kRegionPresets) {
+      if (candidate.id == styleId) {
+        preset = candidate;
+        break;
+      }
+    }
+
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.chevron_left, color: AppColors.gold),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/browse');
+            }
+          },
+        ),
+        title: Text(
+          preset?.title ?? 'Style',
+          style: AppTextStyles.titleLarge,
+        ),
+        backgroundColor: AppColors.ink,
+        elevation: 0,
+      ),
+      body: Stack(
+        children: [
+          const ArabesqueBackground(),
+          SafeArea(
+            child: preset == null
+                ? const _UnknownStyle()
+                : _StyleDetail(preset: preset),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StyleDetail extends StatelessWidget {
+  const _StyleDetail({required this.preset});
+
+  final RegionStylePreset preset;
+
+  @override
+  Widget build(BuildContext context) {
+    final variants = kRegionPresets
+        .where(
+          (p) => p.region == preset.region && p.id != preset.id,
+        )
+        .toList(growable: false);
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.xl,
+        AppSpacing.lg,
+        AppSpacing.xl,
+        AppSpacing.xxl,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AspectRatio(
+            aspectRatio: 16 / 9,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+              child: CustomPaint(
+                painter: RegionPatternPainter(
+                  primary: preset.primaryColour,
+                  accent: preset.accentColour,
+                  region: preset.region,
+                ),
+                child: const SizedBox.expand(),
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          Text(preset.title, style: AppTextStyles.displayMedium),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            preset.subtitle,
+            style: AppTextStyles.bodyMedium,
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          LolipantsButton(
+            label: 'Design this',
+            onPressed: () {
+              context.push(
+                '/editor',
+                extra: EditorBootstrapArgs(
+                  source: 'garment_style',
+                  preset: EditorPresetArgs(
+                    presetId: preset.id,
+                    designName: preset.title,
+                    garmentType: preset.garmentType,
+                    primaryColour: preset.primaryColour,
+                    accentColour: preset.accentColour,
+                    fabricId: preset.fabricId,
+                  ),
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          if (variants.isNotEmpty) ...[
+            Text(
+              'More ${_regionName(preset.region)} styles',
+              style: AppTextStyles.titleMedium,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            for (final variant in variants) ...[
+              RegionStyleButton(
+                preset: variant,
+                onTap: () => context.pushReplacement(
+                  '/browse/style/${variant.id}',
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+
+  String _regionName(Region region) {
+    switch (region) {
+      case Region.gulf:
+        return 'Gulf';
+      case Region.levant:
+        return 'Levant';
+      case Region.maghreb:
+        return 'Maghreb';
+      case Region.modern:
+        return 'Modern';
+    }
+  }
+}
+
+class _UnknownStyle extends StatelessWidget {
+  const _UnknownStyle();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: Text(
+          'This style is no longer available.',
+          textAlign: TextAlign.center,
+          style: AppTextStyles.bodyMedium,
+        ),
+      ),
+    );
+  }
+}

@@ -8,9 +8,13 @@ ThemeData buildAppTheme() {
     scaffoldBackgroundColor: AppColors.ink,
     colorScheme: const ColorScheme.dark(
       primary: AppColors.gold,
+      secondary: AppColors.blush,
+      tertiary: AppColors.goldLight,
       surface: AppColors.stone,
       error: AppColors.rubyLight,
     ),
+    cardColor: AppColors.ember,
+    dividerColor: AppColors.borderSubtle,
     splashFactory: NoSplash.splashFactory,
     highlightColor: Colors.transparent,
     useMaterial3: true,

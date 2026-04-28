@@ -1,0 +1,866 @@
+import { Hono } from "hono";
+import { v4 as uuidv4 } from "uuid";
+import { apiError } from "../lib/http";
+import { hmacSha256Hex, syncRoleWithAuthWorker } from "../lib/roleSync";
+import { requireAdmin, requireAuth } from "../middleware/auth";
+import type { AppVariables, Env } from "../types";
+import { AdminScopes, ALLOWED_ROLES } from "../lib/roles";
+
+export const adminRoutes = new Hono<{ Bindings: Env; Variables: AppVariables }>();
+
+const validOrderStatuses = new Set([
+  "placed",
+  "confirmed",
+  "cutting",
+  "stitching",
+  "embroidery",
+  "quality_check",
+  "ready_to_ship",
+  "out_for_delivery",
+  "delivered",
+  "cancelled",
+]);
+
+const statusTransitions: Record<string, ReadonlySet<string>> = {
+  placed: new Set(["confirmed", "cancelled"]),
+  confirmed: new Set(["cutting", "cancelled"]),
+  cutting: new Set(["stitching", "cancelled"]),
+  stitching: new Set(["embroidery", "quality_check", "cancelled"]),
+  embroidery: new Set(["quality_check", "cancelled"]),
+  quality_check: new Set(["ready_to_ship", "cancelled"]),
+  ready_to_ship: new Set(["out_for_delivery", "cancelled"]),
+  out_for_delivery: new Set(["delivered"]),
+  delivered: new Set(),
+  cancelled: new Set(),
+};
+
+// ---------------------------------------------------------------------------
+// Legacy HMAC-gated commission endpoint (preserved for automation).
+// ---------------------------------------------------------------------------
+
+adminRoutes.patch("/commissions/:id", async (c) => {
+  const secret = c.env.ADMIN_HMAC_SECRET?.trim();
+  if (!secret) {
+    return apiError(c, 404, "NOT_FOUND", "Admin endpoints disabled");
+  }
+  const raw = await c.req.text();
+  const signature = c.req.header("x-admin-signature") ?? "";
+  const expected = await hmacSha256Hex(secret, raw);
+  if (!signature || signature !== expected) {
+    return apiError(c, 401, "INVALID_ADMIN_SIGNATURE", "Invalid signature");
+  }
+
+  let body: Record<string, unknown>;
+  try {
+    body = raw.length > 0 ? (JSON.parse(raw) as Record<string, unknown>) : {};
+  } catch {
+    return apiError(c, 400, "INVALID_JSON", "Invalid JSON body");
+  }
+  const id = c.req.param("id");
+  const nextStatus = String(body.status ?? "paid").trim().toLowerCase();
+  if (!["approved", "paid", "void"].includes(nextStatus)) {
+    return apiError(c, 400, "INVALID_STATUS", "Invalid commission status");
+  }
+  const payoutRef = body.payoutReference
+    ? String(body.payoutReference).trim()
+    : null;
+  const notes = body.notes ? String(body.notes).trim() : null;
+
+  const existing = await c.env.DB.prepare(
+    "SELECT id FROM commissions WHERE id = ?",
+  )
+    .bind(id)
+    .first<{ id: string }>();
+  if (!existing) return apiError(c, 404, "COMMISSION_NOT_FOUND", "Commission not found");
+
+  await c.env.DB.prepare(
+    `UPDATE commissions
+     SET status = ?, payout_reference = COALESCE(?, payout_reference),
+         notes = COALESCE(?, notes), updated_at = datetime('now')
+     WHERE id = ?`,
+  )
+    .bind(nextStatus, payoutRef, notes, id)
+    .run();
+  const row = await c.env.DB.prepare("SELECT * FROM commissions WHERE id = ?")
+    .bind(id)
+    .first<Record<string, unknown>>();
+  return c.json(row);
+});
+
+// ---------------------------------------------------------------------------
+// Session-authenticated admin routes. Every subsequent handler requires an
+// authenticated admin; individual routes add a scope check on top.
+// ---------------------------------------------------------------------------
+
+adminRoutes.use("*", requireAuth);
+
+// ------- /admin/users (users_mgmt) -----------------------------------------
+
+adminRoutes.get("/users", requireAdmin(AdminScopes.usersMgmt), async (c) => {
+  const role = c.req.query("role")?.trim().toLowerCase() ?? "";
+  const banned = c.req.query("banned")?.trim();
+  const search = c.req.query("q")?.trim() ?? "";
+  const bindings: Array<string> = [];
+  let where = "WHERE 1=1";
+  if (role && ALLOWED_ROLES.has(role)) {
+    where += " AND role = ?";
+    bindings.push(role);
+  }
+  if (banned === "true") {
+    where += " AND banned_at IS NOT NULL";
+  } else if (banned === "false") {
+    where += " AND banned_at IS NULL";
+  }
+  if (search.length > 0) {
+    where += " AND (LOWER(name) LIKE ? OR LOWER(email) LIKE ?)";
+    const needle = `%${search.toLowerCase()}%`;
+    bindings.push(needle, needle);
+  }
+  const { results } = await c.env.DB.prepare(
+    `SELECT id, name, email, role, admin_scopes, banned_at, avatar_url, bio, is_pro_designer, created_at
+     FROM users ${where}
+     ORDER BY created_at DESC
+     LIMIT 200`,
+  )
+    .bind(...bindings)
+    .all();
+  return c.json(results);
+});
+
+adminRoutes.patch("/users/:id", requireAdmin(AdminScopes.usersMgmt), async (c) => {
+  const id = c.req.param("id");
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+  const existing = await c.env.DB.prepare(
+    "SELECT id, role, admin_scopes, banned_at FROM users WHERE id = ?",
+  )
+    .bind(id)
+    .first<{ id: string; role: string; admin_scopes: string | null; banned_at: string | null }>();
+  if (!existing) return apiError(c, 404, "USER_NOT_FOUND", "User not found");
+
+  const patch: Record<string, string | null> = {};
+  let nextRole: string | undefined;
+  let nextScopes: string[] | undefined;
+  let nextBanned: string | null | undefined;
+
+  if (typeof body.role === "string") {
+    const role = body.role.trim().toLowerCase();
+    if (!ALLOWED_ROLES.has(role)) {
+      return apiError(c, 400, "INVALID_ROLE", "Invalid role");
+    }
+    nextRole = role;
+    patch.role = role;
+  }
+  if (body.adminScopes !== undefined || body.admin_scopes !== undefined) {
+    const raw = body.adminScopes ?? body.admin_scopes;
+    if (!Array.isArray(raw)) {
+      return apiError(c, 400, "INVALID_SCOPES", "adminScopes must be an array");
+    }
+    nextScopes = raw
+      .map((v) => String(v ?? "").trim())
+      .filter((v) => v.length > 0);
+    patch.admin_scopes = JSON.stringify(nextScopes);
+  }
+  if (body.banned !== undefined) {
+    const banned = Boolean(body.banned);
+    patch.banned_at = banned ? new Date().toISOString() : null;
+    nextBanned = patch.banned_at;
+  }
+
+  if (Object.keys(patch).length === 0) {
+    return apiError(c, 400, "NO_FIELDS", "Provide role, adminScopes, or banned");
+  }
+
+  const setClauses: string[] = [];
+  const bindings: Array<string | null> = [];
+  for (const [key, value] of Object.entries(patch)) {
+    setClauses.push(`${key} = ?`);
+    bindings.push(value);
+  }
+  setClauses.push("updated_at = datetime('now')");
+  bindings.push(id);
+  await c.env.DB.prepare(
+    `UPDATE users SET ${setClauses.join(", ")} WHERE id = ?`,
+  )
+    .bind(...bindings)
+    .run();
+
+  if (nextRole !== undefined || nextScopes !== undefined) {
+    await syncRoleWithAuthWorker(c, id, {
+      role: nextRole ?? existing.role,
+      adminScopes:
+        nextScopes ??
+        (() => {
+          try {
+            const parsed = existing.admin_scopes
+              ? (JSON.parse(existing.admin_scopes) as unknown)
+              : [];
+            return Array.isArray(parsed) ? (parsed as string[]) : [];
+          } catch {
+            return [];
+          }
+        })(),
+    });
+  }
+
+  const updated = await c.env.DB.prepare(
+    "SELECT id, name, email, role, admin_scopes, banned_at FROM users WHERE id = ?",
+  )
+    .bind(id)
+    .first<Record<string, unknown>>();
+  return c.json({ ...updated, banned_at: nextBanned ?? updated?.banned_at ?? null });
+});
+
+// ------- /admin/role-requests (users_mgmt) ---------------------------------
+
+adminRoutes.get("/role-requests", requireAdmin(AdminScopes.usersMgmt), async (c) => {
+  const status = c.req.query("status")?.trim().toLowerCase() ?? "";
+  let query = `SELECT r.*, u.name AS requester_name, u.email AS requester_email,
+                      u.role AS requester_current_role
+               FROM role_requests r
+               JOIN users u ON u.id = r.user_id`;
+  const bindings: string[] = [];
+  if (status.length > 0 && ["pending", "approved", "rejected"].includes(status)) {
+    query += " WHERE r.status = ?";
+    bindings.push(status);
+  }
+  query += " ORDER BY r.created_at DESC LIMIT 200";
+  const { results } = await c.env.DB.prepare(query)
+    .bind(...bindings)
+    .all();
+  return c.json(results);
+});
+
+adminRoutes.patch("/role-requests/:id", requireAdmin(AdminScopes.usersMgmt), async (c) => {
+  const id = c.req.param("id");
+  const adminId = c.get("userId") as string;
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+  const nextStatus = String(body.status ?? "").trim().toLowerCase();
+  if (!["approved", "rejected"].includes(nextStatus)) {
+    return apiError(c, 400, "INVALID_STATUS", "status must be approved or rejected");
+  }
+  const adminNoteRaw = body.adminNote != null ? String(body.adminNote).trim() : "";
+  const adminNote = adminNoteRaw.length > 0 ? adminNoteRaw : null;
+
+  const reqRow = await c.env.DB.prepare("SELECT * FROM role_requests WHERE id = ?")
+    .bind(id)
+    .first<{
+      id: string;
+      user_id: string;
+      requested_role: string;
+      status: string;
+    }>();
+  if (!reqRow) {
+    return apiError(c, 404, "NOT_FOUND", "Role request not found");
+  }
+  if (reqRow.status !== "pending") {
+    return apiError(c, 400, "ALREADY_RESOLVED", "Request is no longer pending");
+  }
+
+  const resolvedAt = new Date().toISOString();
+
+  if (nextStatus === "rejected") {
+    await c.env.DB.prepare(
+      `UPDATE role_requests
+       SET status = ?, admin_note = ?, resolved_at = ?, resolved_by = ?
+       WHERE id = ?`,
+    )
+      .bind("rejected", adminNote, resolvedAt, adminId, id)
+      .run();
+    const row = await c.env.DB.prepare("SELECT * FROM role_requests WHERE id = ?")
+      .bind(id)
+      .first<Record<string, unknown>>();
+    return c.json(row);
+  }
+
+  const targetId = reqRow.user_id;
+  const newRole = reqRow.requested_role.trim().toLowerCase();
+  if (!["tailor", "delivery"].includes(newRole)) {
+    return apiError(c, 400, "INVALID_REQUEST", "Invalid requested role on record");
+  }
+
+  const userRow = await c.env.DB.prepare(
+    "SELECT id, role, admin_scopes FROM users WHERE id = ?",
+  )
+    .bind(targetId)
+    .first<{
+      id: string;
+      role: string | null;
+      admin_scopes: string | null;
+    }>();
+  if (!userRow) {
+    return apiError(c, 404, "USER_NOT_FOUND", "User not found");
+  }
+  const currentRole = (userRow.role ?? "user").trim().toLowerCase();
+  if (currentRole !== "user") {
+    return apiError(
+      c,
+      409,
+      "USER_ROLE_CHANGED",
+      "User is no longer a customer; reject this request instead",
+    );
+  }
+
+  let adminScopes: string[] = [];
+  try {
+    const parsed = userRow.admin_scopes
+      ? (JSON.parse(userRow.admin_scopes) as unknown)
+      : [];
+    adminScopes = Array.isArray(parsed) ? (parsed as string[]) : [];
+  } catch {
+    adminScopes = [];
+  }
+
+  await c.env.DB.prepare(
+    `UPDATE users SET role = ?, updated_at = datetime('now') WHERE id = ?`,
+  )
+    .bind(newRole, targetId)
+    .run();
+
+  await syncRoleWithAuthWorker(c, targetId, {
+    role: newRole,
+    adminScopes,
+  });
+
+  await c.env.DB.prepare(
+    `UPDATE role_requests
+     SET status = ?, admin_note = ?, resolved_at = ?, resolved_by = ?
+     WHERE id = ?`,
+  )
+    .bind("approved", adminNote, resolvedAt, adminId, id)
+    .run();
+
+  const row = await c.env.DB.prepare(
+    `SELECT r.*, u.name AS requester_name, u.email AS requester_email
+     FROM role_requests r
+     JOIN users u ON u.id = r.user_id
+     WHERE r.id = ?`,
+  )
+    .bind(id)
+    .first<Record<string, unknown>>();
+  return c.json(row);
+});
+
+// ------- /admin/orders (orders_oversight) ----------------------------------
+
+adminRoutes.get("/orders", requireAdmin(AdminScopes.ordersOversight), async (c) => {
+  const status = c.req.query("status")?.trim().toLowerCase() ?? "";
+  let query = `SELECT o.*, d.name AS design_name
+               FROM orders o
+               LEFT JOIN designs d ON d.id = o.design_id`;
+  const bindings: string[] = [];
+  if (status.length > 0) {
+    query += " WHERE o.status = ?";
+    bindings.push(status);
+  }
+  query += " ORDER BY o.placed_at DESC LIMIT 200";
+  const { results } = await c.env.DB.prepare(query)
+    .bind(...bindings)
+    .all();
+  return c.json(results);
+});
+
+adminRoutes.patch("/orders/:id", requireAdmin(AdminScopes.ordersOversight), async (c) => {
+  const id = c.req.param("id");
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+  const existing = await c.env.DB.prepare("SELECT id, status FROM orders WHERE id = ?")
+    .bind(id)
+    .first<{ id: string; status: string }>();
+  if (!existing) return apiError(c, 404, "ORDER_NOT_FOUND", "Order not found");
+
+  const setClauses: string[] = [];
+  const bindings: Array<string | null> = [];
+  let nextStatus: string | null = null;
+  if (typeof body.status === "string") {
+    nextStatus = body.status.trim().toLowerCase();
+    if (!validOrderStatuses.has(nextStatus)) {
+      return apiError(c, 400, "INVALID_STATUS", "Invalid order status");
+    }
+    const currentStatus = existing.status.trim().toLowerCase();
+    const allowed = statusTransitions[currentStatus] ?? new Set();
+    if (!allowed.has(nextStatus)) {
+      return apiError(
+        c,
+        409,
+        "INVALID_STATUS_TRANSITION",
+        `Cannot transition from ${currentStatus} to ${nextStatus}`,
+      );
+    }
+    setClauses.push("status = ?");
+    bindings.push(nextStatus);
+  }
+  if (body.tailorId !== undefined || body.tailor_id !== undefined) {
+    const val = body.tailorId ?? body.tailor_id;
+    setClauses.push("tailor_id = ?");
+    bindings.push(val === null || val === "" ? null : String(val));
+  }
+  if (body.courierId !== undefined || body.courier_id !== undefined) {
+    const val = body.courierId ?? body.courier_id;
+    setClauses.push("courier_id = ?");
+    bindings.push(val === null || val === "" ? null : String(val));
+  }
+  if (setClauses.length === 0) {
+    return apiError(c, 400, "NO_FIELDS", "Nothing to update");
+  }
+  setClauses.push("updated_at = datetime('now')");
+  bindings.push(id);
+  await c.env.DB.prepare(
+    `UPDATE orders SET ${setClauses.join(", ")} WHERE id = ?`,
+  )
+    .bind(...bindings)
+    .run();
+  if (nextStatus != null) {
+    const adminId = c.get("userId") as string;
+    await c.env.DB.prepare(
+      "INSERT INTO order_status_history (id, order_id, status, note, updated_by) VALUES (?, ?, ?, ?, ?)",
+    )
+      .bind(
+        uuidv4(),
+        id,
+        nextStatus,
+        body.note ? String(body.note).trim() : "Admin override",
+        adminId,
+      )
+      .run();
+  }
+  const row = await c.env.DB.prepare("SELECT * FROM orders WHERE id = ?")
+    .bind(id)
+    .first<Record<string, unknown>>();
+  return c.json(row);
+});
+
+// ------- /admin/payouts (payouts) ------------------------------------------
+
+adminRoutes.get("/payouts", requireAdmin(AdminScopes.payouts), async (c) => {
+  const status = c.req.query("status")?.trim().toLowerCase() ?? "";
+  let query = `SELECT com.*, u.name AS designer_name, u.email AS designer_email,
+                      o.total_price AS order_total
+               FROM commissions com
+               LEFT JOIN users u ON u.id = com.designer_id
+               LEFT JOIN orders o ON o.id = com.order_id`;
+  const bindings: string[] = [];
+  if (status.length > 0) {
+    query += " WHERE com.status = ?";
+    bindings.push(status);
+  }
+  query += " ORDER BY com.created_at DESC LIMIT 200";
+  const { results } = await c.env.DB.prepare(query)
+    .bind(...bindings)
+    .all();
+  return c.json(results);
+});
+
+adminRoutes.patch("/payouts/:id", requireAdmin(AdminScopes.payouts), async (c) => {
+  const id = c.req.param("id");
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+  const nextStatus = String(body.status ?? "paid").trim().toLowerCase();
+  if (!["approved", "paid", "void"].includes(nextStatus)) {
+    return apiError(c, 400, "INVALID_STATUS", "Invalid payout status");
+  }
+  const payoutRef = body.payoutReference
+    ? String(body.payoutReference).trim()
+    : null;
+  const notes = body.notes ? String(body.notes).trim() : null;
+  const existing = await c.env.DB.prepare(
+    "SELECT id FROM commissions WHERE id = ?",
+  )
+    .bind(id)
+    .first<{ id: string }>();
+  if (!existing) return apiError(c, 404, "COMMISSION_NOT_FOUND", "Commission not found");
+  await c.env.DB.prepare(
+    `UPDATE commissions
+     SET status = ?, payout_reference = COALESCE(?, payout_reference),
+         notes = COALESCE(?, notes), updated_at = datetime('now')
+     WHERE id = ?`,
+  )
+    .bind(nextStatus, payoutRef, notes, id)
+    .run();
+  const row = await c.env.DB.prepare("SELECT * FROM commissions WHERE id = ?")
+    .bind(id)
+    .first<Record<string, unknown>>();
+  return c.json(row);
+});
+
+// ------- /admin/moderation (moderation) ------------------------------------
+
+adminRoutes.patch(
+  "/moderation/posts/:id/hide",
+  requireAdmin(AdminScopes.moderation),
+  async (c) => {
+    const id = c.req.param("id");
+    const existing = await c.env.DB.prepare("SELECT id FROM posts WHERE id = ?")
+      .bind(id)
+      .first<{ id: string }>();
+    if (!existing) return apiError(c, 404, "POST_NOT_FOUND", "Post not found");
+    await c.env.DB.prepare("DELETE FROM posts WHERE id = ?").bind(id).run();
+    return c.json({ hidden: true, id });
+  },
+);
+
+adminRoutes.patch(
+  "/moderation/designs/:id/hide",
+  requireAdmin(AdminScopes.moderation),
+  async (c) => {
+    const id = c.req.param("id");
+    await c.env.DB.prepare(
+      "UPDATE designs SET is_public = 0, updated_at = datetime('now') WHERE id = ?",
+    )
+      .bind(id)
+      .run();
+    return c.json({ hidden: true, id });
+  },
+);
+
+adminRoutes.delete(
+  "/moderation/commissions/:id",
+  requireAdmin(AdminScopes.moderation),
+  async (c) => {
+    const id = c.req.param("id");
+    const existing = await c.env.DB.prepare(
+      "SELECT id FROM commissions WHERE id = ?",
+    )
+      .bind(id)
+      .first<{ id: string }>();
+    if (!existing) {
+      return apiError(c, 404, "COMMISSION_NOT_FOUND", "Commission not found");
+    }
+    await c.env.DB.prepare(
+      "UPDATE commissions SET status = 'void', notes = 'Voided by admin', updated_at = datetime('now') WHERE id = ?",
+    )
+      .bind(id)
+      .run();
+    return c.json({ voided: true, id });
+  },
+);
+
+// ------- /admin/cms/* (cms) ------------------------------------------------
+
+type CmsTableConfig = {
+  table: string;
+  columns: readonly string[];
+  required: readonly string[];
+};
+
+const CMS_TABLES: Record<string, CmsTableConfig> = {
+  mannequins: {
+    table: "mannequin_options",
+    columns: ["label_en", "label_ar", "is_active", "sort_order", "preview_url"],
+    required: ["label_en", "label_ar"],
+  },
+  fabrics: {
+    table: "fabric_options",
+    columns: ["name", "name_ar", "quality", "garment_type", "is_available"],
+    required: ["name", "name_ar", "quality", "garment_type"],
+  },
+  presets: {
+    table: "presets",
+    columns: ["type", "name", "name_ar", "garment_type", "image_url", "is_active"],
+    required: ["type", "name", "name_ar"],
+  },
+};
+
+// "patterns" is shown as a separate menu item in the Flutter CMS screen even
+// though it's just presets with a canonical type.
+adminRoutes.get("/cms/:resource", requireAdmin(AdminScopes.cms), async (c) => {
+  const resource = c.req.param("resource");
+  const cfg = CMS_TABLES[resource];
+  if (resource === "patterns") {
+    const { results } = await c.env.DB.prepare(
+      "SELECT * FROM presets WHERE type = 'pattern' ORDER BY created_at DESC LIMIT 200",
+    ).all();
+    return c.json(results);
+  }
+  if (!cfg) return apiError(c, 404, "UNKNOWN_RESOURCE", "Unknown CMS resource");
+  const { results } = await c.env.DB.prepare(
+    `SELECT * FROM ${cfg.table} ORDER BY created_at DESC LIMIT 200`,
+  ).all();
+  return c.json(results);
+});
+
+adminRoutes.post("/cms/:resource", requireAdmin(AdminScopes.cms), async (c) => {
+  const resource = c.req.param("resource");
+  let cfg = CMS_TABLES[resource];
+  if (resource === "patterns") {
+    cfg = {
+      table: "presets",
+      columns: ["type", "name", "name_ar", "garment_type", "image_url", "is_active"],
+      required: ["name", "name_ar"],
+    };
+  }
+  if (!cfg) return apiError(c, 404, "UNKNOWN_RESOURCE", "Unknown CMS resource");
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+  if (resource === "patterns") {
+    body.type = "pattern";
+  }
+  for (const field of cfg.required) {
+    if (!body[field] || String(body[field]).trim().length === 0) {
+      return apiError(c, 400, "FIELD_REQUIRED", `${field} is required`);
+    }
+  }
+  const id = uuidv4();
+  const cols = ["id", ...cfg.columns.filter((col) => col in body)];
+  const values = [id, ...cols.slice(1).map((col) => body[col])];
+  const placeholders = cols.map(() => "?").join(", ");
+  await c.env.DB.prepare(
+    `INSERT INTO ${cfg.table} (${cols.join(", ")}) VALUES (${placeholders})`,
+  )
+    .bind(...(values as Array<string | number | null>))
+    .run();
+  const row = await c.env.DB.prepare(
+    `SELECT * FROM ${cfg.table} WHERE id = ?`,
+  )
+    .bind(id)
+    .first<Record<string, unknown>>();
+  return c.json(row, 201);
+});
+
+adminRoutes.patch("/cms/:resource/:id", requireAdmin(AdminScopes.cms), async (c) => {
+  const resource = c.req.param("resource");
+  let cfg = CMS_TABLES[resource];
+  if (resource === "patterns") {
+    cfg = {
+      table: "presets",
+      columns: ["name", "name_ar", "garment_type", "image_url", "is_active"],
+      required: [],
+    };
+  }
+  if (!cfg) return apiError(c, 404, "UNKNOWN_RESOURCE", "Unknown CMS resource");
+  const id = c.req.param("id");
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+  const setClauses: string[] = [];
+  const bindings: Array<string | number | null> = [];
+  for (const col of cfg.columns) {
+    if (body[col] !== undefined) {
+      setClauses.push(`${col} = ?`);
+      bindings.push(body[col] as string | number | null);
+    }
+  }
+  if (setClauses.length === 0) {
+    return apiError(c, 400, "NO_FIELDS", "Nothing to update");
+  }
+  bindings.push(id);
+  await c.env.DB.prepare(
+    `UPDATE ${cfg.table} SET ${setClauses.join(", ")} WHERE id = ?`,
+  )
+    .bind(...bindings)
+    .run();
+  const row = await c.env.DB.prepare(
+    `SELECT * FROM ${cfg.table} WHERE id = ?`,
+  )
+    .bind(id)
+    .first<Record<string, unknown>>();
+  return c.json(row);
+});
+
+adminRoutes.delete("/cms/:resource/:id", requireAdmin(AdminScopes.cms), async (c) => {
+  const resource = c.req.param("resource");
+  let cfg = CMS_TABLES[resource];
+  if (resource === "patterns") {
+    cfg = {
+      table: "presets",
+      columns: [],
+      required: [],
+    };
+  }
+  if (!cfg) return apiError(c, 404, "UNKNOWN_RESOURCE", "Unknown CMS resource");
+  const id = c.req.param("id");
+  await c.env.DB.prepare(`DELETE FROM ${cfg.table} WHERE id = ?`)
+    .bind(id)
+    .run();
+  return c.json({ deleted: true, id });
+});
+
+// ------- /admin/complaints (complaints) ------------------------------------
+
+adminRoutes.get("/complaints", requireAdmin(AdminScopes.complaints), async (c) => {
+  const status = c.req.query("status")?.trim().toLowerCase() ?? "";
+  let query = `SELECT com.*, u.name AS author_name, u.email AS author_email
+               FROM complaints com
+               LEFT JOIN users u ON u.id = com.user_id`;
+  const bindings: string[] = [];
+  if (status.length > 0) {
+    query += " WHERE com.status = ?";
+    bindings.push(status);
+  }
+  query += " ORDER BY com.created_at DESC LIMIT 200";
+  const { results } = await c.env.DB.prepare(query)
+    .bind(...bindings)
+    .all();
+  return c.json(results);
+});
+
+adminRoutes.patch("/complaints/:id", requireAdmin(AdminScopes.complaints), async (c) => {
+  const id = c.req.param("id");
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+  const status = String(body.status ?? "").trim().toLowerCase();
+  if (!["open", "resolved", "rejected"].includes(status)) {
+    return apiError(c, 400, "INVALID_STATUS", "Invalid complaint status");
+  }
+  const resolution = body.resolution ? String(body.resolution).trim() : null;
+  const adminId = c.get("userId") as string;
+  const resolvedAt = status === "open" ? null : new Date().toISOString();
+  await c.env.DB.prepare(
+    `UPDATE complaints
+     SET status = ?, resolution = COALESCE(?, resolution),
+         resolved_by = ?, resolved_at = ?
+     WHERE id = ?`,
+  )
+    .bind(status, resolution, status === "open" ? null : adminId, resolvedAt, id)
+    .run();
+  const row = await c.env.DB.prepare(
+    "SELECT * FROM complaints WHERE id = ?",
+  )
+    .bind(id)
+    .first<Record<string, unknown>>();
+  return c.json(row);
+});
+
+// ------- /admin/stats (no scope required) ----------------------------------
+
+adminRoutes.get("/stats", requireAdmin(), async (c) => {
+  const [usersByRole, ordersByStatus, commissionsByStatus] = await Promise.all([
+    c.env.DB.prepare(
+      "SELECT role, COUNT(*) AS count FROM users GROUP BY role",
+    ).all<{ role: string; count: number }>(),
+    c.env.DB.prepare(
+      "SELECT status, COUNT(*) AS count FROM orders GROUP BY status",
+    ).all<{ status: string; count: number }>(),
+    c.env.DB.prepare(
+      "SELECT status, COUNT(*) AS count FROM commissions GROUP BY status",
+    ).all<{ status: string; count: number }>(),
+  ]);
+  const openComplaintRow = await c.env.DB.prepare(
+    "SELECT COUNT(*) AS count FROM complaints WHERE status = 'open'",
+  ).first<{ count: number }>();
+  return c.json({
+    usersByRole: usersByRole.results,
+    ordersByStatus: ordersByStatus.results,
+    commissionsByStatus: commissionsByStatus.results,
+    openComplaints: openComplaintRow?.count ?? 0,
+  });
+});
+
+adminRoutes.get("/render-metrics", requireAdmin(), async (c) => {
+  const windowHours = Math.min(
+    168,
+    Math.max(1, Number(c.req.query("windowHours") ?? 24)),
+  );
+  const lookbackIso = new Date(
+    Date.now() - windowHours * 60 * 60 * 1000,
+  ).toISOString();
+  let rows: Array<{
+    status: string | null;
+    provider_status: string | null;
+    error_message: string | null;
+    created_at: string | null;
+    completed_at: string | null;
+    failed_at: string | null;
+    attempt_count: number | null;
+  }> = [];
+  try {
+    const result = await c.env.DB.prepare(
+      `SELECT status, provider_status, error_message, created_at, completed_at, failed_at, attempt_count
+       FROM design_render_jobs
+       WHERE created_at >= ?
+       ORDER BY created_at DESC
+       LIMIT 2000`,
+    )
+      .bind(lookbackIso)
+      .all<{
+        status: string | null;
+        provider_status: string | null;
+        error_message: string | null;
+        created_at: string | null;
+        completed_at: string | null;
+        failed_at: string | null;
+        attempt_count: number | null;
+      }>();
+    rows = result.results ?? [];
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (/no such table/i.test(msg)) {
+      return c.json({
+        windowHours,
+        totalJobs: 0,
+        successRate: 0,
+        p50LatencyMs: 0,
+        p95LatencyMs: 0,
+        failuresByCategory: {},
+        retries: { jobsWithRetry: 0, avgAttempts: 0 },
+      });
+    }
+    throw e;
+  }
+
+  const totalJobs = rows.length;
+  const completed = rows.filter((r) => (r.status ?? "") === "completed");
+  const failed = rows.filter((r) => (r.status ?? "") === "failed");
+  const successRate = totalJobs === 0 ? 0 : completed.length / totalJobs;
+  const latenciesMs = completed
+    .map((row) => {
+      const start = row.created_at ? Date.parse(row.created_at) : NaN;
+      const end = row.completed_at ? Date.parse(row.completed_at) : NaN;
+      if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) {
+        return null;
+      }
+      return end - start;
+    })
+    .filter((v): v is number => v != null);
+
+  const failuresByCategory: Record<string, number> = {};
+  for (const row of failed) {
+    const category = _failureCategory(
+      row.error_message ?? "",
+      row.provider_status ?? "",
+    );
+    failuresByCategory[category] = (failuresByCategory[category] ?? 0) + 1;
+  }
+
+  const attempts = rows
+    .map((r) => r.attempt_count ?? 0)
+    .filter((n) => Number.isFinite(n) && n >= 0);
+  const jobsWithRetry = attempts.filter((n) => n > 1).length;
+  const avgAttempts =
+    attempts.length === 0
+      ? 0
+      : attempts.reduce((sum, n) => sum + n, 0) / attempts.length;
+
+  return c.json({
+    windowHours,
+    totalJobs,
+    successRate,
+    p50LatencyMs: _percentile(latenciesMs, 50),
+    p95LatencyMs: _percentile(latenciesMs, 95),
+    failuresByCategory,
+    retries: {
+      jobsWithRetry,
+      avgAttempts,
+    },
+  });
+});
+
+function _failureCategory(errorMessage: string, providerStatus: string): string {
+  const message = errorMessage.toLowerCase();
+  if (providerStatus.toLowerCase() === "timeout" || message.includes("abort")) {
+    return "timeout";
+  }
+  if (message.includes("meshy") && message.includes("503")) {
+    return "provider_5xx";
+  }
+  if (message.includes("missing") && message.includes("image")) {
+    return "missing_source_image";
+  }
+  if (message.includes("parse")) {
+    return "provider_parse_error";
+  }
+  return "other";
+}
+
+function _percentile(values: number[], p: number): number {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const idx = Math.min(
+    sorted.length - 1,
+    Math.max(0, Math.ceil((p / 100) * sorted.length) - 1),
+  );
+  return sorted[idx];
+}

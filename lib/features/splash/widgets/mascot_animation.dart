@@ -1,16 +1,77 @@
 import 'package:flutter/material.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
+import 'package:lolipants/features/mascot/mascot_controller.dart';
+import 'package:rive/rive.dart';
 
-/// Placeholder region for the Rive panda mascot (130×160).
-class MascotAnimation extends StatelessWidget {
-  /// Reserves layout space for the mascot asset.
-  const MascotAnimation({super.key});
+/// Hosts the Rive panda mascot shown on the splash screen.
+///
+/// The animation is driven by a state machine named `MascotState` with a
+/// numeric input `state` where 0 = idle, 1 = celebrate, 2 = sad. When the
+/// asset is missing or fails to load we fall back to a branded placeholder so
+/// the splash still lays out correctly.
+class MascotAnimation extends StatefulWidget {
+  /// Creates the mascot animation at its default splash size.
+  const MascotAnimation({
+    super.key,
+    this.width = 130,
+    this.height = 160,
+    this.initialState = MascotState.idle,
+  });
+
+  /// Target width in logical pixels.
+  final double width;
+
+  /// Target height in logical pixels.
+  final double height;
+
+  /// State to bootstrap the machine in. Splash should stay idle.
+  final MascotState initialState;
+
+  @override
+  State<MascotAnimation> createState() => _MascotAnimationState();
+}
+
+class _MascotAnimationState extends State<MascotAnimation> {
+  SMINumber? _stateInput;
+  bool _loadFailed = false;
+
+  void _onInit(Artboard artboard) {
+    final controller = StateMachineController.fromArtboard(
+      artboard,
+      'MascotState',
+    );
+    if (controller == null) {
+      setState(() => _loadFailed = true);
+      return;
+    }
+    artboard.addController(controller);
+    _stateInput = controller.findInput<double>('state') as SMINumber?;
+    _stateInput?.value = widget.initialState.index.toDouble();
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_loadFailed) {
+      return _fallback();
+    }
+    return SizedBox(
+      width: widget.width,
+      height: widget.height,
+      child: RiveAnimation.asset(
+        'assets/animations/mascot.riv',
+        fit: BoxFit.contain,
+        onInit: _onInit,
+        // Rive swallows asset errors to the console; surface them as the
+        // branded fallback so users see something sensible.
+        placeHolder: _fallback(),
+      ),
+    );
+  }
+
+  Widget _fallback() {
     return Container(
-      width: 130,
-      height: 160,
+      width: widget.width,
+      height: widget.height,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: AppColors.ember,

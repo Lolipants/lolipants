@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:lolipants/core/config/app_features.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/features/auth/models/user.dart';
 import 'package:lolipants/features/auth/providers/auth_providers.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
 import 'package:lolipants/shared/widgets/gold_divider.dart';
@@ -76,17 +78,38 @@ class ProfileScreen extends ConsumerWidget {
                   icon: Icons.straighten,
                   onTap: () => context.push('/profile/measurements'),
                 ),
+                if (kFeatureCommunity) ...[
+                  _ProfileTile(
+                    labelEn: 'Designer earnings',
+                    labelAr: 'أرباح المصمم',
+                    icon: Icons.account_balance_wallet_outlined,
+                    onTap: () => context.push('/community/earnings'),
+                  ),
+                  _ProfileTile(
+                    labelEn: 'My consultations',
+                    labelAr: 'استشاراتي',
+                    icon: Icons.forum_outlined,
+                    onTap: () => context.push('/community/consultations'),
+                  ),
+                ],
                 _ProfileTile(
-                  labelEn: AppStrings.notifications,
-                  labelAr: AppStrings.notificationsAr,
-                  icon: Icons.notifications_none,
-                  onTap: () => _snack(context),
+                  labelEn: 'Edit profile',
+                  labelAr: 'تعديل الملف',
+                  icon: Icons.person_outline,
+                  onTap: () => context.push('/profile/edit'),
                 ),
+                if (user != null && user.normalizedRole == UserRoles.user)
+                  _ProfileTile(
+                    labelEn: 'Partner with Lolipants',
+                    labelAr: 'كن شريكاً',
+                    icon: Icons.handshake_outlined,
+                    onTap: () => context.push('/profile/role-request'),
+                  ),
                 _ProfileTile(
                   labelEn: AppStrings.settings,
                   labelAr: AppStrings.settingsAr,
                   icon: Icons.settings_outlined,
-                  onTap: () => _snack(context),
+                  onTap: () => context.push('/profile/settings'),
                 ),
                 _ProfileTile(
                   labelEn: AppStrings.logOut,
@@ -99,14 +122,6 @@ class ProfileScreen extends ConsumerWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  void _snack(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('${AppStrings.comingSoon} / ${AppStrings.comingSoonAr}'),
       ),
     );
   }

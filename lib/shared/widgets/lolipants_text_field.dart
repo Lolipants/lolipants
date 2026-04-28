@@ -106,34 +106,38 @@ class _LolipantsTextFieldState extends State<LolipantsTextField> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        TextField(
-          controller: widget.controller,
-          obscureText: widget.obscureToggle ? _hidden : widget.obscureText,
-          keyboardType: widget.keyboardType,
-          textInputAction: widget.textInputAction,
-          onChanged: widget.onChanged,
-          inputFormatters: widget.inputFormatters,
-          style: AppTextStyles.bodyLarge,
-          cursorColor: AppColors.gold,
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: AppColors.smoke,
-            labelText: widget.label,
-            labelStyle: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.dust,
-            ),
-            floatingLabelStyle: AppTextStyles.bodySmall.copyWith(
-              color: AppColors.dust,
-            ),
-            prefixIcon: widget.prefixIcon,
-            suffixIcon: suffix,
-            enabledBorder: _border(borderColor),
-            focusedBorder: _border(
-              hasError ? AppColors.rubyLight : AppColors.gold,
-            ),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.lg,
-              vertical: AppSpacing.md,
+        Semantics(
+          label: widget.label,
+          textField: true,
+          child: TextField(
+            controller: widget.controller,
+            obscureText: widget.obscureToggle ? _hidden : widget.obscureText,
+            keyboardType: widget.keyboardType,
+            textInputAction: widget.textInputAction,
+            onChanged: widget.onChanged,
+            inputFormatters: widget.inputFormatters,
+            style: AppTextStyles.bodyLarge,
+            cursorColor: AppColors.gold,
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: AppColors.smoke,
+              labelText: widget.label,
+              labelStyle: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.dust,
+              ),
+              floatingLabelStyle: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.dust,
+              ),
+              prefixIcon: widget.prefixIcon,
+              suffixIcon: suffix,
+              enabledBorder: _border(borderColor),
+              focusedBorder: _border(
+                hasError ? AppColors.rubyLight : AppColors.gold,
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.lg,
+                vertical: AppSpacing.md,
+              ),
             ),
           ),
         ),

@@ -48,5 +48,8 @@ app.*.map.json
 .env
 
 # Node worker (Better Auth)
+/node_modules/
+**/node_modules/
 /server/better-auth-worker/node_modules/
+/server/lolipants-api/node_modules/
 /server/better-auth-worker/.dev.vars

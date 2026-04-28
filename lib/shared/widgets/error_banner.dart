@@ -46,35 +46,39 @@ class _ErrorBannerState extends State<ErrorBanner> {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(AppSpacing.md),
-        decoration: BoxDecoration(
-          color: AppColors.ruby,
-          borderRadius: BorderRadius.circular(AppRadius.md),
-        ),
-        child: Row(
-          children: [
-            const Icon(Icons.warning_amber_rounded, color: AppColors.sand),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: Text(
-                widget.message,
-                style: AppTextStyles.bodyMedium.copyWith(
-                  fontSize: 12,
-                  color: AppColors.sand,
+    return Semantics(
+      liveRegion: true,
+      label: 'Error: ${widget.message}',
+      child: Material(
+        color: Colors.transparent,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(AppSpacing.md),
+          decoration: BoxDecoration(
+            color: AppColors.ruby,
+            borderRadius: BorderRadius.circular(AppRadius.md),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.warning_amber_rounded, color: AppColors.sand),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  widget.message,
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.sand,
+                  ),
                 ),
               ),
-            ),
-            IconButton(
-              splashColor: Colors.transparent,
-              highlightColor: Colors.transparent,
-              onPressed: widget.onDismiss,
-              icon: const Icon(Icons.close, color: AppColors.sand, size: 18),
-            ),
-          ],
+              IconButton(
+                splashColor: Colors.transparent,
+                highlightColor: Colors.transparent,
+                onPressed: widget.onDismiss,
+                tooltip: 'Dismiss error',
+                icon: const Icon(Icons.close, color: AppColors.sand, size: 18),
+              ),
+            ],
+          ),
         ),
       ),
     )

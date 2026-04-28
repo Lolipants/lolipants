@@ -58,6 +58,12 @@ final authRepositoryProvider = Provider<AuthRepository>(
 final authProvider =
     AsyncNotifierProvider<AuthNotifier, AuthState>(AuthNotifier.new);
 
+/// Pending post-login route captured when session expires.
+final pendingAuthReturnToProvider = StateProvider<String?>((ref) => null);
+
+/// Optional user-facing session recovery message.
+final authRecoveryMessageProvider = StateProvider<String?>((ref) => null);
+
 /// Riverpod notifier coordinating session restore and sign-in/out.
 class AuthNotifier extends AsyncNotifier<AuthState> {
   @override
@@ -95,7 +101,10 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     final result = await repo.signIn(email: email, password: password);
     result.fold(
       (_) {},
-      (user) => state = AsyncValue.data(AuthAuthenticated(user)),
+      (user) {
+        state = AsyncValue.data(AuthAuthenticated(user));
+        ref.read(authRecoveryMessageProvider.notifier).state = null;
+      },
     );
     return result;
   }
@@ -114,7 +123,50 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     );
     result.fold(
       (_) {},
-      (user) => state = AsyncValue.data(AuthAuthenticated(user)),
+      (user) {
+        state = AsyncValue.data(AuthAuthenticated(user));
+        ref.read(authRecoveryMessageProvider.notifier).state = null;
+      },
+    );
+    return result;
+  }
+
+  /// Starts an OAuth flow against better-auth and updates [authProvider] on
+  /// success.
+  Future<Either<AppException, User>> signInWithSocial(
+    SocialProvider provider,
+  ) async {
+    final repo = ref.read(authRepositoryProvider);
+    final result = await repo.signInWithSocial(provider);
+    result.fold(
+      (_) {},
+      (user) {
+        state = AsyncValue.data(AuthAuthenticated(user));
+        ref.read(authRecoveryMessageProvider.notifier).state = null;
+      },
+    );
+    return result;
+  }
+
+  /// Asks better-auth to email a 6-digit OTP to [email].
+  Future<Either<AppException, Unit>> sendEmailOtp(String email) async {
+    final repo = ref.read(authRepositoryProvider);
+    return repo.sendEmailOtp(email);
+  }
+
+  /// Verifies an emailed OTP and updates [authProvider] on success.
+  Future<Either<AppException, User>> verifyEmailOtp({
+    required String email,
+    required String otp,
+  }) async {
+    final repo = ref.read(authRepositoryProvider);
+    final result = await repo.verifyEmailOtp(email: email, otp: otp);
+    result.fold(
+      (_) {},
+      (user) {
+        state = AsyncValue.data(AuthAuthenticated(user));
+        ref.read(authRecoveryMessageProvider.notifier).state = null;
+      },
     );
     return result;
   }
@@ -125,6 +177,45 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     final result = await repo.signOut();
     state = const AsyncValue.data(AuthUnauthenticated());
     return result;
+  }
+
+  /// Deletes the authenticated user on better-auth and resets local state.
+  Future<Either<AppException, void>> deleteAccount() async {
+    final repo = ref.read(authRepositoryProvider);
+    final result = await repo.deleteAccount();
+    state = const AsyncValue.data(AuthUnauthenticated());
+    return result;
+  }
+
+  /// Updates the current user's display name and refreshes local state.
+  Future<Either<AppException, User>> updateProfile({
+    required String name,
+  }) async {
+    final repo = ref.read(authRepositoryProvider);
+    final result = await repo.updateProfile(name: name);
+    result.fold(
+      (_) {},
+      (user) => state = AsyncValue.data(AuthAuthenticated(user)),
+    );
+    return result;
+  }
+
+  /// Forces local sign-out state (used by API interceptors on 401).
+  Future<void> forceSignOutLocal() async {
+    final storage = ref.read(authLocalStorageProvider);
+    await storage.clearAll();
+    state = const AsyncValue.data(AuthUnauthenticated());
+  }
+
+  /// Captures the desired destination and moves auth state to signed out.
+  Future<void> handleUnauthorized({String? returnTo}) async {
+    final normalized = returnTo?.trim();
+    if (normalized != null && normalized.isNotEmpty) {
+      ref.read(pendingAuthReturnToProvider.notifier).state = normalized;
+    }
+    ref.read(authRecoveryMessageProvider.notifier).state =
+        'Your session expired. Please sign in to continue.';
+    await forceSignOutLocal();
   }
 }
 

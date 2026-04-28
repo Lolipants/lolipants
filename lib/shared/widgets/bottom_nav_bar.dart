@@ -1,55 +1,74 @@
 import 'package:flutter/material.dart';
+import 'package:lolipants/core/config/app_features.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
+import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
 
-/// Bottom navigation: Home, Browse, Orders, Community, Profile.
+/// Bottom navigation for the main customer shell: maps each visible tab to a
+/// [StatefulNavigationShell] branch index (0=home, 1=browse, 2=orders,
+/// 3=community, 4=profile). When [kFeatureCommunity] is false, community
+/// is omitted and four tabs target branches `0,1,2,4`.
 class LolipantsBottomNavBar extends StatelessWidget {
-  /// Creates the tab bar with the active index.
+  /// Creates the tab bar for the current [shellBranchIndex].
   const LolipantsBottomNavBar({
-    required this.currentIndex,
-    required this.onChanged,
-    required this.onDesignTap,
+    required this.shellBranchIndex,
+    required this.onShellBranchSelected,
     super.key,
   });
 
-  /// Selected tab index (0–4).
-  final int currentIndex;
+  /// Active shell branch index from [StatefulNavigationShell.currentIndex].
+  final int shellBranchIndex;
 
-  /// Notifies when a tab is tapped.
-  final ValueChanged<int> onChanged;
-  final VoidCallback onDesignTap;
+  /// Selects a shell branch (same as [StatefulNavigationShell.goBranch]).
+  final ValueChanged<int> onShellBranchSelected;
+
+  static List<_NavDef> _defs() {
+    const home = _NavSpec(
+      labelEn: AppStrings.navHome,
+      labelAr: AppStrings.navHomeAr,
+      icon: Icons.home_outlined,
+    );
+    const browse = _NavSpec(
+      labelEn: AppStrings.navBrowse,
+      labelAr: AppStrings.navBrowseAr,
+      icon: Icons.diamond_outlined,
+    );
+    const orders = _NavSpec(
+      labelEn: AppStrings.navOrders,
+      labelAr: AppStrings.navOrdersAr,
+      icon: Icons.receipt_long_outlined,
+    );
+    const community = _NavSpec(
+      labelEn: AppStrings.navCommunity,
+      labelAr: AppStrings.navCommunityAr,
+      icon: Icons.people_outline,
+    );
+    const profile = _NavSpec(
+      labelEn: AppStrings.navProfile,
+      labelAr: AppStrings.navProfileAr,
+      icon: Icons.person_outline,
+    );
+    if (kFeatureCommunity) {
+      return const [
+        _NavDef(0, home),
+        _NavDef(1, browse),
+        _NavDef(2, orders),
+        _NavDef(3, community),
+        _NavDef(4, profile),
+      ];
+    }
+    return const [
+      _NavDef(0, home),
+      _NavDef(1, browse),
+      _NavDef(2, orders),
+      _NavDef(4, profile),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
-    const items = <_NavSpec>[
-      _NavSpec(
-        labelEn: AppStrings.navHome,
-        labelAr: AppStrings.navHomeAr,
-        icon: Icons.home_outlined,
-      ),
-      _NavSpec(
-        labelEn: AppStrings.navBrowse,
-        labelAr: AppStrings.navBrowseAr,
-        icon: Icons.diamond_outlined,
-      ),
-      _NavSpec(
-        labelEn: AppStrings.navOrders,
-        labelAr: AppStrings.navOrdersAr,
-        icon: Icons.receipt_long_outlined,
-      ),
-      _NavSpec(
-        labelEn: AppStrings.navCommunity,
-        labelAr: AppStrings.navCommunityAr,
-        icon: Icons.people_outline,
-      ),
-      _NavSpec(
-        labelEn: AppStrings.navProfile,
-        labelAr: AppStrings.navProfileAr,
-        icon: Icons.person_outline,
-      ),
-    ];
-
+    final defs = _defs();
     return DecoratedBox(
       decoration: const BoxDecoration(
         color: AppColors.ink,
@@ -60,45 +79,32 @@ class LolipantsBottomNavBar extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: SizedBox(
-          height: 76,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Positioned.fill(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: List.generate(items.length, (index) {
-                    final selected = index == currentIndex;
-                    return Expanded(
-                      child: _NavEntry(
-                        spec: items[index],
-                        selected: selected,
-                        onTap: () => onChanged(index),
-                      ),
-                    );
-                  }),
+          height: AppSpacing.xxl + AppSpacing.xxl + AppSpacing.md,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: List.generate(defs.length, (i) {
+              final def = defs[i];
+              final selected = shellBranchIndex == def.branchIndex;
+              return Expanded(
+                child: _NavEntry(
+                  spec: def.spec,
+                  selected: selected,
+                  onTap: () => onShellBranchSelected(def.branchIndex),
                 ),
-              ),
-              Positioned(
-                left: 0,
-                right: 0,
-                top: -16,
-                child: Center(
-                  child: FloatingActionButton(
-                    heroTag: 'design_cta',
-                    onPressed: onDesignTap,
-                    backgroundColor: AppColors.gold,
-                    foregroundColor: AppColors.ink,
-                    child: const Icon(Icons.design_services_outlined),
-                  ),
-                ),
-              ),
-            ],
+              );
+            }),
           ),
         ),
       ),
     );
   }
+}
+
+class _NavDef {
+  const _NavDef(this.branchIndex, this.spec);
+
+  final int branchIndex;
+  final _NavSpec spec;
 }
 
 class _NavSpec {
@@ -138,41 +144,49 @@ class _NavEntry extends StatelessWidget {
       onTap: onTap,
       splashFactory: NoSplash.splashFactory,
       highlightColor: Colors.transparent,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(spec.icon, color: color, size: 22),
-          const SizedBox(height: 2),
-          Text(
-            spec.labelAr,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: AppTextStyles.arabicLabel.copyWith(
-              fontSize: 9,
-              color: color,
-            ),
+      child: Semantics(
+        label: '${spec.labelEn} tab',
+        button: true,
+        selected: selected,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 56),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(spec.icon, color: color, size: 22),
+              const SizedBox(height: AppSpacing.xs / 2),
+              Text(
+                spec.labelAr,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.arabicLabel.copyWith(
+                  fontSize: 9,
+                  color: color,
+                ),
+              ),
+              Text(
+                spec.labelEn,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.labelGold.copyWith(
+                  fontSize: 8,
+                  color: color,
+                  letterSpacing: 0,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                height: 3,
+                width: selected ? 22 : 6,
+                decoration: BoxDecoration(
+                  color: AppColors.gold.withValues(alpha: selected ? 1 : 0.22),
+                  borderRadius: BorderRadius.circular(AppRadius.pill),
+                ),
+              ),
+            ],
           ),
-          Text(
-            spec.labelEn,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: AppTextStyles.labelGold.copyWith(
-              fontSize: 8,
-              color: color,
-              letterSpacing: 0,
-            ),
-          ),
-          const SizedBox(height: 4),
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            height: 3,
-            width: selected ? 22 : 6,
-            decoration: BoxDecoration(
-              color: AppColors.gold.withValues(alpha: selected ? 1 : 0.22),
-              borderRadius: BorderRadius.circular(100),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

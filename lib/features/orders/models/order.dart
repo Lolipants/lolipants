@@ -30,6 +30,15 @@ class Order {
     required this.placedAt,
     this.estimatedDelivery,
     this.statusHistory = const [],
+    this.basePrice,
+    this.fabricFee,
+    this.deliveryFee,
+    this.totalPrice,
+    this.currency = 'QAR',
+    this.deliveryAddress,
+    this.deliveryCity,
+    this.deliveryPhone,
+    this.paymentStatus,
   });
 
   /// Public identifier fragment (e.g. `0042`).
@@ -52,6 +61,33 @@ class Order {
 
   /// Historical status transitions.
   final List<OrderStatusUpdate> statusHistory;
+
+  /// Base garment price (QAR) as stored on the order.
+  final int? basePrice;
+
+  /// Fabric fee (QAR).
+  final int? fabricFee;
+
+  /// Delivery fee (QAR).
+  final int? deliveryFee;
+
+  /// Total price (QAR).
+  final int? totalPrice;
+
+  /// Currency (default `QAR`).
+  final String currency;
+
+  /// Delivery address.
+  final String? deliveryAddress;
+
+  /// Delivery city.
+  final String? deliveryCity;
+
+  /// Delivery phone.
+  final String? deliveryPhone;
+
+  /// Latest payment status (`requires_payment`, `paid`, `failed`).
+  final String? paymentStatus;
 
   /// Builds an [Order] from API payload.
   factory Order.fromApi(Map<String, dynamic> json) {
@@ -88,6 +124,18 @@ class Order {
     final eta = DateTime.tryParse(json['estimated_delivery']?.toString() ?? '') ??
         DateTime.tryParse(json['estimatedDelivery']?.toString() ?? '');
 
+    int? asInt(Object? v) {
+      if (v == null) return null;
+      if (v is num) return v.round();
+      return int.tryParse(v.toString());
+    }
+
+    final payment = json['payment'];
+    String? paymentStatus;
+    if (payment is Map<String, dynamic>) {
+      paymentStatus = payment['status']?.toString();
+    }
+
     return Order(
       id: id,
       designName: designName,
@@ -96,6 +144,18 @@ class Order {
       placedAt: placedAt,
       estimatedDelivery: eta,
       statusHistory: history,
+      basePrice: asInt(json['base_price'] ?? json['basePrice']),
+      fabricFee: asInt(json['fabric_fee'] ?? json['fabricFee']),
+      deliveryFee: asInt(json['delivery_fee'] ?? json['deliveryFee']),
+      totalPrice: asInt(json['total_price'] ?? json['totalPrice']),
+      currency: json['currency']?.toString() ?? 'QAR',
+      deliveryAddress: json['delivery_address']?.toString() ??
+          json['deliveryAddress']?.toString(),
+      deliveryCity: json['delivery_city']?.toString() ??
+          json['deliveryCity']?.toString(),
+      deliveryPhone: json['delivery_phone']?.toString() ??
+          json['deliveryPhone']?.toString(),
+      paymentStatus: paymentStatus,
     );
   }
 }
