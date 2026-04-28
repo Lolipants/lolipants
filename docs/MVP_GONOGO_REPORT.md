@@ -5,6 +5,7 @@ Date: 2026-04-28
 ## Scope freeze
 
 Ship scope remains: `discover -> design -> order -> fulfill`.
+Customer-facing MVP scope is women-only (no men/kids surfaces).
 
 ## Completed hardening checks
 

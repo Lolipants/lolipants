@@ -155,6 +155,10 @@ String? _redirectLogic(AsyncValue<AuthState> auth, String location) {
     if (menCategory.hasMatch(location)) {
       return '/browse';
     }
+    final kidsCategory = RegExp(r'^/browse/c/kids/?$');
+    if (kidsCategory.hasMatch(location)) {
+      return '/browse';
+    }
   }
   if (auth.isLoading) {
     if (location != '/') {

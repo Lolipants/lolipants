@@ -33,7 +33,9 @@ class _CategoryPillsState extends State<CategoryPills> {
   Widget build(BuildContext context) {
     final labels = kFeatureMens
         ? _allLabels
-        : _allLabels.where((e) => e.$3 != 'men').toList(growable: false);
+        : _allLabels
+            .where((e) => e.$3 != 'men' && e.$3 != 'kids')
+            .toList(growable: false);
     final activeSlug =
         labels.any((e) => e.$3 == _selectedSlug) ? _selectedSlug : 'all';
     return SingleChildScrollView(

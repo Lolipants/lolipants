@@ -78,7 +78,16 @@ class _MannequinSelectorScreenState
 
   List<MannequinOption> _mannequinsList(List<MannequinOption> raw) {
     if (kFeatureMens) return raw;
-    return raw.where((o) => !isMaleMannequinOption(o)).toList();
+    return raw.where((o) {
+      if (isMaleMannequinOption(o)) return false;
+      final id = o.id.toLowerCase();
+      final en = o.labelEn.toLowerCase();
+      final ar = o.labelAr;
+      if (id.contains('child') || id.contains('kid')) return false;
+      if (en.contains('child') || en.contains('kid')) return false;
+      if (ar.contains('أطفال') || ar.contains('طفل')) return false;
+      return true;
+    }).toList();
   }
 
   @override

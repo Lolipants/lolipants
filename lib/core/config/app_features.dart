@@ -4,8 +4,8 @@
 /// `--dart-define=FEATURE_COMMUNITY=false`
 /// `--dart-define=FEATURE_MUSIC_PLAYER=false`
 /// `--dart-define=FEATURE_AI_EDITOR_TAB=false`
-/// `--dart-define=FEATURE_MENS=false` (women-first MVP: hide Men browse, male
-/// mannequins, and use women defaults in the editor)
+/// `--dart-define=FEATURE_MENS=false` (women-first MVP: hide men/kids browse
+/// entries and non-women mannequin defaults in the editor)
 ///
 /// Debug defaults stay `true` so developers see the full surface unless they
 /// opt into the slim MVP preview.
@@ -28,8 +28,8 @@ const bool kFeatureAiEditorTab = bool.fromEnvironment(
   defaultValue: true,
 );
 
-/// Male-focused catalogue and mannequins (Men category, mens garment presets,
-/// male mannequin options, thobe-first editor seed).
+/// Non-women catalogue/mannequin surfaces (men + kids category paths and
+/// non-women mannequin options).
 ///
 /// Set to `false` for a women-first MVP export.
 const bool kFeatureMens = bool.fromEnvironment(

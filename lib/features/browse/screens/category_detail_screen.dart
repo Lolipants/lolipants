@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lolipants/core/config/app_features.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
@@ -50,6 +51,12 @@ class CategoryDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final key = category.toLowerCase().trim();
+    if (!kFeatureMens && (key == 'men' || key == 'kids')) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted) context.go('/browse');
+      });
+      return const SizedBox.shrink();
+    }
     final garments = _categoryGarments[key] ?? const <String>[];
     final presets = garments.isEmpty
         ? kRegionPresets
