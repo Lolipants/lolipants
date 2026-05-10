@@ -33,7 +33,7 @@ class Stmt {
       if (!design || design.user_id !== b[1]) return null;
       return design as T;
     }
-    if (s.includes("SELECT print_image_url FROM designs WHERE id = ?")) {
+    if (s.includes("FROM designs d") && s.includes("LEFT JOIN mannequin_options")) {
       const design = this.db.designs.get(String(b[0]));
       if (!design || design.user_id !== b[1]) return null;
       return {
@@ -43,6 +43,7 @@ class Stmt {
         mannequin_id: design.mannequin_id ?? null,
         primary_colour: design.primary_colour ?? "#162F28",
         accent_colour: design.accent_colour ?? "#C9A84C",
+        mannequin_preview_url: null,
       } as T;
     }
     if (s.includes("FROM design_render_jobs WHERE id = ? AND user_id = ?")) {
@@ -180,8 +181,6 @@ const env = {
   ONESIGNAL_APP_ID: "k",
   CLOUDFLARE_R2_BASE_URL: "https://files.example.com",
   ENVIRONMENT: "test",
-  MESHY_API_KEY: "k",
-  MESHY_API_BASE_URL: "https://mesh.local",
 } as const;
 
 async function req(
@@ -230,15 +229,6 @@ describe("AI render job endpoints", () => {
       }),
     });
 
-    const fetchMock = vi
-      .spyOn(globalThis, "fetch")
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify({ preview_url: "https://mesh.local/p.png" }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        }),
-      );
-
     const start = await req("POST", "/ai/design-render", {
       token: "customer-token",
       body: { designId: "design-1" },
@@ -260,11 +250,9 @@ describe("AI render job endpoints", () => {
     };
     expect(body.jobId).toBe(startBody.jobId);
     expect(body.artifacts.heroFrontUrl?.length ?? 0).toBeGreaterThan(0);
-
-    expect(fetchMock).toHaveBeenCalled();
   });
 
-  it("returns fallback artifacts when provider fails quickly", async () => {
+  it("returns deterministic fallback artifacts without provider calls", async () => {
     mockDb.designs.set("design-fail", {
       id: "design-fail",
       user_id: "user-1",
@@ -277,10 +265,6 @@ describe("AI render job endpoints", () => {
         textLayers: [],
       }),
     });
-
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response("mesh down", { status: 503 }),
-    );
 
     const start = await req("POST", "/ai/design-render", {
       token: "customer-token",
@@ -297,8 +281,8 @@ describe("AI render job endpoints", () => {
       status: string;
       artifacts: Record<string, string>;
     };
-    expect(body.status).toBe("failed");
-    expect(body.artifacts.fallbackPreviewUrl).toBe(
+    expect(body.status).toBe("completed");
+    expect(body.artifacts.heroFrontUrl).toBe(
       "https://files.example.com/uploads/u/fallback.png",
     );
   });

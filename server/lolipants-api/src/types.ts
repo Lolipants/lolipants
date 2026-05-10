@@ -8,8 +8,6 @@ export type Env = {
   ONESIGNAL_API_KEY: string;
   ONESIGNAL_APP_ID: string;
   CLOUDFLARE_R2_BASE_URL: string;
-  MESHY_API_KEY?: string;
-  MESHY_API_BASE_URL?: string;
   ENVIRONMENT: string;
   APP_ALLOWED_ORIGINS?: string;
   ADMIN_HMAC_SECRET?: string;

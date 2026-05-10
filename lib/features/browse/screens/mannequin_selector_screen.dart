@@ -48,6 +48,16 @@ class _MannequinSelectorScreenState
       labelAr: 'نسائي قصير',
     ),
     MannequinOption(
+      id: 'athletic_female',
+      labelEn: 'Athletic (Female)',
+      labelAr: 'نسائي رياضي',
+    ),
+    MannequinOption(
+      id: 'plus_female',
+      labelEn: 'Plus (Female)',
+      labelAr: 'نسائي بلس',
+    ),
+    MannequinOption(
       id: 'standard_male',
       labelEn: 'Standard (Male)',
       labelAr: 'رجالي قياسي',
@@ -140,11 +150,14 @@ class _MannequinSelectorScreenState
                             height: 190,
                             child: ListView.separated(
                               scrollDirection: Axis.horizontal,
-                              itemCount: mannequins.length + 1,
+                              itemCount:
+                                  mannequins.length +
+                                  (kFeatureCustomPhotoMannequin ? 1 : 0),
                               separatorBuilder: (context, index) =>
                                   const SizedBox(width: AppSpacing.md),
                               itemBuilder: (context, index) {
-                                if (index == mannequins.length) {
+                                if (kFeatureCustomPhotoMannequin &&
+                                    index == mannequins.length) {
                                   final selected =
                                       _selectedId == 'custom_photo';
                                   return _MannequinCard(
@@ -206,7 +219,8 @@ class _MannequinSelectorScreenState
                           ),
                         ],
                       ),
-                    if (_generationStatus != null) ...[
+                    if (kFeatureCustomPhotoMannequin &&
+                        _generationStatus != null) ...[
                       const SizedBox(height: AppSpacing.sm),
                       Text(
                         _generationStatus!,

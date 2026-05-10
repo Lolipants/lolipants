@@ -518,7 +518,7 @@ describe("phase 8 / admin RBAC", () => {
       {
         status: "failed",
         provider_status: "failed",
-        error_message: "Meshy request failed (503)",
+        error_message: "provider unavailable (503)",
         created_at: new Date(now - 20_000).toISOString(),
         completed_at: null,
         failed_at: new Date(now - 15_000).toISOString(),

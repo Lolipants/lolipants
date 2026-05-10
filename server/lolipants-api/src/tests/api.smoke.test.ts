@@ -423,11 +423,11 @@ describe("API error contract consistency", () => {
     expect(notFound.status).toBe(404);
     assertErrorContract(await notFound.json(), 404);
 
-    const mannequinPhotoRequired = await apiRequest("POST", "/ai/mannequin", {
+    const mannequinDisabled = await apiRequest("POST", "/ai/mannequin", {
       token: "valid-user",
       formData: new FormData(),
     });
-    expect(mannequinPhotoRequired.status).toBe(400);
-    assertErrorContract(await mannequinPhotoRequired.json(), 400);
+    expect(mannequinDisabled.status).toBe(503);
+    assertErrorContract(await mannequinDisabled.json(), 503);
   });
 });

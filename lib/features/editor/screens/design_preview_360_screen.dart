@@ -11,7 +11,7 @@ import 'package:lolipants/features/editor/widgets/mannequin_viewer.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
 
-/// Server-backed final render preview with editor fallback.
+/// Deterministic template preview with editor fallback.
 class DesignPreview360Screen extends ConsumerStatefulWidget {
   const DesignPreview360Screen({super.key});
 
@@ -158,14 +158,14 @@ class _DesignPreview360ScreenState extends ConsumerState<DesignPreview360Screen>
   }
 
   String _statusLabel(RenderPreviewJob? job) {
-    if (job == null) return 'Preparing render job...';
+    if (job == null) return 'Preparing template preview...';
     if (job.status == 'failed') {
-      return '${job.error ?? 'Render failed'}. Showing editor fallback.';
+      return '${job.error ?? 'Preview failed'}. Showing editor fallback.';
     }
     if (job.status == 'completed') {
-      return 'Final render ready';
+      return 'Template preview ready';
     }
-    return 'Rendering with Meshy...';
+    return 'Rendering template preview...';
   }
 
   String _toHex(Color color) {

@@ -142,33 +142,12 @@ aiRoutes.post("/measure", async (c) => {
 });
 
 aiRoutes.post("/mannequin", async (c) => {
-  const userId = c.get("userId") as string;
-  const formData = await c.req.formData();
-  const photo = formData.get("photo");
-  if (!(photo instanceof File)) {
-    return apiError(c, 400, "PHOTO_REQUIRED", "photo is required");
-  }
-  if (photo.size > 12 * 1024 * 1024) {
-    return apiError(c, 400, "PHOTO_TOO_LARGE", "photo exceeds 12MB limit");
-  }
-
-  const sourceKey = `mannequin-jobs/${userId}/${crypto.randomUUID()}-source.jpg`;
-  await c.env.R2.put(sourceKey, await photo.arrayBuffer(), {
-    httpMetadata: { contentType: photo.type || "image/jpeg" },
-  });
-  const sourceUrl = `${c.env.CLOUDFLARE_R2_BASE_URL}/${sourceKey}`;
-  const jobId = crypto.randomUUID();
-
-  await c.env.DB.prepare(
-    `INSERT INTO mannequin_jobs (
-      id, user_id, source_url, status, provider, provider_status, retry_count, started_at
-    ) VALUES (?, ?, ?, 'queued', 'meshy', 'queued', 0, datetime('now'))`,
-  )
-    .bind(jobId, userId, sourceUrl)
-    .run();
-
-  c.executionCtx.waitUntil(_advanceMannequinJob(c.env, jobId));
-  return c.json({ jobId, status: "queued" }, 202);
+  return apiError(
+    c,
+    503,
+    "MANNEQUIN_GENERATION_DISABLED",
+    "Custom photo mannequin generation is disabled in low-cost mode",
+  );
 });
 
 aiRoutes.get("/mannequin/:jobId", async (c) => {
@@ -242,7 +221,7 @@ aiRoutes.post("/design-render", async (c) => {
   await c.env.DB.prepare(
     `INSERT INTO design_render_jobs (
       id, user_id, design_id, mannequin_id, status, provider, provider_status, started_at
-    ) VALUES (?, ?, ?, ?, 'queued', 'meshy', 'queued', datetime('now'))`,
+    ) VALUES (?, ?, ?, ?, 'queued', 'template', 'queued', datetime('now'))`,
   )
     .bind(jobId, userId, designId, design.mannequin_id)
     .run();
@@ -275,85 +254,6 @@ aiRoutes.get("/design-render/:jobId", async (c) => {
   });
 });
 
-async function _advanceMannequinJob(env: Env, jobId: string) {
-  const row = await env.DB.prepare(
-    `SELECT id, user_id, status, source_url, preview_url, provider, provider_job_id,
-      provider_status, artifact_urls, error_message, retry_count
-     FROM mannequin_jobs WHERE id = ?`,
-  )
-    .bind(jobId)
-    .first<MannequinJobRow>();
-  if (!row || row.status === "completed" || row.status === "failed") return;
-  console.info(
-    JSON.stringify({
-      event: "mannequin_job_start",
-      jobId: row.id,
-      userId: row.user_id,
-      provider: row.provider ?? "meshy",
-    }),
-  );
-
-  await env.DB.prepare(
-    `UPDATE mannequin_jobs
-     SET status = 'rendering', provider_status = 'processing', updated_at = datetime('now')
-     WHERE id = ?`,
-  )
-    .bind(row.id)
-    .run();
-
-  const result = await _generateMannequinPreviewWithRetry(env, row.source_url);
-  if (!result.ok) {
-    await env.DB.prepare(
-      `UPDATE mannequin_jobs
-       SET status = 'failed', provider_status = 'failed', error_message = ?, retry_count = ?,
-         failed_at = datetime('now'), updated_at = datetime('now')
-       WHERE id = ?`,
-    )
-      .bind(result.message, result.retries, row.id)
-      .run();
-    console.warn(
-      JSON.stringify({
-        event: "mannequin_job_failed",
-        jobId: row.id,
-        retries: result.retries,
-        error: result.message,
-      }),
-    );
-    return;
-  }
-
-  await env.DB.prepare(
-    `UPDATE mannequin_jobs
-     SET status = 'completed', provider_status = 'completed', preview_url = ?, retry_count = ?,
-       artifact_urls = ?, completed_at = datetime('now'), updated_at = datetime('now')
-     WHERE id = ?`,
-  )
-    .bind(
-      result.previewUrl,
-      result.retries,
-      JSON.stringify({ thumbnailUrl: result.previewUrl, heroFrontUrl: result.previewUrl }),
-      row.id,
-    )
-    .run();
-
-  const optionId = `generated_${row.id}`;
-  await env.DB.prepare(
-    `INSERT INTO mannequin_options (id, label_en, label_ar, preview_url, is_active, sort_order)
-     VALUES (?, ?, ?, ?, 0, 9999)
-     ON CONFLICT(id) DO UPDATE SET preview_url = excluded.preview_url`,
-  )
-    .bind(optionId, "My 3D Mannequin", "مانيكاني ثلاثي الأبعاد", result.previewUrl)
-    .run();
-  console.info(
-    JSON.stringify({
-      event: "mannequin_job_completed",
-      jobId: row.id,
-      retries: result.retries,
-    }),
-  );
-
-}
-
 async function _advanceDesignRenderJob(env: Env, jobId: string) {
   const startMs = Date.now();
   const row = await env.DB.prepare(
@@ -382,12 +282,14 @@ async function _advanceDesignRenderJob(env: Env, jobId: string) {
     .run();
 
   const design = await env.DB.prepare(
-    `SELECT print_image_url, render_metadata, garment_type, mannequin_id,
-      primary_colour, accent_colour
-     FROM designs WHERE id = ? AND user_id = ?`,
+    `SELECT d.print_image_url, d.render_metadata, d.garment_type, d.mannequin_id,
+      d.primary_colour, d.accent_colour, mo.preview_url AS mannequin_preview_url
+     FROM designs d
+     LEFT JOIN mannequin_options mo ON mo.id = d.mannequin_id
+     WHERE d.id = ? AND d.user_id = ?`,
   )
     .bind(row.design_id, row.user_id)
-    .first<DesignRenderSourceRow>();
+    .first<DesignRenderSourceRow & { mannequin_preview_url: string | null }>();
 
   const normalized = normalizeRenderMetadata({
     garmentType: design?.garment_type,
@@ -398,8 +300,13 @@ async function _advanceDesignRenderJob(env: Env, jobId: string) {
     renderMetadataRaw: design?.render_metadata,
   });
 
-  const previewSource = await _composeRenderTextureSource(env, row, normalized);
-  if (previewSource.length === 0) {
+  const artifacts = _buildDeterministicArtifacts({
+    printImageUrl: design?.print_image_url ?? null,
+    mannequinPreviewUrl: design?.mannequin_preview_url ?? null,
+    templateId: normalized.templateId,
+    materialPreset: normalized.materialPreset,
+  });
+  if ((artifacts.heroFrontUrl ?? "").length === 0) {
     await env.DB.prepare(
       `UPDATE design_render_jobs
        SET status = 'failed', provider_status = 'failed', error_message = ?,
@@ -408,7 +315,7 @@ async function _advanceDesignRenderJob(env: Env, jobId: string) {
        WHERE id = ?`,
     )
       .bind(
-        "Design has no print image to render",
+        "Design has no renderable preview source",
         JSON.stringify(_fallbackArtifacts(design?.print_image_url ?? null)),
         jobId,
       )
@@ -417,41 +324,6 @@ async function _advanceDesignRenderJob(env: Env, jobId: string) {
     return;
   }
 
-  const generated = await _generateMannequinPreviewWithRetry(
-    env,
-    previewSource,
-    {
-      maxAttempts: 2,
-      requestTimeoutMs: 9_000,
-    },
-  );
-  if (!generated.ok) {
-    await env.DB.prepare(
-      `UPDATE design_render_jobs
-       SET status = 'failed', provider_status = 'failed', error_message = ?, attempt_count = ?,
-         artifact_urls = ?,
-         failed_at = datetime('now'), updated_at = datetime('now')
-       WHERE id = ?`,
-    )
-      .bind(
-        generated.message,
-        generated.retries,
-        JSON.stringify(_fallbackArtifacts(design?.print_image_url ?? null)),
-        jobId,
-      )
-      .run();
-    console.warn(
-      JSON.stringify({
-        event: "design_render_failed",
-        jobId,
-        retries: generated.retries,
-        error: generated.message,
-      }),
-    );
-    return;
-  }
-
-  const artifacts = await _persistRenderArtifacts(env, row, generated.previewUrl, normalized);
   const elapsedMs = Date.now() - startMs;
   await env.DB.prepare(
     `UPDATE design_render_jobs
@@ -459,13 +331,13 @@ async function _advanceDesignRenderJob(env: Env, jobId: string) {
        completed_at = datetime('now'), updated_at = datetime('now')
      WHERE id = ?`,
   )
-    .bind(generated.retries, JSON.stringify(artifacts), jobId)
+    .bind(1, JSON.stringify(artifacts), jobId)
     .run();
   console.info(
     JSON.stringify({
       event: "design_render_completed",
       jobId,
-      retries: generated.retries,
+      retries: 1,
       elapsedMs,
       templateId: normalized.templateId,
       materialPreset: normalized.materialPreset,
@@ -473,157 +345,26 @@ async function _advanceDesignRenderJob(env: Env, jobId: string) {
   );
 }
 
-async function _generateMannequinPreviewWithRetry(
-  env: Env,
-  sourceUrl: string,
-  options?: {
-    maxAttempts?: number;
-    requestTimeoutMs?: number;
-  },
-): Promise<
-  | { ok: true; previewUrl: string; retries: number }
-  | { ok: false; message: string; retries: number }
-> {
-  const apiKey = env.MESHY_API_KEY?.trim();
-  const apiBase = env.MESHY_API_BASE_URL?.trim() || "https://api.meshy.ai/openapi/v1";
-  if (!apiKey) {
-    return { ok: false, message: "Meshy API is not configured", retries: 0 };
-  }
-
-  const maxAttempts = options?.maxAttempts ?? 3;
-  const requestTimeoutMs = options?.requestTimeoutMs ?? 12_000;
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), requestTimeoutMs);
-      const response = await fetch(`${apiBase}/image-to-3d`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        signal: controller.signal,
-        body: JSON.stringify({
-          image_url: sourceUrl,
-          topology: "quad",
-        }),
-      });
-      clearTimeout(timeoutId);
-      if (!response.ok) {
-        if (attempt < maxAttempts && response.status >= 500) {
-          await _sleep(350 * attempt);
-          continue;
-        }
-        return {
-          ok: false,
-          message: `Meshy request failed (${response.status})`,
-          retries: attempt,
-        };
-      }
-
-      const data = (await response.json()) as Record<string, unknown>;
-      const previewUrl =
-        data["thumbnail_url"]?.toString() ||
-        data["preview_url"]?.toString() ||
-        data["image_url"]?.toString() ||
-        "";
-      if (previewUrl.length === 0) {
-        if (attempt < maxAttempts) {
-          await _sleep(350 * attempt);
-          continue;
-        }
-        return {
-          ok: false,
-          message: "Meshy response missing preview URL",
-          retries: attempt,
-        };
-      }
-      return { ok: true, previewUrl, retries: attempt };
-    } catch {
-      if (attempt < maxAttempts) {
-        await _sleep(350 * attempt);
-        continue;
-      }
-      return {
-        ok: false,
-        message: "Meshy request failed after retries",
-        retries: attempt,
-      };
-    }
-  }
-  return { ok: false, message: "Meshy request failed", retries: maxAttempts };
-}
-
-async function _composeRenderTextureSource(
-  env: Env,
-  row: DesignRenderJobRow,
-  normalized: ReturnType<typeof normalizeRenderMetadata>,
-) {
-  const sourceImage = normalized.overlay.printImageUrl?.trim() ?? "";
-  if (sourceImage.length === 0) return "";
-  const key = `render-jobs/${row.user_id}/${row.id}/texture-input.json`;
-  const payload = {
-    sourceImageUrl: sourceImage,
-    templateId: normalized.templateId,
-    materialPreset: normalized.materialPreset,
-    cameraPreset: normalized.cameraPreset,
-    palette: normalized.palette,
-    printTransform: {
-      placement: normalized.overlay.placement,
-      x: normalized.overlay.x,
-      y: normalized.overlay.y,
-      scale: normalized.overlay.scale,
-    },
-    textLayers: normalized.overlay.textLayers,
-    composedAt: new Date().toISOString(),
+function _buildDeterministicArtifacts(input: {
+  printImageUrl: string | null;
+  mannequinPreviewUrl: string | null;
+  templateId: string;
+  materialPreset: string;
+}) {
+  const source =
+    input.printImageUrl?.trim() ||
+    input.mannequinPreviewUrl?.trim() ||
+    "";
+  return {
+    fallbackPreviewUrl: source,
+    thumbnailUrl: source,
+    heroFrontUrl: source,
+    heroSideUrl: source,
+    heroBackUrl: source,
+    templateId: input.templateId,
+    materialPreset: input.materialPreset,
+    renderMode: "template_static_v1",
   };
-  await env.R2.put(key, JSON.stringify(payload), {
-    httpMetadata: { contentType: "application/json" },
-  });
-  // Fast path: we still render from source image URL, but we persist normalized
-  // composition metadata in R2 for deterministic reproducibility.
-  return sourceImage;
-}
-
-async function _persistRenderArtifacts(
-  env: Env,
-  row: DesignRenderJobRow,
-  previewUrl: string,
-  normalized: ReturnType<typeof normalizeRenderMetadata>,
-) {
-  const copiedPreview = await _copyExternalImageToR2(
-    env,
-    previewUrl,
-    `render-jobs/${row.user_id}/${row.id}/hero-front.jpg`,
-  );
-  const base = copiedPreview ?? previewUrl;
-  const artifacts = {
-    thumbnailUrl: base,
-    heroFrontUrl: base,
-    heroSideUrl: base,
-    heroBackUrl: base,
-    templateId: normalized.templateId,
-    materialPreset: normalized.materialPreset,
-  };
-  return artifacts;
-}
-
-async function _copyExternalImageToR2(
-  env: Env,
-  sourceUrl: string,
-  key: string,
-): Promise<string | null> {
-  try {
-    const response = await fetch(sourceUrl);
-    if (!response.ok) return null;
-    const body = await response.arrayBuffer();
-    await env.R2.put(key, body, {
-      httpMetadata: { contentType: response.headers.get("content-type") ?? "image/jpeg" },
-    });
-    return `${env.CLOUDFLARE_R2_BASE_URL}/${key}`;
-  } catch {
-    return null;
-  }
 }
 
 function _fallbackArtifacts(printImageUrl: string | null) {
@@ -635,12 +376,6 @@ function _fallbackArtifacts(printImageUrl: string | null) {
     heroSideUrl: fallback,
     heroBackUrl: fallback,
   };
-}
-
-function _sleep(ms: number) {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms);
-  });
 }
 
 function _safeParseArtifactUrls(value: string | null): Record<string, string> {

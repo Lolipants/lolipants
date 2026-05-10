@@ -151,7 +151,15 @@ function resolveTemplateId(input: {
   if (input.templateHint === "unisex_bisht_v1") return "unisex_bisht_v1";
   if (input.garmentType === "abaya") return "female_abaya_v1";
   if (input.garmentType === "bisht") return "unisex_bisht_v1";
-  if (input.mannequinId.includes("female")) return "female_abaya_v1";
+  if (
+    input.mannequinId.includes("female") ||
+    input.mannequinId.includes("curvy") ||
+    input.mannequinId.includes("plus") ||
+    input.mannequinId.includes("petite") ||
+    input.mannequinId.includes("athletic")
+  ) {
+    return "female_abaya_v1";
+  }
   if (input.mannequinId.includes("male")) return "male_thobe_v1";
   return "default_thobe_v1";
 }

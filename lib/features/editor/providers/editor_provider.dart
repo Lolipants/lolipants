@@ -614,6 +614,8 @@ class EditorNotifier extends StateNotifier<EditorState> {
       'standard_female',
       'curvy_female',
       'petite_female',
+      'athletic_female',
+      'plus_female',
       'standard_male',
       'tall_male',
       'child',
@@ -633,7 +635,14 @@ class EditorNotifier extends StateNotifier<EditorState> {
   String _resolveMannequinTemplateId() {
     final id = state.mannequinId.toLowerCase();
     final garment = state.garmentType.toLowerCase();
-    if (garment == 'abaya' || id.contains('female')) return 'female_abaya_v1';
+    if (garment == 'abaya' ||
+        id.contains('female') ||
+        id.contains('curvy') ||
+        id.contains('plus') ||
+        id.contains('petite') ||
+        id.contains('athletic')) {
+      return 'female_abaya_v1';
+    }
     if (garment == 'bisht') return 'unisex_bisht_v1';
     if (id.contains('male')) return 'male_thobe_v1';
     return 'default_thobe_v1';

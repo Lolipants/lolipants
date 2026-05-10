@@ -19,7 +19,7 @@ class MannequinGenerationResult {
   final String? errorMessage;
 }
 
-/// Loads mannequin options and triggers Meshy generation through backend.
+/// Loads mannequin options and checks custom mannequin generation jobs.
 class MannequinsRepository {
   MannequinsRepository({
     required Dio dio,
@@ -50,7 +50,7 @@ class MannequinsRepository {
     }
   }
 
-  /// Calls backend endpoint that proxies Meshy API generation.
+  /// Calls backend endpoint that starts custom mannequin generation.
   /// Starts mannequin generation and returns job metadata.
   Future<Either<AppException, MannequinGenerationResult>> startGeneration({
     required String photoPath,

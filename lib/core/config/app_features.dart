@@ -37,12 +37,18 @@ const bool kFeatureMens = bool.fromEnvironment(
   defaultValue: true,
 );
 
-/// Final render preview screen that fetches server-rendered artifacts.
-///
-/// Keep enabled in dev, but allow MVP builds to disable Meshy/preview surfaces.
+/// Final render preview screen that fetches deterministic preview artifacts.
 const bool kFeatureFinalRenderPreview = bool.fromEnvironment(
   'FEATURE_FINAL_RENDER_PREVIEW',
   defaultValue: true,
+);
+
+/// "Use my photo" custom mannequin generation.
+///
+/// Disabled by default in low-cost mode because it needs paid 3D generation.
+const bool kFeatureCustomPhotoMannequin = bool.fromEnvironment(
+  'FEATURE_CUSTOM_PHOTO_MANNEQUIN',
+  defaultValue: false,
 );
 
 /// [StatefulNavigationShell] branch index for Community when

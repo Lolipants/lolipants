@@ -843,7 +843,7 @@ function _failureCategory(errorMessage: string, providerStatus: string): string 
   if (providerStatus.toLowerCase() === "timeout" || message.includes("abort")) {
     return "timeout";
   }
-  if (message.includes("meshy") && message.includes("503")) {
+  if (message.includes("503") || message.includes("provider unavailable")) {
     return "provider_5xx";
   }
   if (message.includes("missing") && message.includes("image")) {
