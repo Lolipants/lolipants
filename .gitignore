@@ -47,6 +47,24 @@ app.*.map.json
 # Environment
 .env
 
+# Private / local documentation (not for public GitHub repo)
+/docs/
+/API_SECRETS_SETUP_LATER.md
+/AWS_SES_SETUP.md
+/LOLIPANTS_BACKEND_SETUP.md
+/LOLIPANTS_CURSOR_INSTRUCTIONS.md
+/LOLIPANTS_CURSOR_INSTRUCTIONS_PHASES_3_6.md
+/PHASES_1_3_UNFINISHED_FEATURES.md
+
+# Wrangler local state (D1 / miniflare)
+**/.wrangler/
+
+# Android build outputs
+/android/build/
+
+# Golden test failure dumps (regenerate goldens instead)
+**/test/**/failures/
+
 # Node worker (Better Auth)
 /node_modules/
 **/node_modules/

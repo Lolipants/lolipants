@@ -1,17 +1,25 @@
-# lolipants
+# Lolipants
 
-A new Flutter project.
+Flutter client for Lolipants (custom garments, orders, community, tailor/delivery flows).
 
-## Getting Started
+## Repository layout
 
-This project is a starting point for a Flutter application.
+- **App**: Flutter/Dart in the repo root (`lib/`, `pubspec.yaml`).
+- **API**: Cloudflare Worker in `server/lolipants-api/` — see [server/lolipants-api/README.md](server/lolipants-api/README.md).
+- **Auth**: Better Auth worker in `server/better-auth-worker/` — see [server/better-auth-worker/README.md](server/better-auth-worker/README.md).
+- **Static landing**: `landing/`.
 
-A few resources to get you started if this is your first Flutter project:
+## Local setup (app)
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+1. Copy `.env.example` to `.env` and set `BETTER_AUTH_BASE_URL` and `API_BASE_URL` (see comments in `.env.example`).
+2. Run `flutter pub get`, then `flutter run`.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+For worker env vars, use each package’s `.dev.vars.example` as a template.
+
+## Tests
+
+```bash
+flutter test
+```
+
+In `server/lolipants-api`: `npm test` (see that README).
