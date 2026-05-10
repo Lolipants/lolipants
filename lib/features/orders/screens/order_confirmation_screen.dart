@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lolipants/core/config/app_features.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
@@ -45,6 +46,16 @@ class OrderConfirmationScreen extends ConsumerWidget {
                     style: AppTextStyles.bodyMedium
                         .copyWith(color: AppColors.sand.withValues(alpha: 0.8)),
                   ).animate().fadeIn(delay: 400.ms, duration: 400.ms),
+                  if (kFeatureMockPayment) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    Text(
+                      'Demo payment mode: no real charge was captured.',
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.gold,
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: AppSpacing.xxl),
                   LolipantsButton(
                     label: 'Track order',

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lolipants/core/config/app_features.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
@@ -81,9 +82,11 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
                     Text('Pay with card', style: AppTextStyles.titleMedium),
                     const SizedBox(height: AppSpacing.xs),
                     Text(
-                      'Payments are processed by Tap. Your card details never '
-                      'touch our servers. In sandbox builds a dev-only button '
-                      'captures the payment without contacting Tap.',
+                      kFeatureMockPayment
+                          ? 'Demo payment mode is active. No real card will be '
+                              'charged in this build.'
+                          : 'Payments are processed by Tap. Your card details '
+                              'never touch our servers.',
                       style: AppTextStyles.bodySmall,
                     ),
                   ],
@@ -209,10 +212,13 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
   /// short-circuit to the sandbox token so local smoke tests do not require
   /// provider credentials.
   ///
-  /// In release builds we collect the provider token produced by the Tap card
-  /// flow and pass it to `POST /payments/confirm`.
+  /// In mock-payment reviewer builds (`FEATURE_MOCK_PAYMENT=true`) this also
+  /// uses the sandbox token and skips manual token entry.
+  ///
+  /// In non-mock release builds we collect the provider token produced by the
+  /// Tap card flow and pass it to `POST /payments/confirm`.
   Future<String?> _requestTapToken() async {
-    if (kDebugMode) {
+    if (kDebugMode || kFeatureMockPayment) {
       return _kSandboxToken;
     }
     final token = await showModalBottomSheet<String>(

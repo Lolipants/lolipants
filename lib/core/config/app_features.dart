@@ -51,6 +51,15 @@ const bool kFeatureCustomPhotoMannequin = bool.fromEnvironment(
   defaultValue: false,
 );
 
+/// Payment mode switch for internal review builds.
+///
+/// When enabled, checkout uses a mock/sandbox confirmation path and shows
+/// explicit "no real charge" copy.
+const bool kFeatureMockPayment = bool.fromEnvironment(
+  'FEATURE_MOCK_PAYMENT',
+  defaultValue: false,
+);
+
 /// [StatefulNavigationShell] branch index for Community when
 /// [kFeatureCommunity] is true (0=home, 1=browse, 2=orders, 3=community,
 /// 4=profile). Must match [LolipantsBottomNavBar] ordering.
