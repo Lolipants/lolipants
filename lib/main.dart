@@ -4,6 +4,7 @@ import 'dart:developer' as developer;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:logging/logging.dart';
 import 'package:lolipants/app.dart';
 import 'package:lolipants/core/preferences/shared_preferences_provider.dart';
@@ -32,6 +33,19 @@ API_BASE_URL=
 CLOUDFLARE_R2_BASE_URL=
 ''',
     );
+  }
+
+  final googleServer = dotenv.env['GOOGLE_SERVER_CLIENT_ID']?.trim() ?? '';
+  if (googleServer.isNotEmpty) {
+    try {
+      await GoogleSignIn.instance.initialize(serverClientId: googleServer);
+    } on Exception catch (e, st) {
+      Logger('lolipants.bootstrap').warning(
+        'GoogleSignIn.initialize failed; Google sign-in may not work.',
+        e,
+        st,
+      );
+    }
   }
 
   final prefs = await SharedPreferences.getInstance();

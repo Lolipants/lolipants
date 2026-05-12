@@ -5,6 +5,119 @@ import { cors } from "hono/cors";
 import { createAuth } from "./auth";
 import * as schema from "./db/schema";
 
+/** Copy Set-Cookie headers from Better Auth redirect onto our HTML response. */
+function appendSetCookieHeaders(from: Headers, to: Headers): void {
+  const getSetCookie = (
+    from as unknown as { getSetCookie?: () => string[] }
+  ).getSetCookie;
+  if (typeof getSetCookie === "function") {
+    for (const c of getSetCookie.call(from)) {
+      to.append("Set-Cookie", c);
+    }
+    return;
+  }
+  const single = from.get("Set-Cookie");
+  if (single) to.append("Set-Cookie", single);
+}
+
+function escapeHtmlAttr(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;");
+}
+
+const ANDROID_APP_PACKAGE = "com.lolipants.lolipants";
+
+/** Primary tap target for Custom Tabs: intent URI avoids broken history / reload. */
+function androidIntentHrefFromDeepLink(deep: URL): string {
+  const hostPathQuery = `${deep.host}${deep.pathname}${deep.search}`;
+  return `intent://${hostPathQuery}#Intent;scheme=lolipants;package=${ANDROID_APP_PACKAGE};end`;
+}
+
+/**
+ * HTML bridge for **redirect-based** OAuth only (e.g. web clients). The Flutter
+ * app uses **native Google Sign-In + ID token** and does not load this page.
+ *
+ * Putting a long session token in the HTTP `Location` header breaks some browsers
+ * (Custom Tabs / desktop WebView can spin forever). Instead return 200 HTML that
+ * sets the same cookies, then sends the user back with `lolipants://…?token=…`.
+ *
+ * **Do not** use automatic redirects to custom schemes inside Chrome Custom Tabs:
+ * navigation can fail and the tab can restore the **previous** history entry
+ * (the Google OAuth page). A **user tap** on the link is reliable; on Android
+ * the `intent://…#Intent;scheme=lolipants;package=…;end` form is used for the
+ * primary button.
+ */
+function withMobileOAuthDeepLinkToken(
+  response: Response,
+  userAgent: string | undefined,
+): Response {
+  if (response.status < 300 || response.status >= 400) return response;
+  const locationHeader = response.headers.get("Location")?.trim();
+  const authToken = response.headers.get("set-auth-token");
+  if (!locationHeader || !authToken) return response;
+  let target: URL;
+  try {
+    target = new URL(locationHeader);
+  } catch {
+    return response;
+  }
+  if (target.protocol !== "lolipants:") return response;
+  if (!target.searchParams.has("token")) {
+    target.searchParams.set("token", authToken);
+  }
+  const deepLink = target.toString();
+
+  const headers = new Headers();
+  appendSetCookieHeaders(response.headers, headers);
+  headers.set("content-type", "text/html; charset=utf-8");
+  headers.set("cache-control", "no-store");
+
+  const isAndroid = /\bAndroid\b/i.test(userAgent ?? "");
+  const primaryHref = isAndroid
+    ? androidIntentHrefFromDeepLink(target)
+    : deepLink;
+  const primaryAttr = escapeHtmlAttr(primaryHref);
+  const deepAttr = escapeHtmlAttr(deepLink);
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Return to app</title>
+  <style>
+    body{font-family:system-ui,sans-serif;margin:0;padding:24px;max-width:28rem;margin-inline:auto;text-align:center}
+    a{display:inline-block;margin-top:20px;padding:14px 22px;background:#111;color:#fff;text-decoration:none;border-radius:10px;font-weight:600}
+    p{color:#333;line-height:1.45}
+    .sub{margin-top:16px;font-size:14px;color:#555}
+  </style>
+</head>
+<body>
+  <p><strong>Almost done.</strong> Tap the button once to return to Lolipants and finish signing in.</p>
+  <p><a href="${primaryAttr}" rel="noopener">Open Lolipants</a></p>
+  ${
+    isAndroid
+      ? `<p class="sub">If the button does nothing, try <a href="${deepAttr}">this link</a> instead.</p>`
+      : ""
+  }
+</body>
+</html>`;
+
+  return new Response(html, { status: 200, headers });
+}
+
+function escapeHtml(s: string): string {
+  return s.replace(/[&<>"']/g, (ch) => {
+    if (ch === "&") return "&amp;";
+    if (ch === "<") return "&lt;";
+    if (ch === ">") return "&gt;";
+    if (ch === '"') return "&quot;";
+    return "&#39;";
+  });
+}
+
 /** One Better Auth instance per isolate — rebuilding `betterAuth()` every request can exceed CPU limits (CF 1102). */
 let cachedAuth: ReturnType<typeof createAuth> | null = null;
 
@@ -21,10 +134,6 @@ type Bindings = {
   APP_NAME?: string;
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
-  APPLE_CLIENT_ID?: string;
-  APPLE_TEAM_ID?: string;
-  APPLE_KEY_ID?: string;
-  APPLE_PRIVATE_KEY?: string;
   INTERNAL_SYNC_SECRET?: string;
 };
 
@@ -86,17 +195,12 @@ app.on(["GET", "POST", "OPTIONS"], "/auth/*", async (c) => {
         clientId: c.env.GOOGLE_CLIENT_ID,
         clientSecret: c.env.GOOGLE_CLIENT_SECRET,
       },
-      apple: {
-        clientId: c.env.APPLE_CLIENT_ID,
-        teamId: c.env.APPLE_TEAM_ID,
-        keyId: c.env.APPLE_KEY_ID,
-        privateKey: c.env.APPLE_PRIVATE_KEY,
-      },
     });
   }
 
   try {
-    return await cachedAuth.handler(c.req.raw);
+    const res = await cachedAuth.handler(c.req.raw);
+    return withMobileOAuthDeepLinkToken(res, c.req.header("User-Agent"));
   } catch (err) {
     console.error("better-auth handler error:", err);
     return c.json({ error: "auth_handler_failed" }, 500);
@@ -166,12 +270,18 @@ app.post("/internal/user/:id/role", async (c) => {
   return c.json({ updated: true, id, role: patch.role, adminScopes: patch.adminScopes });
 });
 
-app.get("/", (c) =>
-  c.json({
+app.get("/", (c) => {
+  const error = c.req.query("error");
+  if (error) {
+    const safe = /^[A-Za-z0-9_.-]+$/.test(error) ? error : "unknown";
+    const html = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>Sign-in</title></head><body style="font-family:system-ui,sans-serif;padding:1.5rem;max-width:32rem"><p><strong>Sign-in did not complete.</strong></p><p>Error code: <code>${escapeHtml(safe)}</code></p><p>You can close this window and try again in the app.</p></body></html>`;
+    return c.body(html, 200, { "content-type": "text/html; charset=utf-8" });
+  }
+  return c.json({
     ok: true,
     service: "lolipants-better-auth",
     authPath: "/auth",
-  }),
-);
+  });
+});
 
 export default app;

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lolipants/core/errors/app_exception.dart';
 import 'package:lolipants/core/errors/app_exception_message_mapper.dart';
 import 'package:lolipants/features/auth/providers/auth_providers.dart';
+import 'package:lolipants/features/community/data/complaints_repository.dart';
 import 'package:lolipants/features/community/data/community_repository.dart';
 import 'package:lolipants/features/community/data/designers_repository.dart';
 import 'package:lolipants/features/community/data/media_upload_repository.dart';
@@ -29,6 +30,14 @@ final communityRepositoryProvider = Provider<CommunityRepository>(
 /// Posts + reactions + comments repository.
 final postsRepositoryProvider = Provider<PostsRepository>(
   (ref) => PostsRepository(
+    dio: ref.watch(apiDioProvider),
+    storage: ref.watch(authLocalStorageProvider),
+  ),
+);
+
+/// User-submitted moderation complaints.
+final complaintsRepositoryProvider = Provider<ComplaintsRepository>(
+  (ref) => ComplaintsRepository(
     dio: ref.watch(apiDioProvider),
     storage: ref.watch(authLocalStorageProvider),
   ),

@@ -9,3 +9,12 @@ String? missingBetterAuthBaseUrlMessage() {
   }
   return null;
 }
+
+/// When non-null, native Google Sign-In is not configured (`.env` missing ID).
+String? missingGoogleServerClientIdMessage() {
+  final u = dotenv.env['GOOGLE_SERVER_CLIENT_ID']?.trim() ?? '';
+  if (u.isEmpty) {
+    return AppStrings.errorGoogleServerClientIdMissing;
+  }
+  return null;
+}

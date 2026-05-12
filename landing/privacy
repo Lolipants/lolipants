@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Lolipants Privacy Policy</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="nav">
+      <a class="brand" href="./index.html#top" aria-label="Lolipants home">
+        <span class="brand__mark">لُلي</span>
+        <span class="brand__word">Lolipants</span>
+      </a>
+      <nav class="nav__links">
+        <a href="./index.html#download">Get the app</a>
+      </nav>
+    </header>
+
+    <main class="legal" style="padding: 64px 24px; max-width: 980px; margin: 0 auto">
+      <h1>Privacy Policy</h1>
+      <p><strong>Last updated:</strong> 2026-05-10</p>
+
+      <p>
+        Lolipants (“we”, “us”) provides a fashion design and ordering experience.
+        This policy explains what data we collect, why we collect it, and the
+        choices you have.
+      </p>
+
+      <hr />
+
+      <h2>What we collect</h2>
+      <ul>
+        <li><strong>Account data</strong>: name, email, auth identifiers.</li>
+        <li><strong>Design content</strong>: saved designs, text layers, images you upload for prints.</li>
+        <li><strong>Order data</strong>: delivery address, city, phone, notes, order status history.</li>
+        <li><strong>Device & app data</strong>: basic diagnostics needed to operate the service.</li>
+        <li><strong>Push notification identifiers</strong>: a OneSignal player/device id if you enable notifications.</li>
+      </ul>
+
+      <h2>Camera and photos</h2>
+      <p>
+        The app may request camera access for measurement estimation and to
+        capture images for design uploads. You can deny permission and still
+        use most features.
+      </p>
+
+      <h2>How we use data</h2>
+      <ul>
+        <li>To create and manage your account.</li>
+        <li>To save designs and fulfill orders with tailors and couriers.</li>
+        <li>To send transactional updates (e.g., order status) if you opt in.</li>
+        <li>To maintain security, prevent abuse, and debug reliability issues.</li>
+      </ul>
+
+      <h2>Payments</h2>
+      <p>
+        Payments are processed by a payment provider. We do not store your full
+        card details on our servers.
+      </p>
+
+      <h2>Sharing</h2>
+      <p>
+        We share data only as needed to provide the service (for example, with
+        tailors/couriers for delivery fulfillment, and with infrastructure
+        providers for hosting and messaging).
+      </p>
+
+      <h2>Retention</h2>
+      <p>
+        We keep data as long as needed to provide the service and comply with
+        legal obligations, then delete or anonymize it where possible.
+      </p>
+
+      <h2>Your choices</h2>
+      <ul>
+        <li>Access and update your profile information.</li>
+        <li>Disable push notifications in your device settings.</li>
+        <li>Request deletion of your account by contacting support.</li>
+      </ul>
+
+      <h2>Contact</h2>
+      <p>
+        Email: <a href="mailto:hello@lolipants.com">hello@lolipants.com</a>
+      </p>
+
+      <hr />
+
+      <h1 dir="rtl">سياسة الخصوصية</h1>
+      <p dir="rtl"><strong>آخر تحديث:</strong> 2026-05-10</p>
+      <p dir="rtl">
+        توضح هذه الصفحة البيانات التي نجمعها وكيف نستخدمها والخيارات المتاحة لك.
+      </p>
+      <h2 dir="rtl">ما الذي نجمعه</h2>
+      <ul dir="rtl">
+        <li><strong>بيانات الحساب</strong>: الاسم والبريد الإلكتروني ومعرّفات الدخول.</li>
+        <li><strong>محتوى التصاميم</strong>: التصاميم المحفوظة والنصوص والصور التي ترفعها للطباعة.</li>
+        <li><strong>بيانات الطلب</strong>: العنوان والمدينة والهاتف والملاحظات وحالة الطلب.</li>
+        <li><strong>معرّف الإشعارات</strong>: معرّف OneSignal عند تفعيل الإشعارات.</li>
+      </ul>
+      <h2 dir="rtl">التواصل</h2>
+      <p dir="rtl">
+        <a href="mailto:hello@lolipants.com">hello@lolipants.com</a>
+      </p>
+    </main>
+
+    <footer class="footer">
+      <div class="footer__row">
+        <div class="footer__brand">
+          <span class="brand__mark">لُلي</span>
+          <span class="brand__word">Lolipants</span>
+        </div>
+        <nav class="footer__links" aria-label="Legal">
+          <a href="/privacy">Privacy</a>
+          <a href="/terms">Terms</a>
+          <a href="mailto:hello@lolipants.com">Contact</a>
+        </nav>
+      </div>
+      <p class="footer__fine">
+        © <span id="yr"></span> Lolipants.
+      </p>
+    </footer>
+
+    <script>
+      document.getElementById("yr").textContent = new Date().getFullYear();
+    </script>
+  </body>
+</html>

@@ -36,7 +36,7 @@ describe("better-auth worker smoke", () => {
 
   it("exposes social sign-in route for google (CORS preflight ok)", async () => {
     const res = await app.request(
-      "http://localhost/auth/sign-in/social/google",
+      "http://localhost/auth/sign-in/social",
       {
         method: "OPTIONS",
         headers: {
@@ -49,18 +49,4 @@ describe("better-auth worker smoke", () => {
     expect([200, 204]).toContain(res.status);
   });
 
-  it("exposes social sign-in route for apple (CORS preflight ok)", async () => {
-    const res = await app.request(
-      "http://localhost/auth/sign-in/social/apple",
-      {
-        method: "OPTIONS",
-        headers: {
-          Origin: "http://localhost:3000",
-          "Access-Control-Request-Method": "POST",
-        },
-      },
-      env,
-    );
-    expect([200, 204]).toContain(res.status);
-  });
 });

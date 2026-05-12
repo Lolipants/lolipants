@@ -1,4 +1,6 @@
+# New company Cloudflare account — create D1/R2 and URLs: server/NEW_ACCOUNT_SETUP.md
 name = "lolipants-api"
+account_id = "ed0f9a60460ec8572f9c24d4d91461ec"
 main = "src/index.ts"
 compatibility_date = "2026-04-14"
 compatibility_flags = ["nodejs_compat"]
@@ -6,7 +8,7 @@ compatibility_flags = ["nodejs_compat"]
 [[d1_databases]]
 binding = "DB"
 database_name = "lolipants-db"
-database_id = "78043871-ef4e-40c9-8133-a2677352ddc5"
+database_id = "c6e58a76-68b0-4f0b-a49c-233fafd9a1e2"
 
 [[r2_buckets]]
 binding = "R2"
@@ -18,7 +20,26 @@ service = "lolipants-better-auth"
 
 [vars]
 ENVIRONMENT = "development"
-BETTER_AUTH_BASE_URL = "https://lolipants-better-auth.lolipants.workers.dev"
+BETTER_AUTH_BASE_URL = "https://lolipants-better-auth.loli-pants.workers.dev"
 # Shared HMAC secrets set via `wrangler secret put`:
 #   ADMIN_HMAC_SECRET     - signs external /admin/commissions/:id calls
 #   INTERNAL_SYNC_SECRET  - signs /internal/user/:id/role sync calls to the better-auth worker
+
+[env.production]
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "lolipants-db"
+database_id = "c6e58a76-68b0-4f0b-a49c-233fafd9a1e2"
+
+[[env.production.r2_buckets]]
+binding = "R2"
+bucket_name = "lolipants-media"
+
+[[env.production.services]]
+binding = "AUTH_SERVICE"
+service = "lolipants-better-auth"
+
+[env.production.vars]
+ENVIRONMENT = "production"
+BETTER_AUTH_BASE_URL = "https://lolipants-better-auth.loli-pants.workers.dev"

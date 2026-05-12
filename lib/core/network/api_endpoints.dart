@@ -24,11 +24,8 @@ abstract final class ApiEndpoints {
   /// Better Auth reset password.
   static const String authResetPassword = '/auth/reset-password';
 
-  /// Better Auth Google OAuth entry point.
-  static const String authSignInGoogle = '/auth/sign-in/social/google';
-
-  /// Better Auth Apple OAuth entry point.
-  static const String authSignInApple = '/auth/sign-in/social/apple';
+  /// Better Auth social OAuth entry point (set `provider: "google"` in body).
+  static const String authSignInGoogle = '/auth/sign-in/social';
 
   /// Better Auth email-OTP send endpoint (sign-in or sign-up via code).
   static const String authSendOtp = '/auth/email-otp/send-verification-otp';

@@ -10,6 +10,7 @@ import 'package:lolipants/shared/widgets/arabesque_background.dart';
 import 'package:lolipants/shared/widgets/gold_divider.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 
 /// Phase 6A settings screen. Hosts language toggle, notification placeholder,
 /// app version, privacy/terms links, and the delete-account action.
@@ -280,39 +281,34 @@ class _LegalTile extends StatelessWidget {
   }
 }
 
-class _WebViewScreen extends StatelessWidget {
+class _WebViewScreen extends StatefulWidget {
   const _WebViewScreen({required this.url, required this.title});
 
   final String url;
   final String title;
 
   @override
+  State<_WebViewScreen> createState() => _WebViewScreenState();
+}
+
+class _WebViewScreenState extends State<_WebViewScreen> {
+  late final WebViewController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = WebViewController()..loadRequest(Uri.parse(widget.url));
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(title, style: AppTextStyles.titleMedium),
+        title: Text(widget.title, style: AppTextStyles.titleMedium),
         backgroundColor: AppColors.ink,
         elevation: 0,
       ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.xl),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.link, color: AppColors.gold, size: 40),
-              const SizedBox(height: AppSpacing.md),
-              Text(url, style: AppTextStyles.bodyMedium),
-              const SizedBox(height: AppSpacing.lg),
-              Text(
-                'This link opens in an in-app browser on release builds.',
-                style: AppTextStyles.bodySmall,
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
-      ),
+      body: WebViewWidget(controller: _controller),
     );
   }
 }

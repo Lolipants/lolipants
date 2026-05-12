@@ -1,4 +1,6 @@
+# New company Cloudflare account — create D1 and URLs: server/NEW_ACCOUNT_SETUP.md
 name = "lolipants-better-auth"
+account_id = "ed0f9a60460ec8572f9c24d4d91461ec"
 main = "src/index.ts"
 compatibility_date = "2026-04-13"
 compatibility_flags = ["nodejs_compat"]
@@ -6,20 +8,21 @@ compatibility_flags = ["nodejs_compat"]
 [[d1_databases]]
 binding = "DB"
 database_name = "lolipants_auth"
-database_id = "6114c978-2a5a-4be1-b7f8-f440d6951634"
+database_id = "ad8341b5-e383-4ea6-b79b-3f17d08ed169"
 
 [vars]
 # For production, set this to your deployed worker origin.
-BETTER_AUTH_URL = "https://lolipants-better-auth.lolipants.workers.dev"
+BETTER_AUTH_URL = "https://lolipants-better-auth.loli-pants.workers.dev"
 # Comma-separated list of origins allowed to call Better Auth. Includes the
 # mobile custom scheme `lolipants://auth` used as the OAuth callback target.
-TRUSTED_ORIGINS = "https://lolipants-better-auth.lolipants.workers.dev,http://localhost:3000,lolipants://auth"
+TRUSTED_ORIGINS = "https://lolipants-better-auth.loli-pants.workers.dev,http://localhost:3000,lolipants://auth"
 AWS_SES_REGION = "us-east-1"
 APP_NAME = "LOLIPANTS"
 RESET_FROM_EMAIL = "LOLIPANTS <no-reply@lolipants.com>"
-# Social login credentials are provided via `wrangler secret put`:
-#   GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
-#   APPLE_CLIENT_ID, APPLE_TEAM_ID, APPLE_KEY_ID, APPLE_PRIVATE_KEY
+# Google OAuth — create a Web client in Google Cloud Console, then:
+#   wrangler secret put GOOGLE_CLIENT_ID
+#   wrangler secret put GOOGLE_CLIENT_SECRET
+# See GOOGLE_OAUTH_SETUP.md for redirect URIs and consent screen.
 # Shared HMAC secret used by lolipants-api admin routes to sync role/scope
 # changes via POST /internal/user/:id/role:
 #   INTERNAL_SYNC_SECRET

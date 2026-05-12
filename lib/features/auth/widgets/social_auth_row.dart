@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
-import 'package:lolipants/features/auth/data/auth_repository.dart';
+import 'package:lolipants/core/errors/app_exception.dart';
 import 'package:lolipants/core/router/role_routing.dart';
 import 'package:lolipants/features/auth/providers/auth_providers.dart';
 import 'package:lolipants/features/auth/utils/auth_env.dart';
@@ -28,29 +28,48 @@ class SocialAuthRow extends ConsumerStatefulWidget {
 class _SocialAuthRowState extends ConsumerState<SocialAuthRow> {
   bool _busy = false;
 
-  Future<void> _runSocial(SocialProvider provider) async {
-    if (_busy) return;
+  /// Synchronous guard: two taps before the first [setState] can both pass
+  /// `if (_busy)` and start two sign-in attempts.
+  bool _googleFlowEntered = false;
+
+  Future<void> _runGoogle() async {
+    if (_busy || _googleFlowEntered) return;
+    _googleFlowEntered = true;
     final envMsg = missingBetterAuthBaseUrlMessage();
     if (envMsg != null) {
+      _googleFlowEntered = false;
       widget.onError?.call(envMsg);
       return;
     }
+    final googleMsg = missingGoogleServerClientIdMessage();
+    if (googleMsg != null) {
+      _googleFlowEntered = false;
+      widget.onError?.call(googleMsg);
+      return;
+    }
     setState(() => _busy = true);
-    final result =
-        await ref.read(authProvider.notifier).signInWithSocial(provider);
-    if (!mounted) return;
-    setState(() => _busy = false);
-    result.fold(
-      (e) {
-        final msg = mapAuthExceptionToUserMessage(e);
-        widget.onError?.call(msg);
-      },
-      (user) {
-        final returnTo = ref.read(pendingAuthReturnToProvider);
-        ref.read(pendingAuthReturnToProvider.notifier).state = null;
-        context.go(postAuthLocation(user, returnTo));
-      },
-    );
+    try {
+      final result =
+          await ref.read(authProvider.notifier).signInWithGoogle();
+      if (!mounted) return;
+      result.fold(
+        (e) {
+          if (e is AuthException && e.message == 'oauth_in_progress') {
+            return;
+          }
+          final msg = mapAuthExceptionToUserMessage(e);
+          widget.onError?.call(msg);
+        },
+        (user) {
+          final returnTo = ref.read(pendingAuthReturnToProvider);
+          ref.read(pendingAuthReturnToProvider.notifier).state = null;
+          context.go(postAuthLocation(user, returnTo));
+        },
+      );
+    } finally {
+      _googleFlowEntered = false;
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   @override
@@ -62,14 +81,7 @@ class _SocialAuthRowState extends ConsumerState<SocialAuthRow> {
           label: 'Continue with Google',
           icon: Icons.g_mobiledata,
           loading: _busy,
-          onPressed: () => _runSocial(SocialProvider.google),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        _SocialButton(
-          label: 'Continue with Apple',
-          icon: Icons.apple,
-          loading: _busy,
-          onPressed: () => _runSocial(SocialProvider.apple),
+          onPressed: _runGoogle,
         ),
         const SizedBox(height: AppSpacing.sm),
         _SocialButton(

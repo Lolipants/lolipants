@@ -2,20 +2,12 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
 import 'package:fpdart/fpdart.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:lolipants/core/errors/app_exception.dart';
 import 'package:lolipants/core/network/api_endpoints.dart';
 import 'package:lolipants/features/auth/data/auth_local_storage.dart';
 import 'package:lolipants/features/auth/models/user.dart';
-
-/// Custom URL scheme used as the OAuth redirect target. Matches the intent
-/// filter on Android and the CFBundleURLTypes entry on iOS.
-const String kAuthCallbackScheme = 'lolipants';
-const String kAuthCallbackUrl = '$kAuthCallbackScheme://auth/callback';
-
-/// Social identity providers wired up in better-auth.
-enum SocialProvider { google, apple }
 
 /// Better Auth REST client returning [Either] for all operations.
 class AuthRepository {
@@ -106,6 +98,13 @@ class AuthRepository {
 
   /// Ends the session on the server and clears local credentials.
   Future<Either<AppException, void>> signOut() async {
+    try {
+      if ((dotenv.env['GOOGLE_SERVER_CLIENT_ID']?.trim() ?? '').isNotEmpty) {
+        await GoogleSignIn.instance.signOut();
+      }
+    } on Exception {
+      // Ignore; native Google session may be absent.
+    }
     try {
       await _dio.post<void>(ApiEndpoints.authSignOut, data: const {});
     } on DioException catch (_) {
@@ -202,57 +201,52 @@ class AuthRepository {
     }
   }
 
-  /// Starts the OAuth flow for [provider] by asking better-auth for the
-  /// provider-hosted authorize URL, opens it in a native web-auth session,
-  /// then persists the bearer token that better-auth returns on the
-  /// `lolipants://auth/callback` redirect.
-  Future<Either<AppException, User>> signInWithSocial(
-    SocialProvider provider,
-  ) async {
+  /// Native Google Sign-In, then Better Auth `signIn.social` with an ID token
+  /// (see https://better-auth.com/docs/authentication/google).
+  Future<Either<AppException, User>> signInWithGoogle() async {
+    final serverId = dotenv.env['GOOGLE_SERVER_CLIENT_ID']?.trim() ?? '';
+    if (serverId.isEmpty) {
+      return left(const AuthException('missing_google_server_client_id'));
+    }
     try {
-      final providerPath = switch (provider) {
-        SocialProvider.google => ApiEndpoints.authSignInGoogle,
-        SocialProvider.apple => ApiEndpoints.authSignInApple,
-      };
+      final account = await GoogleSignIn.instance.authenticate(
+        scopeHint: const ['email', 'profile', 'openid'],
+      );
+      final auth = account.authentication;
+      final idToken = auth.idToken;
+      if (idToken == null || idToken.isEmpty) {
+        await GoogleSignIn.instance.signOut();
+        return left(const AuthException('missing_google_id_token'));
+      }
       final response = await _dio.post<Map<String, dynamic>>(
-        providerPath,
+        ApiEndpoints.authSignInGoogle,
         data: {
-          'provider': switch (provider) {
-            SocialProvider.google => 'google',
-            SocialProvider.apple => 'apple',
+          'provider': 'google',
+          'idToken': {
+            'token': idToken,
           },
-          'callbackURL': kAuthCallbackUrl,
         },
       );
-      final authorizeUrl = response.data?['url']?.toString() ??
-          response.data?['redirect']?.toString() ??
-          '';
-      if (authorizeUrl.isEmpty) {
-        return left(const AuthException('missing_authorize_url'));
+      await GoogleSignIn.instance.signOut();
+      return _persistSessionFromResponse(response.data);
+    } on GoogleSignInException catch (e) {
+      if (e.code == GoogleSignInExceptionCode.canceled) {
+        return left(const AuthException('google_sign_in_canceled'));
       }
-      final callback = await FlutterWebAuth2.authenticate(
-        url: authorizeUrl,
-        callbackUrlScheme: kAuthCallbackScheme,
-      );
-      final uri = Uri.parse(callback);
-      final token = uri.queryParameters['token'] ??
-          uri.queryParameters['sessionToken'] ??
-          uri.queryParameters['session_token'];
-      if (token == null || token.isEmpty) {
-        return left(const AuthException('missing_session_token'));
-      }
-      await _storage.writeSessionToken(token);
-      final sessionUser = await _fetchAndCacheSession();
-      if (sessionUser == null) {
-        await _storage.clearAll();
-        return left(const AuthException('invalid_session'));
-      }
-      final merged = await _tryMergeAppProfile(sessionUser);
-      await _storage.writeUserJson(merged.toJsonString());
-      return right(merged);
+      return left(const AuthException('google_sign_in_failed'));
     } on DioException catch (e) {
+      try {
+        await GoogleSignIn.instance.signOut();
+      } on Exception {
+        // ignore
+      }
       return left(_mapDio(e));
     } on Exception {
+      try {
+        await GoogleSignIn.instance.signOut();
+      } on Exception {
+        // ignore
+      }
       return left(const UnknownException());
     }
   }
@@ -287,23 +281,6 @@ class AuthRepository {
       return left(_mapDio(e));
     } on Exception {
       return left(const UnknownException());
-    }
-  }
-
-  Future<User?> _fetchAndCacheSession() async {
-    try {
-      final response = await _dio.get<Map<String, dynamic>>(
-        ApiEndpoints.authGetSession,
-      );
-      final user = _parseUser(response.data);
-      if (user != null) {
-        await _storage.writeUserJson(user.toJsonString());
-      }
-      return user;
-    } on DioException {
-      return null;
-    } on Exception {
-      return null;
     }
   }
 

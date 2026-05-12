@@ -52,15 +52,15 @@ android {
 
     buildTypes {
         release {
-            // Release signing should come from android/key.properties.
-            // If missing, we keep debug signing for local smoke builds and print
-            // a clear warning so upload builds can fix configuration.
+            // Do not throw here: Gradle configures all build types even for
+            // `assembleDebug` / `flutter run`, so a throw would break debug builds.
             signingConfig =
                 if (hasReleaseSigning) {
                     signingConfigs.getByName("release")
                 } else {
                     println(
-                        "WARNING: android/key.properties not found; release build is using debug signing.",
+                        "WARNING: android/key.properties not found; release APK/AAB " +
+                            "uses debug signing (fine for local dev, not for Play Store).",
                     )
                     signingConfigs.getByName("debug")
                 }

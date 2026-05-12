@@ -11,13 +11,6 @@ type SocialProviderConfig = {
   clientSecret?: string;
 };
 
-type AppleProviderConfig = {
-  clientId?: string;
-  teamId?: string;
-  keyId?: string;
-  privateKey?: string;
-};
-
 type CreateAuthArgs = {
   db: DrizzleD1Database<typeof schema>;
   secret: string;
@@ -30,7 +23,6 @@ type CreateAuthArgs = {
   resetFromEmail: string;
   appName?: string;
   google?: SocialProviderConfig;
-  apple?: AppleProviderConfig;
 };
 
 /** Creates a Better Auth instance for a single request. */
@@ -46,25 +38,12 @@ export function createAuth({
   resetFromEmail,
   appName,
   google,
-  apple,
 }: CreateAuthArgs) {
   const socialProviders: Record<string, unknown> = {};
   if (google?.clientId && google.clientSecret) {
     socialProviders.google = {
       clientId: google.clientId,
       clientSecret: google.clientSecret,
-    };
-  }
-  if (apple?.clientId && apple.teamId && apple.keyId && apple.privateKey) {
-    socialProviders.apple = {
-      clientId: apple.clientId,
-      teamId: apple.teamId,
-      keyId: apple.keyId,
-      // Apple expects the PKCS#8 private key. Accept literal PEM or
-      // base64-single-line form so it round-trips through wrangler secrets.
-      privateKey: apple.privateKey.includes("BEGIN PRIVATE KEY")
-        ? apple.privateKey
-        : `-----BEGIN PRIVATE KEY-----\n${apple.privateKey}\n-----END PRIVATE KEY-----`,
     };
   }
 
@@ -78,6 +57,14 @@ export function createAuth({
       schema,
       usePlural: false,
     }),
+    // OAuth is started from the Flutter app via HTTP (Dio), but Google finishes in
+    // the system browser / Custom Tab. The default "database" state strategy also
+    // sets a signed `state` cookie on the start request — that cookie never reaches
+    // the browser, so the callback would fail with state_mismatch. Skipping the
+    // cookie check still validates `state` against the verification row in D1.
+    account: {
+      skipStateCookieCheck: true,
+    },
     user: {
       additionalFields: {
         role: {

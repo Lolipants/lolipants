@@ -69,6 +69,138 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     }
   }
 
+  Future<void> _reportPost() async {
+    final postId = widget.postId;
+    if (postId.isEmpty) return;
+
+    final subjectController = TextEditingController();
+    final bodyController = TextEditingController();
+    final parentContext = context;
+
+    try {
+      String? dialogError;
+      bool submitting = false;
+
+      await showDialog<void>(
+        context: parentContext,
+        builder: (dialogContext) {
+          return StatefulBuilder(
+            builder: (context, setState) {
+              return AlertDialog(
+                title: const Text('Report post'),
+                content: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      TextField(
+                        controller: subjectController,
+                        decoration: const InputDecoration(
+                          labelText: 'Subject',
+                          hintText: 'Short summary (min 3 characters)',
+                        ),
+                        enabled: !submitting,
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      TextField(
+                        controller: bodyController,
+                        decoration: const InputDecoration(
+                          labelText: 'Details',
+                          hintText: 'Explain what’s wrong (min 10 characters)',
+                        ),
+                        enabled: !submitting,
+                        minLines: 3,
+                        maxLines: 6,
+                      ),
+                      if (dialogError != null) ...[
+                        const SizedBox(height: AppSpacing.md),
+                        Text(
+                          dialogError!,
+                          style: TextStyle(
+                            color: AppColors.rubyLight,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: submitting
+                        ? null
+                        : () => Navigator.of(dialogContext).pop(),
+                    child: const Text('Cancel'),
+                  ),
+                  TextButton(
+                    onPressed: submitting
+                        ? null
+                        : () async {
+                            final subject = subjectController.text.trim();
+                            final body = bodyController.text.trim();
+
+                            if (subject.isEmpty || subject.length < 3) {
+                              setState(
+                                () => dialogError = 'Subject is required.',
+                              );
+                              return;
+                            }
+                            if (body.isEmpty || body.length < 10) {
+                              setState(
+                                () => dialogError = 'Details are required.',
+                              );
+                              return;
+                            }
+
+                            setState(() {
+                              submitting = true;
+                              dialogError = null;
+                            });
+
+                            final repo = ref.read(complaintsRepositoryProvider);
+                            final result = await repo.submitComplaint(
+                              targetType: 'post',
+                              targetId: postId,
+                              subject: subject,
+                              body: body,
+                            );
+
+                            if (!mounted) return;
+
+                            result.fold(
+                              (e) {
+                                setState(() {
+                                  submitting = false;
+                                  dialogError = communityErrorMessage(
+                                    e,
+                                    fallback: 'Could not send your report.',
+                                  );
+                                });
+                              },
+                              (_) {
+                                Navigator.of(dialogContext).pop();
+                                ScaffoldMessenger.of(parentContext)
+                                    .showSnackBar(
+                                  const SnackBar(
+                                    content:
+                                        Text('Thanks. Your report was sent.'),
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                    child: Text(submitting ? 'Sending…' : 'Send report'),
+                  ),
+                ],
+              );
+            },
+          );
+        },
+      );
+    } finally {
+      subjectController.dispose();
+      bodyController.dispose();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final postAsync = ref.watch(postDetailProvider(widget.postId));
@@ -81,6 +213,13 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         title: Text('Post', style: AppTextStyles.titleLarge),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.flag_outlined, color: AppColors.gold),
+            onPressed: _reportPost,
+            tooltip: 'Report post',
+          ),
+        ],
       ),
       body: Stack(
         children: [

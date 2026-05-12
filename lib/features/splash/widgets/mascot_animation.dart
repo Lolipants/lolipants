@@ -32,8 +32,35 @@ class MascotAnimation extends StatefulWidget {
 }
 
 class _MascotAnimationState extends State<MascotAnimation> {
+  static const _assetPath = 'assets/animations/mascot.riv';
+
   SMINumber? _stateInput;
   bool _loadFailed = false;
+  bool _loading = true;
+  RiveFile? _riveFile;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRive();
+  }
+
+  Future<void> _loadRive() async {
+    try {
+      final file = await RiveFile.asset(_assetPath);
+      if (!mounted) return;
+      setState(() {
+        _riveFile = file;
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _loadFailed = true;
+        _loading = false;
+      });
+    }
+  }
 
   void _onInit(Artboard artboard) {
     final controller = StateMachineController.fromArtboard(
@@ -54,15 +81,29 @@ class _MascotAnimationState extends State<MascotAnimation> {
     if (_loadFailed) {
       return _fallback();
     }
+    if (_loading || _riveFile == null) {
+      return SizedBox(
+        width: widget.width,
+        height: widget.height,
+        child: Center(
+          child: SizedBox(
+            width: 28,
+            height: 28,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: AppColors.gold.withValues(alpha: 0.5),
+            ),
+          ),
+        ),
+      );
+    }
     return SizedBox(
       width: widget.width,
       height: widget.height,
-      child: RiveAnimation.asset(
-        'assets/animations/mascot.riv',
+      child: RiveAnimation.direct(
+        _riveFile!,
         fit: BoxFit.contain,
         onInit: _onInit,
-        // Rive swallows asset errors to the console; surface them as the
-        // branded fallback so users see something sensible.
         placeHolder: _fallback(),
       ),
     );

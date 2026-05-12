@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Web OAuth client ID (same as GOOGLE_SERVER_CLIENT_ID / worker GOOGLE_CLIENT_ID).
+         Android OAuth client (package + SHA-1) is separate; do not put that id here. -->
+    <string name="default_web_client_id">407254430257-3l0bn97r2l34nt918guir3tjgqhek2i2.apps.googleusercontent.com</string>
+</resources>

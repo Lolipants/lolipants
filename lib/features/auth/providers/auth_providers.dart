@@ -66,6 +66,10 @@ final authRecoveryMessageProvider = StateProvider<String?>((ref) => null);
 
 /// Riverpod notifier coordinating session restore and sign-in/out.
 class AuthNotifier extends AsyncNotifier<AuthState> {
+  /// Prevents overlapping Google OAuth; a second call would replace the
+  /// native plugin callback and open another browser session.
+  bool _googleOAuthInFlight = false;
+
   @override
   Future<AuthState> build() async {
     final repo = ref.read(authRepositoryProvider);
@@ -131,21 +135,27 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     return result;
   }
 
-  /// Starts an OAuth flow against better-auth and updates [authProvider] on
+  /// Starts Google OAuth against better-auth and updates [authProvider] on
   /// success.
-  Future<Either<AppException, User>> signInWithSocial(
-    SocialProvider provider,
-  ) async {
-    final repo = ref.read(authRepositoryProvider);
-    final result = await repo.signInWithSocial(provider);
-    result.fold(
-      (_) {},
-      (user) {
-        state = AsyncValue.data(AuthAuthenticated(user));
-        ref.read(authRecoveryMessageProvider.notifier).state = null;
-      },
-    );
-    return result;
+  Future<Either<AppException, User>> signInWithGoogle() async {
+    if (_googleOAuthInFlight) {
+      return left(const AuthException('oauth_in_progress'));
+    }
+    _googleOAuthInFlight = true;
+    try {
+      final repo = ref.read(authRepositoryProvider);
+      final result = await repo.signInWithGoogle();
+      result.fold(
+        (_) {},
+        (user) {
+          state = AsyncValue.data(AuthAuthenticated(user));
+          ref.read(authRecoveryMessageProvider.notifier).state = null;
+        },
+      );
+      return result;
+    } finally {
+      _googleOAuthInFlight = false;
+    }
   }
 
   /// Asks better-auth to email a 6-digit OTP to [email].

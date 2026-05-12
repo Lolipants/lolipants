@@ -477,6 +477,12 @@ class AppStrings {
       'Sign-in is not configured: add BETTER_AUTH_BASE_URL to your .env '
       'file (see .env.example).';
 
+  /// `.env` missing `GOOGLE_SERVER_CLIENT_ID` (English).
+  static const String errorGoogleServerClientIdMissing =
+      'Google sign-in is not configured: add GOOGLE_SERVER_CLIENT_ID to your '
+      '.env (your Google Web OAuth client ID; must match GOOGLE_CLIENT_ID on '
+      'the auth worker). See server/better-auth-worker/GOOGLE_OAUTH_SETUP.md.';
+
   /// Onboarding slide 1 body (English).
   static const String onboardingSlide1Body =
       'Create custom garments on a 3D mannequin';
