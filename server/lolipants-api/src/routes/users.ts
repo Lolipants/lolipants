@@ -31,3 +31,11 @@ userRoutes.post("/push-token", async (c) => {
 
   return c.json({ saved: true });
 });
+
+userRoutes.delete("/push-token", async (c) => {
+  const userId = c.get("userId") as string;
+  await c.env.DB.prepare("DELETE FROM push_tokens WHERE user_id = ?")
+    .bind(userId)
+    .run();
+  return c.json({ cleared: true });
+});

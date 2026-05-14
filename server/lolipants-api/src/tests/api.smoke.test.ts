@@ -384,6 +384,10 @@ describe("API smoke tests for CRUD flows", () => {
       body: { oneSignalId: "os-123" },
     })).status).toBe(200);
 
+    expect((await apiRequest("DELETE", "/users/push-token", {
+      token: "valid-user",
+    })).status).toBe(200);
+
     expect((await apiRequest("GET", "/fabrics")).status).toBe(200);
     expect((await apiRequest("GET", "/presets")).status).toBe(200);
     expect((await apiRequest("GET", "/mannequins", { token: "valid-user" })).status).toBe(200);
