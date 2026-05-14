@@ -485,7 +485,7 @@ class AppStrings {
 
   /// Onboarding slide 1 body (English).
   static const String onboardingSlide1Body =
-      'Create custom garments on a 3D mannequin';
+      'Create custom garments on a realistic mannequin';
 
   /// Onboarding slide 2 body (English).
   static const String onboardingSlide2Body =
@@ -494,6 +494,177 @@ class AppStrings {
   /// Onboarding slide 3 body (English).
   static const String onboardingSlide3Body =
       'Order and track your garment from stitch to door';
+
+  // --- Partner with Lolipants (role request flow) ---
+
+  /// Partner flow app bar (English).
+  static const String partnerTitleEn = 'Partner with Lolipants';
+
+  /// Partner flow app bar (Arabic).
+  static const String partnerTitleAr = 'كن شريكاً مع Lolipants';
+
+  /// Partner static header subtitle (English).
+  static const String partnerHeaderSubtitleEn =
+      'Tailors and delivery partners help us fulfil custom orders. Apply here '
+      'and our team will review your details.';
+
+  /// Partner static header subtitle (Arabic).
+  static const String partnerHeaderSubtitleAr =
+      'يساعدنا الخياطون وشركاء التوصيل في تنفيذ الطلبات المخصصة. قدّم طلبك '
+      'وسيراجع فريقنا بياناتك.';
+
+  /// While loading role request history (English).
+  static const String partnerLoadingRequests =
+      'Loading your previous requests…';
+
+  /// Retry after load failure (English).
+  static const String partnerRetry = 'Retry';
+
+  /// `.env` missing `API_BASE_URL` (English).
+  static const String errorApiBaseUrlMissing =
+      'The app cannot reach the API: add API_BASE_URL to your .env in the '
+      'project root (see .env.example), then restart the app.';
+
+  /// API_BASE_URL points at Better Auth by mistake (English).
+  static const String errorApiBaseUrlSameAsAuth =
+      'API_BASE_URL must be your lolipants-api worker URL (orders, community, '
+      'partner requests). It cannot be the same as BETTER_AUTH_BASE_URL. See '
+      '.env.example.';
+
+  /// HTTP 404 on partner / API — often wrong base URL (English).
+  static const String partnerError404Hint =
+      'This usually means API_BASE_URL is not your lolipants-api server—for '
+      'example it was set to the Better Auth worker by mistake. Fix .env and '
+      'restart the app.';
+
+  /// Partner welcome step title (English).
+  static const String partnerWelcomeTitle = 'How it works';
+
+  /// Partner welcome step body (English).
+  static const String partnerWelcomeBody =
+      'Choose whether you sew garments in our network or handle deliveries. '
+      'We review every application. Typical review time is a few business '
+      'days; we will contact you if we need more information.';
+
+  /// Partner welcome step title (Arabic).
+  static const String partnerWelcomeTitleAr = 'كيف يعمل';
+
+  /// Partner welcome step body (Arabic).
+  static const String partnerWelcomeBodyAr =
+      'اختر إن كنت تخيط ضمن شبكتنا أو تتولى التوصيل. نراجع كل طلب. قد يستغرق '
+      'المراجعة عدة أيام عمل؛ سنتواصل معك إن احتجنا لمزيد من التفاصيل.';
+
+  /// Partner step: choose path (English).
+  static const String partnerChoosePathTitle = 'Choose your path';
+
+  /// Partner step: choose path (Arabic).
+  static const String partnerChoosePathTitleAr = 'اختر مسارك';
+
+  /// Tailor path card title (English).
+  static const String partnerRoleTailorTitle = 'Tailor partner';
+
+  /// Tailor path card bullets (English).
+  static const String partnerRoleTailorBullets =
+      '• Work with customer orders in the app\n'
+      '• Update tailoring status as you progress\n'
+      '• Coordinate with our operations team';
+
+  /// Delivery path card title (English).
+  static const String partnerRoleDeliveryTitle = 'Delivery partner';
+
+  /// Delivery path card bullets (English).
+  static const String partnerRoleDeliveryBullets =
+      '• Pick up and drop off garments\n'
+      '• Cover the areas you confirm with us\n'
+      '• Follow safe handling guidelines';
+
+  /// Partner details step title (English).
+  static const String partnerDetailsTitle = 'Tell us about you';
+
+  /// Partner details step title (Arabic).
+  static const String partnerDetailsTitleAr = 'أخبرنا عنك';
+
+  /// Tailor: city / region label (English).
+  static const String partnerFieldCityRegion = 'City or region served';
+
+  /// Tailor: years experience label (English).
+  static const String partnerFieldYearsExperience = 'Years of experience';
+
+  /// Tailor: workshop name label (English).
+  static const String partnerFieldWorkshopName = 'Workshop or studio name '
+      '(optional)';
+
+  /// Tailor: portfolio URL label (English).
+  static const String partnerFieldPortfolioUrl = 'Portfolio or website '
+      '(optional)';
+
+  /// Tailor: specialties label (English).
+  static const String partnerFieldSpecialties =
+      'Specialties (e.g. bridal, abaya, alterations)';
+
+  /// Delivery: vehicle label (English).
+  static const String partnerFieldVehicle = 'Vehicle type';
+
+  /// Delivery: coverage label (English).
+  static const String partnerFieldCoverage = 'Coverage areas / zones';
+
+  /// Delivery: availability label (English).
+  static const String partnerFieldAvailability =
+      'Availability notes (optional)';
+
+  /// Review step title (English).
+  static const String partnerReviewTitle = 'Review and submit';
+
+  /// Review step title (Arabic).
+  static const String partnerReviewTitleAr = 'راجع وأرسل';
+
+  /// Optional note on review step (English).
+  static const String partnerReviewNoteLabel = 'Anything else? (optional)';
+
+  /// Wizard: back (English).
+  static const String partnerWizardBack = 'Back';
+
+  /// Wizard: next (English).
+  static const String partnerWizardNext = 'Next';
+
+  /// Partner details validation (English).
+  static const String partnerDetailsValidation =
+      'Please fill in the required fields before continuing.';
+
+  /// Wizard: submit application (English).
+  static const String partnerWizardSubmit = 'Submit application';
+
+  /// Done step title (English).
+  static const String partnerDoneTitle = 'Application sent';
+
+  /// Done step body (English).
+  static const String partnerDoneBody =
+      'Thank you. Our team will review your application and reach out if we '
+      'need more details.';
+
+  /// Done: back to profile (English).
+  static const String partnerDoneBackToProfile = 'Back to profile';
+
+  /// Pending request banner (English).
+  static const String partnerPendingBanner =
+      'You already have a pending request. We will notify you when it is '
+      'reviewed.';
+
+  /// Previous requests section (English).
+  static const String partnerPreviousRequests = 'Previous requests';
+
+  /// Empty history (English).
+  static const String partnerNoRequestsYet = 'No requests yet.';
+
+  /// Post-approval hint (English).
+  static const String partnerPostApprovalHint =
+      'If your request is approved, sign out and sign back in so the app opens '
+      'the correct home for your new role.';
+
+  /// 409 duplicate pending (English).
+  static const String partnerErrorPendingExists =
+      'You already have a pending application. Please wait for our team to '
+      'review it.';
 
   /// AI designer label pair (English, short).
   static const String aiDesigner = 'AI Designer';
@@ -575,11 +746,29 @@ class AppStrings {
   static const String editorSaved = 'Design saved / تم الحفظ';
   static const String editorExitConfirm =
       'Exit without saving? / الخروج بدون حفظ؟';
+  static const String editorTabDesigns = 'Designs';
   static const String editorTabFabric = 'Fabric';
   static const String editorTabPattern = 'Pattern';
   static const String editorTabEmbroidery = 'Embroidery';
   static const String editorTabText = 'Text';
   static const String editorTabAi = 'AI';
+
+  /// Hero: flat catalogue source vs on-model AI render.
+  static const String editorHeroCompose = 'Flat design / التصميم المسطح';
+  static const String editorHeroAiLook = 'On model / على المانيكان';
+  static const String editorStudioPromptTitle =
+      'Describe how to change it / صف كيف تريد تعديله';
+  static const String editorStudioPromptSubtitle =
+      'We combine your pick, your words, and our style guide for the preview.';
+  static const String editorHeroAiOutputEmpty =
+      'Generate to see this design on a model / اضغط إنشاء لعرض التصميم على المانيكان';
+  static const String editorGenerateLook = 'Generate look';
+  static const String editorLookGenerating = 'Creating preview…';
+  static const String editorLookDisclaimer =
+      'Preview is AI-generated and illustrative only.';
+  static const String editorSketchOptional =
+      'Optional silhouette sketch for AI / رسم اختياري';
+  static const String editorSketchClear = 'Remove sketch';
 
   /// Phase 3C sizing title.
   static const String sizingOptions = 'Sizing options / خيارات القياس';
@@ -713,4 +902,299 @@ class AppStrings {
   /// After applying AI suggestion to live editor mannequin.
   static const String aiAppliedToDesign =
       'Applied to design / تم التطبيق على التصميم';
+
+  // --- Settings hub (Profile → Settings) ---
+
+  /// Settings screen title (English).
+  static const String settingsScreenTitle = 'Settings';
+
+  /// Settings screen title (Arabic).
+  static const String settingsScreenTitleAr = 'الإعدادات';
+
+  /// Section: General (English).
+  static const String settingsSectionGeneral = 'General';
+
+  /// Section: General (Arabic).
+  static const String settingsSectionGeneralAr = 'عام';
+
+  /// Section: Appearance (English).
+  static const String settingsSectionAppearance = 'Appearance';
+
+  /// Section: Appearance (Arabic).
+  static const String settingsSectionAppearanceAr = 'المظهر';
+
+  /// Section: Notifications (English).
+  static const String settingsSectionNotifications = 'Notifications';
+
+  /// Section: Notifications (Arabic).
+  static const String settingsSectionNotificationsAr = 'الإشعارات';
+
+  /// Section: Media (English).
+  static const String settingsSectionMedia = 'Media';
+
+  /// Section: Media (Arabic).
+  static const String settingsSectionMediaAr = 'الوسائط';
+
+  /// Section: Privacy & legal (English).
+  static const String settingsSectionPrivacy = 'Privacy & legal';
+
+  /// Section: Privacy & legal (Arabic).
+  static const String settingsSectionPrivacyAr = 'الخصوصية والقانون';
+
+  /// Section: Support (English).
+  static const String settingsSectionSupport = 'Support';
+
+  /// Section: Support (Arabic).
+  static const String settingsSectionSupportAr = 'الدعم';
+
+  /// Section: Account (English).
+  static const String settingsSectionAccount = 'Account';
+
+  /// Section: Account (Arabic).
+  static const String settingsSectionAccountAr = 'الحساب';
+
+  /// Section: About (English).
+  static const String settingsSectionAbout = 'About';
+
+  /// Section: About (Arabic).
+  static const String settingsSectionAboutAr = 'حول التطبيق';
+
+  /// Language row label (English).
+  static const String settingsLanguageLabel = 'Language';
+
+  /// Language row label (Arabic).
+  static const String settingsLanguageLabelAr = 'اللغة';
+
+  /// Text size label (English).
+  static const String settingsTextSizeLabel = 'Text size';
+
+  /// Text size label (Arabic).
+  static const String settingsTextSizeLabelAr = 'حجم النص';
+
+  /// Text size: compact (English).
+  static const String settingsTextSizeCompact = 'Compact';
+
+  /// Text size: compact (Arabic).
+  static const String settingsTextSizeCompactAr = 'مدمج';
+
+  /// Text size: default (English).
+  static const String settingsTextSizeNormal = 'Default';
+
+  /// Text size: default (Arabic).
+  static const String settingsTextSizeNormalAr = 'افتراضي';
+
+  /// Text size: comfortable (English).
+  static const String settingsTextSizeComfortable = 'Comfortable';
+
+  /// Text size: comfortable (Arabic).
+  static const String settingsTextSizeComfortableAr = 'مريح';
+
+  /// Text size: large (English).
+  static const String settingsTextSizeLarge = 'Large';
+
+  /// Text size: large (Arabic).
+  static const String settingsTextSizeLargeAr = 'كبير';
+
+  /// Reduce motion switch (English).
+  static const String settingsReduceMotionTitle = 'Reduce motion';
+
+  /// Reduce motion switch (Arabic).
+  static const String settingsReduceMotionTitleAr = 'تقليل الحركة';
+
+  /// Reduce motion subtitle (English).
+  static const String settingsReduceMotionSubtitle =
+      'Less animation in the interface.';
+
+  /// Reduce motion subtitle (Arabic).
+  static const String settingsReduceMotionSubtitleAr =
+      'حركة أقل في الواجهة.';
+
+  /// Push master toggle title (English).
+  static const String settingsPushTitle = 'Push notifications';
+
+  /// Push master toggle title (Arabic).
+  static const String settingsPushTitleAr = 'إشعارات الدفع';
+
+  /// Push master toggle subtitle (English).
+  static const String settingsPushSubtitle =
+      'Order updates, delivery status, and important alerts.';
+
+  /// Push master toggle subtitle (Arabic).
+  static const String settingsPushSubtitleAr =
+      'تحديثات الطلب والتوصيل والتنبيهات المهمة.';
+
+  /// Push unavailable: OneSignal not configured (English).
+  static const String settingsPushUnavailable =
+      'Push is not configured in this build.';
+
+  /// Push unavailable (Arabic).
+  static const String settingsPushUnavailableAr =
+      'الإشعارات غير مفعّلة في هذا الإصدار.';
+
+  /// Permission denied snack (English).
+  static const String settingsPushPermissionDenied =
+      'Notification permission was not granted.';
+
+  /// Permission denied snack (Arabic).
+  static const String settingsPushPermissionDeniedAr =
+      'لم يُمنح إذن الإشعارات.';
+
+  /// Privacy policy link (English).
+  static const String settingsPrivacyPolicy = 'Privacy policy';
+
+  /// Privacy policy link (Arabic).
+  static const String settingsPrivacyPolicyAr = 'سياسة الخصوصية';
+
+  /// Terms link (English).
+  static const String settingsTermsOfService = 'Terms of service';
+
+  /// Terms link (Arabic).
+  static const String settingsTermsOfServiceAr = 'شروط الخدمة';
+
+  /// Open-source licenses tile (English).
+  static const String settingsOpenSourceLicenses = 'Open-source licenses';
+
+  /// Open-source licenses tile (Arabic).
+  static const String settingsOpenSourceLicensesAr = 'تراخيص البرمجيات';
+
+  /// Help center tile (English).
+  static const String settingsHelpCenter = 'Help center';
+
+  /// Help center tile (Arabic).
+  static const String settingsHelpCenterAr = 'مركز المساعدة';
+
+  /// FAQ tile (English).
+  static const String settingsFaq = 'FAQ';
+
+  /// FAQ tile (Arabic).
+  static const String settingsFaqAr = 'الأسئلة الشائعة';
+
+  /// Contact support tile (English).
+  static const String settingsContactSupport = 'Contact support';
+
+  /// Contact support tile (Arabic).
+  static const String settingsContactSupportAr = 'تواصل مع الدعم';
+
+  /// App version row title (English).
+  static const String settingsAppVersion = 'App version';
+
+  /// App version row title (Arabic).
+  static const String settingsAppVersionAr = 'إصدار التطبيق';
+
+  /// Version loading placeholder (English).
+  static const String settingsVersionLoading = 'Loading…';
+
+  /// Version loading placeholder (Arabic).
+  static const String settingsVersionLoadingAr = 'جاري التحميل…';
+
+  /// API base debug label (English).
+  static const String settingsApiBaseDebug = 'API base (debug)';
+
+  /// API base debug label (Arabic).
+  static const String settingsApiBaseDebugAr = 'عنوان API (تصحيح)';
+
+  /// Clear music queue tile (English).
+  static const String settingsClearMusicQueue = 'Clear music queue';
+
+  /// Clear music queue tile (Arabic).
+  static const String settingsClearMusicQueueAr = 'مسح قائمة الموسيقى';
+
+  /// Clear music queue subtitle (English).
+  static const String settingsClearMusicQueueSubtitle =
+      'Remove saved tracks from this device.';
+
+  /// Clear music queue subtitle (Arabic).
+  static const String settingsClearMusicQueueSubtitleAr =
+      'إزالة المسارات المحفوظة من هذا الجهاز.';
+
+  /// Clear music confirm title (English).
+  static const String settingsClearMusicConfirmTitle = 'Clear music queue?';
+
+  /// Clear music confirm title (Arabic).
+  static const String settingsClearMusicConfirmTitleAr = 'مسح قائمة الموسيقى؟';
+
+  /// Clear music confirm body (English).
+  static const String settingsClearMusicConfirmBody =
+      'Saved tracks will be removed from the app.';
+
+  /// Clear music confirm body (Arabic).
+  static const String settingsClearMusicConfirmBodyAr =
+      'ستُزال المسارات المحفوظة من التطبيق.';
+
+  /// After clearing music queue (English).
+  static const String settingsMusicQueueCleared = 'Music queue cleared.';
+
+  /// After clearing music queue (Arabic).
+  static const String settingsMusicQueueClearedAr = 'تم مسح قائمة الموسيقى.';
+
+  /// Edit profile shortcut (English).
+  static const String settingsEditProfile = 'Edit profile';
+
+  /// Edit profile shortcut (Arabic).
+  static const String settingsEditProfileAr = 'تعديل الملف';
+
+  /// Sign out from settings (English).
+  static const String settingsSignOut = 'Sign out';
+
+  /// Sign out from settings (Arabic).
+  static const String settingsSignOutAr = 'تسجيل الخروج';
+
+  /// Delete account button (English).
+  static const String settingsDeleteAccount = 'Delete account';
+
+  /// Delete account button (Arabic).
+  static const String settingsDeleteAccountAr = 'حذف الحساب';
+
+  /// Deleting account progress (English).
+  static const String settingsDeletingAccount = 'Deleting…';
+
+  /// Deleting account progress (Arabic).
+  static const String settingsDeletingAccountAr = 'جاري الحذف…';
+
+  /// Delete account failed snack (English).
+  static const String settingsDeleteAccountFailed =
+      'Could not delete account.';
+
+  /// Delete account failed snack (Arabic).
+  static const String settingsDeleteAccountFailedAr =
+      'تعذر حذف الحساب.';
+
+  /// Delete account dialog title (English).
+  static const String settingsDeleteDialogTitle = 'Delete account?';
+
+  /// Delete account dialog title (Arabic).
+  static const String settingsDeleteDialogTitleAr = 'حذف الحساب؟';
+
+  /// Delete account dialog body (English).
+  static const String settingsDeleteDialogBody =
+      'This removes your profile, designs, and measurements. Active orders '
+      'continue to completion. This cannot be undone.';
+
+  /// Delete account dialog body (Arabic).
+  static const String settingsDeleteDialogBodyAr =
+      'سيؤدي ذلك إلى إزالة ملفك وتصاميمك ومقاساتك. الطلبات النشطة تُستكمل. '
+      'لا يمكن التراجع.';
+
+  /// Delete account dialog confirm (English).
+  static const String settingsDeleteDialogConfirm = 'Delete';
+
+  /// Delete account dialog confirm (Arabic).
+  static const String settingsDeleteDialogConfirmAr = 'حذف';
+
+  /// Default help center URL.
+  static const String settingsDefaultHelpUrl = 'https://lolipants.com/help';
+
+  /// Default FAQ URL.
+  static const String settingsDefaultFaqUrl = 'https://lolipants.com/faq';
+
+  /// Default mailto for support.
+  static const String settingsDefaultSupportMailto =
+      'mailto:support@lolipants.com';
+
+  /// Default privacy policy URL.
+  static const String settingsDefaultPrivacyUrl =
+      'https://lolipants.com/privacy';
+
+  /// Default terms URL.
+  static const String settingsDefaultTermsUrl = 'https://lolipants.com/terms';
 }
