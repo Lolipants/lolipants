@@ -112,6 +112,14 @@ class MusicNotifier extends StateNotifier<MusicState> {
     }
   }
 
+  /// Clears the saved queue, stops playback, and resets state.
+  Future<void> clearLibraryAndStop() async {
+    if (kIsWeb) return;
+    await _player.stop();
+    await _storage.writePaths([]);
+    state = MusicState.idle();
+  }
+
   /// Plays the track at [index].
   Future<void> playIndex(int index) async {
     if (index < 0 || index >= state.queue.length) return;

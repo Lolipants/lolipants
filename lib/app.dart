@@ -15,6 +15,8 @@ class LolipantsApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(appRouterProvider);
     final locale = ref.watch(settingsLocaleProvider);
+    final textScale = ref.watch(settingsTextScaleFactorProvider);
+    final reduceMotion = ref.watch(settingsReduceMotionProvider);
     return MaterialApp.router(
       title: AppStrings.appName,
       theme: buildAppTheme(),
@@ -30,6 +32,17 @@ class LolipantsApp extends ConsumerWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
+      builder: (context, child) {
+        final mq = MediaQuery.of(context);
+        final wrapped = MediaQuery(
+          data: mq.copyWith(
+            textScaler: TextScaler.linear(textScale),
+            disableAnimations: mq.disableAnimations || reduceMotion,
+          ),
+          child: child ?? const SizedBox.shrink(),
+        );
+        return wrapped;
+      },
     );
   }
 }
