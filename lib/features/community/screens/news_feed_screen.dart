@@ -96,7 +96,9 @@ class _NewsFeedScreenState extends ConsumerState<NewsFeedScreen> {
               onPressed: () async {
                 final created = await context.push<bool>('/community/new-post');
                 if (created == true) {
-                  await ref.read(feedPostsProvider(_tagFilter).notifier).refresh();
+                  for (final tag in kNewsFeedTagFilterKeys) {
+                    ref.invalidate(feedPostsProvider(tag));
+                  }
                 }
               },
               backgroundColor: AppColors.gold,

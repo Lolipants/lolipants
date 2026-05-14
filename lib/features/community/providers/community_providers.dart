@@ -128,6 +128,16 @@ final feedPostsProvider =
   (ref, tag) => FeedPostsNotifier(ref: ref, tag: tag)..loadFirstPage(),
 );
 
+/// Tag keys used by [NewsFeedScreen] filters (`all` → null).
+const kNewsFeedTagFilterKeys = <String?>[
+  null,
+  'abaya',
+  'thobe',
+  'suit',
+  'dress',
+  'showcase',
+];
+
 /// StateNotifier driving paginated feed with optimistic reaction toggles.
 class FeedPostsNotifier extends StateNotifier<FeedPostsState> {
   /// Creates the notifier.

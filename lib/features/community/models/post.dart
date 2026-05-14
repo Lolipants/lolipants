@@ -76,6 +76,7 @@ class Post {
           _asInt(json['is_verified_designer']) == 1,
       imageUrls: _asStringList(json['imageUrls']) ??
           _asStringList(json['image_urls']) ??
+          _asStringList(json['images']) ??
           const [],
       tags: _asStringList(json['tags']) ?? const [],
       reactionCount: _asInt(json['reactionCount']) ??

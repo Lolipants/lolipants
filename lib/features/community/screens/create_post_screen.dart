@@ -182,9 +182,9 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
         );
       },
       (post) {
-        ref
-            .read(feedPostsProvider(null).notifier)
-            .insertPost(post);
+        for (final tag in kNewsFeedTagFilterKeys) {
+          ref.invalidate(feedPostsProvider(tag));
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Post published')),
         );
