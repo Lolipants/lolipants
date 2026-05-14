@@ -26,7 +26,8 @@ class RoleRequestRepository {
         ApiEndpoints.roleRequests,
         data: {
           'requestedRole': requestedRole,
-          if (message != null && message.trim().isNotEmpty) 'message': message.trim(),
+          if (message != null && message.trim().isNotEmpty)
+            'message': message.trim(),
         },
         options: await _authOptions(),
       );
