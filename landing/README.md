@@ -63,5 +63,6 @@ without imagery. When real renders are available:
 
 ## Legal pages
 
-`/privacy.html` and `/terms.html` are referenced in the footer but not yet
-shipped; generate them before launch or swap the hrefs to your legal host.
+The app links to the canonical routes `/privacy` and `/terms`. The landing
+site keeps those routes in sync with the detailed documents in
+`landing/privacy.html` and `landing/terms.html`.

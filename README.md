@@ -16,6 +16,33 @@ Flutter client for Lolipants (custom garments, orders, community, tailor/deliver
 
 For worker env vars, use each package’s `.dev.vars.example` as a template.
 
+## Store builds (App Store / Play)
+
+Before generating a release binary for Store review, make sure the app uses real integrations:
+
+1. Put the following values into `.env` (these are loaded at app startup via `flutter_dotenv`):
+   - `BETTER_AUTH_BASE_URL`
+   - `API_BASE_URL`
+   - `TAP_PUBLIC_KEY`
+   - `ONESIGNAL_APP_ID`
+2. Ensure mock payment is disabled:
+   - Do **not** set `--dart-define=FEATURE_MOCK_PAYMENT=true`
+   - For CI safety, you can pass `--dart-define=FEATURE_MOCK_PAYMENT=false`
+
+For **Google Play**, add `android/key.properties` and your upload keystore so the release AAB is signed with your production key (without it, Gradle falls back to debug signing and Play will reject the upload).
+
+Typical build commands:
+
+```bash
+# Android
+flutter build appbundle --release --dart-define=FEATURE_MOCK_PAYMENT=false
+
+# iOS
+flutter build ipa --release --dart-define=FEATURE_MOCK_PAYMENT=false
+```
+
+On a Mac CI runner, the first `flutter build ipa` will create the iOS `Podfile.lock` (CocoaPods). Commit the generated `ios/Podfile.lock` to keep lockfiles stable across submissions.
+
 ## Tests
 
 ```bash

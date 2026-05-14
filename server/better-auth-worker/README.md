@@ -41,6 +41,15 @@ If `0002` is missing, Better Auth’s Drizzle schema does not match D1 and sign-
 
 ## 4) Set secrets
 
+**Google Sign-In:** follow [GOOGLE_OAUTH_SETUP.md](./GOOGLE_OAUTH_SETUP.md), then:
+
+```bash
+npx wrangler secret put GOOGLE_CLIENT_ID
+npx wrangler secret put GOOGLE_CLIENT_SECRET
+```
+
+Core auth + email:
+
 ```bash
 npx wrangler secret put BETTER_AUTH_SECRET
 npx wrangler secret put AWS_ACCESS_KEY_ID
@@ -89,12 +98,12 @@ npm run deploy
 
 After deploy, note your worker URL, for example:
 
-`https://lolipants-better-auth.<your-subdomain>.workers.dev`
+`https://lolipants-better-auth.loli-pants.workers.dev`
 
 Then update Flutter `.env` in project root:
 
 ```env
-BETTER_AUTH_BASE_URL=https://lolipants-better-auth.<your-subdomain>.workers.dev
+BETTER_AUTH_BASE_URL=https://lolipants-better-auth.loli-pants.workers.dev
 ```
 
 Do not include `/auth` in `BETTER_AUTH_BASE_URL` because the app already calls `/auth/...`.

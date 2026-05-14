@@ -42,7 +42,7 @@ dashboard tab:
 ## Promoting the first super admin
 
 1. Have the owner sign up via the normal better-auth flow (email/password,
-   Google, Apple, or magic link). This creates a row in both
+   Google or magic link). This creates a row in both
    `better-auth-worker.user` and `lolipants-api.users`.
 2. Grab their `id` (same across both workers — better-auth mirrors the id).
    A quick way is:

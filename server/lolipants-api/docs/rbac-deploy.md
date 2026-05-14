@@ -83,7 +83,7 @@ npx wrangler d1 execute lolipants-db --remote \
 # 3. Sync to better-auth.
 node --loader tsx server/lolipants-api/scripts/sync-super-admin.ts \
   --user-id <id> --role admin --scopes '["*"]' \
-  --base https://lolipants-better-auth.lolipants.workers.dev \
+  --base https://lolipants-better-auth.loli-pants.workers.dev \
   --secret "$(cat /path/to/secret)"
 ```
 
