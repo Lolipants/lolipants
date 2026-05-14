@@ -8,11 +8,15 @@ class ColourStrip extends StatelessWidget {
   const ColourStrip({
     required this.selectedColour,
     required this.onSelected,
+    this.embedded = false,
     super.key,
   });
 
   final Color selectedColour;
   final ValueChanged<Color> onSelected;
+
+  /// When true, omit outer frame (use inside a shared panel).
+  final bool embedded;
 
   static const _swatches = <Color>[
     Color(0xFF162F28),
@@ -25,6 +29,32 @@ class ColourStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final column = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (final swatch in _swatches)
+          _Swatch(
+            color: swatch,
+            isSelected: swatch.value == selectedColour.value,
+            onTap: () => onSelected(swatch),
+          ),
+        _Swatch(
+          color: AppColors.smoke,
+          isSelected: false,
+          child: const Icon(Icons.add, size: 12, color: AppColors.gold),
+          onTap: () => _openPicker(context),
+        ),
+      ],
+    );
+    if (embedded) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.xs,
+          vertical: AppSpacing.sm,
+        ),
+        child: column,
+      );
+    }
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.xs,
@@ -35,23 +65,7 @@ class ColourStrip extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: AppColors.borderSubtle),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (final swatch in _swatches)
-            _Swatch(
-              color: swatch,
-              isSelected: swatch.value == selectedColour.value,
-              onTap: () => onSelected(swatch),
-            ),
-          _Swatch(
-            color: AppColors.smoke,
-            isSelected: false,
-            child: const Icon(Icons.add, size: 12, color: AppColors.gold),
-            onTap: () => _openPicker(context),
-          ),
-        ],
-      ),
+      child: column,
     );
   }
 

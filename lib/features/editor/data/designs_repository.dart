@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:fpdart/fpdart.dart' show Either, Unit, left, right, unit;
 import 'package:lolipants/core/errors/app_exception.dart';
 import 'package:lolipants/core/network/api_endpoints.dart';
@@ -96,6 +97,29 @@ class DesignsRepository {
     }
   }
 
+  /// Updates an existing saved design.
+  Future<Either<AppException, GarmentDesign>> updateDesign({
+    required String id,
+    required Map<String, dynamic> payload,
+  }) async {
+    try {
+      final response = await _dio.patch<Map<String, dynamic>>(
+        '${ApiEndpoints.designs}/$id',
+        data: payload,
+        options: await _authOptions(),
+      );
+      final data = response.data;
+      if (data == null) {
+        return left(const ServerException(500, 'Missing design payload'));
+      }
+      return right(GarmentDesign.fromApi(data));
+    } on DioException catch (e) {
+      return left(_mapDio(e));
+    } on Exception {
+      return left(const UnknownException());
+    }
+  }
+
   /// Deletes a design owned by the current user.
   Future<Either<AppException, Unit>> deleteDesign(String id) async {
     try {
@@ -111,24 +135,87 @@ class DesignsRepository {
     }
   }
 
+  /// Uploads raw image bytes (e.g. bundled catalogue PNG) and returns URL.
+  Future<Either<AppException, String>> uploadPrintBytes({
+    required List<int> bytes,
+    required String filename,
+    ProgressCallback? onSendProgress,
+  }) async {
+    try {
+      final form = FormData.fromMap({
+        'file': MultipartFile.fromBytes(bytes, filename: filename),
+      });
+      final response = await _dio.post<Map<String, dynamic>>(
+        ApiEndpoints.upload,
+        data: form,
+        options: await _authOptionsMultipart(),
+        onSendProgress: onSendProgress,
+      );
+      final data = response.data ?? const <String, dynamic>{};
+      var url = data['url']?.toString() ??
+          data['fileUrl']?.toString() ??
+          data['path']?.toString() ??
+          '';
+      final key = data['key']?.toString() ?? '';
+      if (url.startsWith('undefined')) {
+        url = '';
+      }
+      if (url.isEmpty && key.isNotEmpty) {
+        final base = (dotenv.env['CLOUDFLARE_R2_BASE_URL'] ?? '').trim();
+        if (base.isNotEmpty) {
+          final baseSanitized = base.replaceAll(RegExp(r'/+$'), '');
+          final keySanitized = key.replaceAll(RegExp('^/+'), '');
+          url = '$baseSanitized/$keySanitized';
+        }
+      }
+      if (url.isEmpty) {
+        return left(const ServerException(500, 'Upload response missing URL'));
+      }
+      return right(url);
+    } on DioException catch (e) {
+      return left(_mapDio(e));
+    } on Exception {
+      return left(const UnknownException());
+    }
+  }
+
   /// Uploads an editor print image and returns the remote URL.
   Future<Either<AppException, String>> uploadPrintImage({
     required String filePath,
+    ProgressCallback? onSendProgress,
   }) async {
     try {
       final form = FormData.fromMap({
         'file': await MultipartFile.fromFile(filePath, filename: 'print.jpg'),
       });
+      // Do not set Content-Type manually — Dio must add the multipart boundary.
       final response = await _dio.post<Map<String, dynamic>>(
         ApiEndpoints.upload,
         data: form,
-        options: await _authOptions(contentType: 'multipart/form-data'),
+        options: await _authOptionsMultipart(),
+        onSendProgress: onSendProgress,
       );
       final data = response.data ?? const <String, dynamic>{};
-      final url = data['url']?.toString() ??
+      var url = data['url']?.toString() ??
           data['fileUrl']?.toString() ??
           data['path']?.toString() ??
           '';
+      final key = data['key']?.toString() ?? '';
+
+      // Server may respond with `url: "undefined/uploads/..."` when
+      // CLOUDFLARE_R2_BASE_URL isn't set. Prefer the returned `key` and build
+      // the public URL using the app's env.
+      if (url.startsWith('undefined')) {
+        url = '';
+      }
+      if (url.isEmpty && key.isNotEmpty) {
+        final base = (dotenv.env['CLOUDFLARE_R2_BASE_URL'] ?? '').trim();
+        if (base.isNotEmpty) {
+          final baseSanitized = base.replaceAll(RegExp(r'/+$'), '');
+          final keySanitized = key.replaceAll(RegExp('^/+'), '');
+          url = '$baseSanitized/$keySanitized';
+        }
+      }
       if (url.isEmpty) {
         return left(const ServerException(500, 'Upload response missing URL'));
       }
@@ -148,6 +235,16 @@ class DesignsRepository {
     }
     if (contentType != null) {
       headers['Content-Type'] = contentType;
+    }
+    return Options(headers: headers);
+  }
+
+  /// Authorization only — lets Dio set `multipart/form-data` + boundary.
+  Future<Options> _authOptionsMultipart() async {
+    final headers = <String, dynamic>{};
+    final token = await _storage.readSessionToken();
+    if (token != null && token.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $token';
     }
     return Options(headers: headers);
   }

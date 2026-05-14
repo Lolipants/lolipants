@@ -4,7 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:lolipants/core/config/app_features.dart';
 import 'package:lolipants/core/router/role_routing.dart';
 
-export 'package:lolipants/core/router/role_routing.dart' show homeForRole, postAuthLocation;
+export 'package:lolipants/core/router/role_routing.dart'
+    show homeForRole, postAuthLocation;
 import 'package:lolipants/features/admin/screens/admin_complaints_screen.dart';
 import 'package:lolipants/features/admin/screens/admin_cms_screen.dart';
 import 'package:lolipants/features/admin/screens/admin_moderation_screen.dart';
@@ -40,7 +41,6 @@ import 'package:lolipants/features/community/screens/designer_earnings_screen.da
 import 'package:lolipants/features/community/models/post.dart';
 import 'package:lolipants/features/editor/models/editor_preset_args.dart';
 import 'package:lolipants/features/editor/models/garment_design.dart';
-import 'package:lolipants/features/editor/screens/design_preview_360_screen.dart';
 import 'package:lolipants/features/editor/screens/editor_screen.dart';
 import 'package:lolipants/features/home/screens/home_screen.dart';
 import 'package:lolipants/features/onboarding/screens/onboarding_screen.dart';
@@ -101,7 +101,8 @@ bool _isProtectedLocation(String location) {
   if (_isDeliveryLocation(location)) return true;
   if (_isAdminLocation(location)) return true;
   if (location == '/sizing' || location.startsWith('/sizing/')) return true;
-  if (location == '/order/summary' || location.startsWith('/order/')) return true;
+  if (location == '/order/summary' || location.startsWith('/order/'))
+    return true;
   return location == '/editor' ||
       location.startsWith('/editor/') ||
       location == '/mannequin-selector';
@@ -220,7 +221,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final auth = ref.read(authProvider);
       final pendingReturnTo = ref.read(pendingAuthReturnToProvider);
-      if (state.matchedLocation == '/login' && auth.value is AuthAuthenticated) {
+      if (state.matchedLocation == '/login' &&
+          auth.value is AuthAuthenticated) {
         final authed = auth.value! as AuthAuthenticated;
         return pendingReturnTo ?? homeForRole(authed.user);
       }
@@ -343,8 +345,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: '/tailor/incoming',
                 name: 'tailorIncoming',
-                builder: (context, state) =>
-                    const TailorIncomingOrdersScreen(),
+                builder: (context, state) => const TailorIncomingOrdersScreen(),
                 routes: [
                   GoRoute(
                     path: 'detail/:orderId',
@@ -471,7 +472,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             name: 'adminRoot',
             redirect: (context, state) {
               if (state.matchedLocation == '/admin') {
-                return _defaultAdminLandingForUser(ref.read(authProvider).value);
+                return _defaultAdminLandingForUser(
+                    ref.read(authProvider).value);
               }
               return null;
             },
@@ -550,13 +552,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             bootstrap: bootstrap,
           );
         },
-        routes: [
-          GoRoute(
-            path: 'preview',
-            name: 'editorPreview',
-            builder: (context, state) => const DesignPreview360Screen(),
-          ),
-        ],
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
@@ -659,14 +654,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                   GoRoute(
                     path: 'consultations',
                     name: 'communityConsultations',
-                    builder: (context, state) =>
-                        const ConsultationsScreen(),
+                    builder: (context, state) => const ConsultationsScreen(),
                   ),
                   GoRoute(
                     path: 'earnings',
                     name: 'communityEarnings',
-                    builder: (context, state) =>
-                        const DesignerEarningsScreen(),
+                    builder: (context, state) => const DesignerEarningsScreen(),
                   ),
                 ],
               ),

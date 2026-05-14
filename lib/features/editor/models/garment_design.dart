@@ -13,6 +13,7 @@ class GarmentDesign {
     this.accentColour,
     this.patternId,
     this.printImageUrl,
+    this.sketchImageUrl,
     this.presetStyleId,
     this.mannequinId,
     this.renderMetadata,
@@ -52,6 +53,8 @@ class GarmentDesign {
           json['pattern_id']?.toString() ?? json['patternId']?.toString(),
       printImageUrl: json['print_image_url']?.toString() ??
           json['printImageUrl']?.toString(),
+      sketchImageUrl: json['sketch_image_url']?.toString() ??
+          json['sketchImageUrl']?.toString(),
       presetStyleId: json['preset_style_id']?.toString() ??
           json['presetStyleId']?.toString(),
       mannequinId:
@@ -87,6 +90,9 @@ class GarmentDesign {
 
   /// Optional print image URL.
   final String? printImageUrl;
+
+  /// Optional silhouette / sketch reference for AI refinement.
+  final String? sketchImageUrl;
 
   /// Optional preset style identifier.
   final String? presetStyleId;

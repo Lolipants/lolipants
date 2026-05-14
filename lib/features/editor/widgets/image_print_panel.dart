@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
+import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/features/editor/providers/editor_provider.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
@@ -26,15 +27,19 @@ class ImagePrintPanel extends StatelessWidget {
     this.minScale = 20,
     this.maxScale = 80,
     required this.onApply,
+    this.sketchPath,
+    this.onSketchSelected,
     super.key,
   });
 
   final String? imagePath;
+  final String? sketchPath;
   final PrintPlacement placement;
   final double offsetX;
   final double offsetY;
   final double scale;
   final ValueChanged<String?> onImageSelected;
+  final ValueChanged<String?>? onSketchSelected;
   final ValueChanged<PrintPlacement> onPlacementChanged;
   final ValueChanged<double> onOffsetXChanged;
   final ValueChanged<double> onOffsetYChanged;
@@ -85,15 +90,67 @@ class ImagePrintPanel extends StatelessWidget {
                     )
                   : ClipRRect(
                       borderRadius: BorderRadius.circular(AppRadius.sm),
-                      child: Image.file(
-                        File(imagePath!),
-                        width: 112,
-                        height: 112,
-                        fit: BoxFit.cover,
-                      ),
+                      child: imagePath!.startsWith('http')
+                          ? Image.network(
+                              imagePath!,
+                              width: 112,
+                              height: 112,
+                              fit: BoxFit.cover,
+                            )
+                          : Image.file(
+                              File(imagePath!),
+                              width: 112,
+                              height: 112,
+                              fit: BoxFit.cover,
+                            ),
                     ),
             ),
           ),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            AppStrings.editorSketchOptional,
+            style: AppTextStyles.bodySmall,
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          GestureDetector(
+            onTap: onSketchSelected == null ? null : () => _pickSketch(context),
+            child: Container(
+              width: 120,
+              height: 120,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                border: Border.all(color: AppColors.borderDefault),
+              ),
+              child: sketchPath == null
+                  ? const Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.draw_outlined, color: AppColors.gold),
+                        SizedBox(height: 6),
+                        Text('Sketch'),
+                      ],
+                    )
+                  : ClipRRect(
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                      child: sketchPath!.startsWith('http')
+                          ? Image.network(sketchPath!, width: 112, height: 112, fit: BoxFit.cover)
+                          : Image.file(
+                              File(sketchPath!),
+                              width: 112,
+                              height: 112,
+                              fit: BoxFit.cover,
+                            ),
+                    ),
+            ),
+          ),
+          if (onSketchSelected != null && sketchPath != null) ...[
+            const SizedBox(height: AppSpacing.xs),
+            TextButton(
+              onPressed: () => onSketchSelected!(null),
+              child: Text(AppStrings.editorSketchClear),
+            ),
+          ],
           const SizedBox(height: AppSpacing.md),
           Wrap(
             spacing: AppSpacing.xs,
@@ -156,6 +213,13 @@ class ImagePrintPanel extends StatelessWidget {
     final picked = await picker.pickImage(source: ImageSource.gallery);
     if (picked == null) return;
     onImageSelected(picked.path);
+  }
+
+  Future<void> _pickSketch(BuildContext context) async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: ImageSource.gallery);
+    if (picked == null) return;
+    onSketchSelected?.call(picked.path);
   }
 }
 

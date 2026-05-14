@@ -164,14 +164,35 @@ class _AiPromptBarState extends ConsumerState<AiPromptBar> {
   Future<void> _submit() async {
     final prompt = _promptController.text.trim();
     if (prompt.isEmpty) return;
+    if (widget.embedInEditor) {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+      final notifier = ref.read(editorProvider.notifier);
+      notifier.setAiLookUserPrompt(prompt);
+      final result = await notifier.generateRefinedLook();
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        if (!result.success && result.message != null) {
+          _error = result.message;
+        }
+      });
+      if (result.success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Look generated. Check preview above.')),
+        );
+      }
+      return;
+    }
+
     setState(() {
       _isLoading = true;
       _error = null;
       _suggestion = null;
     });
-    final garmentType = widget.embedInEditor
-        ? ref.read(editorProvider).garmentType
-        : 'thobe';
+    final garmentType = 'thobe';
     final service = ref.read(aiDesignServiceProvider);
     final result = await service.generateDesign(
       prompt: prompt,

@@ -22,7 +22,8 @@ const bool kFeatureMusicPlayer = bool.fromEnvironment(
   defaultValue: true,
 );
 
-/// Editor bottom-panel "AI" tab ([EditorTab.ai]).
+/// Editor bottom-panel AI tab (paired with Designs only; no legacy fabric /
+/// pattern / embroidery / text tabs in the shell).
 const bool kFeatureAiEditorTab = bool.fromEnvironment(
   'FEATURE_AI_EDITOR_TAB',
   defaultValue: true,
@@ -37,15 +38,9 @@ const bool kFeatureMens = bool.fromEnvironment(
   defaultValue: true,
 );
 
-/// Final render preview screen that fetches deterministic preview artifacts.
-const bool kFeatureFinalRenderPreview = bool.fromEnvironment(
-  'FEATURE_FINAL_RENDER_PREVIEW',
-  defaultValue: true,
-);
-
 /// "Use my photo" custom mannequin generation.
 ///
-/// Disabled by default in low-cost mode because it needs paid 3D generation.
+/// Disabled by default in low-cost mode because it needs a paid backend job.
 const bool kFeatureCustomPhotoMannequin = bool.fromEnvironment(
   'FEATURE_CUSTOM_PHOTO_MANNEQUIN',
   defaultValue: false,

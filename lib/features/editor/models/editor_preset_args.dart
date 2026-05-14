@@ -66,12 +66,15 @@ class EditorBootstrapArgs {
     this.preset,
     this.designId,
     this.source = 'unknown',
+    this.customMannequinImagePath,
   });
 
   final String? mannequinId;
   final EditorPresetArgs? preset;
   final String? designId;
   final String source;
+  /// Local file path from image picker; used as AI / mannequin body reference.
+  final String? customMannequinImagePath;
 
   Map<String, dynamic> toJson() {
     return {
@@ -79,6 +82,7 @@ class EditorBootstrapArgs {
       'preset': preset?.toJson(),
       'designId': designId,
       'source': source,
+      'customMannequinImagePath': customMannequinImagePath,
     };
   }
 
@@ -91,6 +95,8 @@ class EditorBootstrapArgs {
           : null,
       designId: json['designId']?.toString(),
       source: json['source']?.toString() ?? 'unknown',
+      customMannequinImagePath:
+          json['customMannequinImagePath']?.toString(),
     );
   }
 }

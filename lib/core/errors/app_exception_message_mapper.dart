@@ -25,13 +25,18 @@ String _mapServerException(
 }) {
   final fromMap = statusMessages[code];
   if (fromMap != null) return fromMap;
-  if (code >= 500) {
-    // [Dio] often puts a multi-line essay in [DioException.message] when
-    // validateStatus throws on 5xx, before JSON body is parsed. Don't show
-    // that to end users; keep short API error strings when we have them.
-    if (_isDioStatusBoilerplate(msg)) {
+  // Dio throws with a long essay (validateStatus / MDN link) for many status
+  // codes, especially 404 — never show that raw text in the UI.
+  if (_isDioStatusBoilerplate(msg)) {
+    if (code == 404) {
+      return 'Not found (404). If you are using the app, make sure API_BASE_URL '
+          'is your lolipants-api worker URL, not the Better Auth worker. Then '
+          'restart the app.';
+    }
+    if (code >= 500) {
       return 'The server had a problem. Please try again in a moment.';
     }
+    return fallback;
   }
   return msg;
 }

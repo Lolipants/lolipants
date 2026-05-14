@@ -4,6 +4,7 @@ import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/features/auth/models/user.dart';
 import 'package:lolipants/features/auth/providers/auth_providers.dart';
 
 /// Time-of-day greeting and signed-in user line for the home feed.
@@ -81,13 +82,17 @@ class HomeHeader extends ConsumerWidget {
               if (state is! AuthAuthenticated) {
                 return const SizedBox.shrink();
               }
+              final avatarImage = _safeAvatarImage(state.user);
               return CircleAvatar(
                 radius: 26,
                 backgroundColor: AppColors.ember,
-                child: Text(
-                  state.user.initials,
-                  style: AppTextStyles.labelGold.copyWith(fontSize: 14),
-                ),
+                backgroundImage: avatarImage,
+                child: avatarImage == null
+                    ? Text(
+                        state.user.initials,
+                        style: AppTextStyles.labelGold.copyWith(fontSize: 14),
+                      )
+                    : null,
               );
             },
             orElse: () => const SizedBox.shrink(),
@@ -95,5 +100,15 @@ class HomeHeader extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  static ImageProvider? _safeAvatarImage(User user) {
+    final raw = user.imageUrl?.trim() ?? '';
+    if (raw.isEmpty) return null;
+    final uri = Uri.tryParse(raw);
+    if (uri == null) return null;
+    if (!(uri.isScheme('http') || uri.isScheme('https'))) return null;
+    if (uri.host.isEmpty) return null;
+    return NetworkImage(raw);
   }
 }

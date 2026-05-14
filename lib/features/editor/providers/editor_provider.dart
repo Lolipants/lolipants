@@ -1,21 +1,30 @@
-import 'package:flutter/material.dart';
-import 'package:lolipants/core/config/app_features.dart';
+import 'dart:typed_data';
+
+import 'package:fpdart/fpdart.dart';
+import 'package:flutter/material.dart' show Color, Offset;
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lolipants/core/config/app_features.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
+import 'package:lolipants/core/errors/app_exception.dart';
 import 'package:lolipants/features/editor/models/design_text_layer.dart';
 import 'package:lolipants/features/editor/models/editor_preset_args.dart';
 import 'package:lolipants/features/editor/models/fabric_option.dart';
 import 'package:lolipants/features/editor/models/garment_design.dart';
 import 'package:lolipants/features/editor/models/garment_design_suggestion.dart';
 import 'package:lolipants/features/editor/providers/designs_providers.dart';
-
-export 'package:lolipants/features/editor/models/design_text_layer.dart';
+import 'package:lolipants/features/editor/constants/ai_look_prompt_suffix.dart';
+import 'package:lolipants/features/editor/data/built_in_mannequin_assets.dart';
+import 'package:lolipants/features/editor/data/bundled_design_assets.dart';
 
 /// Editor interaction tools shown in the side rail.
 enum EditorTool { colour, text, image, sizing }
 
 /// Bottom panel tabs for the editor shell.
-enum EditorTab { fabric, pattern, embroidery, text, ai }
+enum EditorTab { designs, ai }
+
+/// Hero preview: schematic compose vs Gemini-refined look.
+enum EditorHeroMode { compose, look }
 
 /// Image print placement presets.
 enum PrintPlacement { chest, back, fullFront }
@@ -37,6 +46,18 @@ class SaveDesignResult {
   final String? designId;
 }
 
+/// Result of Gemini look generation from the editor.
+class GenerateLookResult {
+  /// Creates result.
+  const GenerateLookResult({required this.success, this.message});
+
+  /// Whether a refined image URL was obtained.
+  final bool success;
+
+  /// Error detail when [success] is false.
+  final String? message;
+}
+
 /// Local state for Phase 3A editor interactions.
 class EditorState {
   const EditorState({
@@ -55,12 +76,21 @@ class EditorState {
     required this.textLayers,
     required this.selectedTextLayerId,
     required this.printImagePath,
+    required this.sketchImagePath,
     required this.customMannequinImagePath,
+    required this.selectedCatalogDesignPath,
+    required this.aiLookUserPrompt,
     required this.printPlacement,
     required this.printOffsetX,
     required this.printOffsetY,
     required this.printScale,
     required this.isSaving,
+    required this.remoteDesignId,
+    required this.heroMode,
+    required this.refinedLookUrl,
+    required this.lookGenerating,
+    required this.lookGenerationError,
+    required this.hasUnsavedChanges,
   });
 
   factory EditorState.initial() {
@@ -72,7 +102,7 @@ class EditorState {
       primaryColour: AppColors.teal,
       accentColour: AppColors.gold,
       activeTool: EditorTool.colour,
-      activeTab: EditorTab.fabric,
+      activeTab: EditorTab.designs,
       fabricQuality: 'standard',
       selectedFabricId: 'cotton',
       availableFabrics: const <FabricOption>[
@@ -96,12 +126,21 @@ class EditorState {
       textLayers: const <DesignTextLayer>[],
       selectedTextLayerId: null,
       printImagePath: null,
+      sketchImagePath: null,
       customMannequinImagePath: null,
+      selectedCatalogDesignPath: kDefaultCatalogDesignPath,
+      aiLookUserPrompt: '',
       printPlacement: PrintPlacement.chest,
       printOffsetX: 0,
       printOffsetY: 0,
       printScale: 40,
       isSaving: false,
+      remoteDesignId: null,
+      heroMode: EditorHeroMode.compose,
+      refinedLookUrl: null,
+      lookGenerating: false,
+      lookGenerationError: null,
+      hasUnsavedChanges: true,
     );
   }
 
@@ -120,12 +159,34 @@ class EditorState {
   final List<DesignTextLayer> textLayers;
   final String? selectedTextLayerId;
   final String? printImagePath;
+  /// Local path or uploaded HTTPS URL for optional silhouette/sketch reference.
+  final String? sketchImagePath;
   final String? customMannequinImagePath;
+  /// Bundled flat-lay PNG path under `assets/images/designs/`.
+  final String selectedCatalogDesignPath;
+  /// User text for Gemini look generation (AI tab).
+  final String aiLookUserPrompt;
   final PrintPlacement printPlacement;
   final double printOffsetX;
   final double printOffsetY;
   final double printScale;
   final bool isSaving;
+
+  /// Server design id when editing a saved design or after first successful save.
+  final String? remoteDesignId;
+
+  /// Hero preview mode: vector compose vs refined AI image.
+  final EditorHeroMode heroMode;
+
+  /// Last Gemini-refined preview URL from `/ai/design-render`.
+  final String? refinedLookUrl;
+
+  final bool lookGenerating;
+  final String? lookGenerationError;
+
+  /// True until [EditorNotifier.saveDesign] succeeds, or after local edits
+  /// following a successful save / [loadDesign] baseline.
+  final bool hasUnsavedChanges;
 
   EditorState copyWith({
     String? designName,
@@ -143,12 +204,23 @@ class EditorState {
     List<DesignTextLayer>? textLayers,
     String? selectedTextLayerId,
     String? printImagePath,
+    String? sketchImagePath,
     String? customMannequinImagePath,
+    String? selectedCatalogDesignPath,
+    String? aiLookUserPrompt,
     PrintPlacement? printPlacement,
     double? printOffsetX,
     double? printOffsetY,
     double? printScale,
     bool? isSaving,
+    String? remoteDesignId,
+    EditorHeroMode? heroMode,
+    String? refinedLookUrl,
+    bool unsetRefinedLook = false,
+    bool? lookGenerating,
+    String? lookGenerationError,
+    bool unsetLookError = false,
+    bool? hasUnsavedChanges,
   }) {
     return EditorState(
       designName: designName ?? this.designName,
@@ -166,13 +238,26 @@ class EditorState {
       textLayers: textLayers ?? this.textLayers,
       selectedTextLayerId: selectedTextLayerId ?? this.selectedTextLayerId,
       printImagePath: printImagePath ?? this.printImagePath,
+      sketchImagePath: sketchImagePath ?? this.sketchImagePath,
       customMannequinImagePath:
           customMannequinImagePath ?? this.customMannequinImagePath,
+      selectedCatalogDesignPath:
+          selectedCatalogDesignPath ?? this.selectedCatalogDesignPath,
+      aiLookUserPrompt: aiLookUserPrompt ?? this.aiLookUserPrompt,
       printPlacement: printPlacement ?? this.printPlacement,
       printOffsetX: printOffsetX ?? this.printOffsetX,
       printOffsetY: printOffsetY ?? this.printOffsetY,
       printScale: printScale ?? this.printScale,
       isSaving: isSaving ?? this.isSaving,
+      remoteDesignId: remoteDesignId ?? this.remoteDesignId,
+      heroMode: heroMode ?? this.heroMode,
+      refinedLookUrl:
+          unsetRefinedLook ? null : (refinedLookUrl ?? this.refinedLookUrl),
+      lookGenerating: lookGenerating ?? this.lookGenerating,
+      lookGenerationError: unsetLookError
+          ? null
+          : (lookGenerationError ?? this.lookGenerationError),
+      hasUnsavedChanges: hasUnsavedChanges ?? this.hasUnsavedChanges,
     );
   }
 }
@@ -193,46 +278,57 @@ class EditorNotifier extends StateNotifier<EditorState> {
   }
 
   void setDesignName(String value) {
-    state = state.copyWith(designName: value);
+    state = state.copyWith(designName: value, hasUnsavedChanges: true);
   }
 
   void setMannequin(String id) {
-    state = state.copyWith(mannequinId: id);
+    state = state.copyWith(mannequinId: id, hasUnsavedChanges: true);
   }
 
   void setCustomMannequinImagePath(String? path) {
-    state = state.copyWith(customMannequinImagePath: path);
+    state = state.copyWith(
+      customMannequinImagePath: path,
+      hasUnsavedChanges: true,
+    );
+  }
+
+  void setCatalogDesignPath(String assetPath) {
+    state = state.copyWith(
+      selectedCatalogDesignPath: assetPath,
+      hasUnsavedChanges: true,
+    );
+  }
+
+  void setAiLookUserPrompt(String value) {
+    state = state.copyWith(aiLookUserPrompt: value, hasUnsavedChanges: true);
   }
 
   void setPrimaryColour(Color colour) {
-    state = state.copyWith(primaryColour: colour);
+    state = state.copyWith(primaryColour: colour, hasUnsavedChanges: true);
   }
 
   void setAccentColour(Color colour) {
-    state = state.copyWith(accentColour: colour);
+    state = state.copyWith(accentColour: colour, hasUnsavedChanges: true);
   }
 
   void setTool(EditorTool tool) {
     state = state.copyWith(activeTool: tool);
-    if (tool == EditorTool.colour) {
-      state = state.copyWith(activeTab: EditorTab.fabric);
-    }
   }
 
   void setTab(EditorTab tab) {
     var next = tab;
     if (tab == EditorTab.ai && !kFeatureAiEditorTab) {
-      next = EditorTab.fabric;
+      next = EditorTab.designs;
     }
     state = state.copyWith(activeTab: next);
   }
 
   void setFabricQuality(String quality) {
-    state = state.copyWith(fabricQuality: quality);
+    state = state.copyWith(fabricQuality: quality, hasUnsavedChanges: true);
   }
 
   void setFabric(String fabricId) {
-    state = state.copyWith(selectedFabricId: fabricId);
+    state = state.copyWith(selectedFabricId: fabricId, hasUnsavedChanges: true);
   }
 
   /// Applies a regional preset (garment + palette + optional fabric/pattern)
@@ -247,7 +343,11 @@ class EditorNotifier extends StateNotifier<EditorState> {
       selectedPatternId: args.patternId ?? state.selectedPatternId,
       mannequinId: args.mannequinId ?? state.mannequinId,
       activeTool: EditorTool.colour,
-      activeTab: EditorTab.fabric,
+      activeTab: EditorTab.designs,
+      remoteDesignId: null,
+      unsetRefinedLook: true,
+      heroMode: EditorHeroMode.compose,
+      hasUnsavedChanges: true,
     );
     loadFabrics();
   }
@@ -255,6 +355,8 @@ class EditorNotifier extends StateNotifier<EditorState> {
   /// Hydrates editor state from a previously saved [GarmentDesign] so the
   /// user can edit it again.
   void loadDesign(GarmentDesign design) {
+    final catalogFromMeta =
+        catalogDesignAssetFromRenderMetadata(design.renderMetadata);
     state = state.copyWith(
       designName: design.name,
       garmentType: design.garmentType,
@@ -266,9 +368,16 @@ class EditorNotifier extends StateNotifier<EditorState> {
       fabricQuality: design.fabricQuality ?? state.fabricQuality,
       selectedPatternId: design.patternId ?? state.selectedPatternId,
       printImagePath: design.printImageUrl,
+      sketchImagePath: design.sketchImageUrl,
       mannequinId: design.mannequinId ?? state.mannequinId,
+      remoteDesignId: design.id,
       activeTool: EditorTool.colour,
-      activeTab: EditorTab.fabric,
+      activeTab: EditorTab.designs,
+      selectedCatalogDesignPath:
+          catalogFromMeta ?? state.selectedCatalogDesignPath,
+      unsetRefinedLook: true,
+      heroMode: EditorHeroMode.compose,
+      hasUnsavedChanges: false,
     );
     loadFabrics();
   }
@@ -293,11 +402,17 @@ class EditorNotifier extends StateNotifier<EditorState> {
   }
 
   void setPattern(String patternId) {
-    state = state.copyWith(selectedPatternId: patternId);
+    state = state.copyWith(
+      selectedPatternId: patternId,
+      hasUnsavedChanges: true,
+    );
   }
 
   void setEmbroidery(String embroideryId) {
-    state = state.copyWith(selectedEmbroideryId: embroideryId);
+    state = state.copyWith(
+      selectedEmbroideryId: embroideryId,
+      hasUnsavedChanges: true,
+    );
   }
 
   /// Applies AI suggestion colours, fabric, and pattern to live editor state.
@@ -379,7 +494,8 @@ class EditorNotifier extends StateNotifier<EditorState> {
       selectedFabricId: fabricId,
       selectedPatternId: patternId,
       activeTool: EditorTool.colour,
-      activeTab: EditorTab.fabric,
+      activeTab: EditorTab.designs,
+      hasUnsavedChanges: true,
     );
   }
 
@@ -441,12 +557,13 @@ class EditorNotifier extends StateNotifier<EditorState> {
       textLayers: [...state.textLayers, layer],
       selectedTextLayerId: layer.id,
       activeTool: EditorTool.text,
-      activeTab: EditorTab.text,
+      activeTab: EditorTab.designs,
+      hasUnsavedChanges: true,
     );
   }
 
   void selectTextLayer(String id) {
-    state = state.copyWith(selectedTextLayerId: id);
+    state = state.copyWith(selectedTextLayerId: id, hasUnsavedChanges: true);
   }
 
   void updateSelectedText({
@@ -474,7 +591,7 @@ class EditorNotifier extends StateNotifier<EditorState> {
         updated.add(layer);
       }
     }
-    state = state.copyWith(textLayers: updated);
+    state = state.copyWith(textLayers: updated, hasUnsavedChanges: true);
   }
 
   void removeSelectedText() {
@@ -483,44 +600,149 @@ class EditorNotifier extends StateNotifier<EditorState> {
     state = state.copyWith(
       textLayers: state.textLayers.where((l) => l.id != selectedId).toList(),
       selectedTextLayerId: null,
+      hasUnsavedChanges: true,
     );
   }
 
   void setPrintImagePath(String? path) {
-    state = state.copyWith(printImagePath: path, activeTool: EditorTool.image);
+    state = state.copyWith(
+      printImagePath: path,
+      activeTool: EditorTool.colour,
+      hasUnsavedChanges: true,
+    );
+  }
+
+  void setSketchImagePath(String? path) {
+    state = state.copyWith(
+      sketchImagePath: path,
+      activeTool: EditorTool.colour,
+      hasUnsavedChanges: true,
+    );
+  }
+
+  void setHeroMode(EditorHeroMode mode) {
+    state = state.copyWith(heroMode: mode);
   }
 
   void setPrintPlacement(PrintPlacement placement) {
-    state = state.copyWith(printPlacement: placement);
+    state = state.copyWith(
+      printPlacement: placement,
+      hasUnsavedChanges: true,
+    );
   }
 
   void setPrintOffsetX(double value) {
-    state = state.copyWith(printOffsetX: value);
+    state = state.copyWith(printOffsetX: value, hasUnsavedChanges: true);
   }
 
   void setPrintOffsetY(double value) {
-    state = state.copyWith(printOffsetY: value);
+    state = state.copyWith(printOffsetY: value, hasUnsavedChanges: true);
   }
 
   void setPrintScale(double value) {
-    state = state.copyWith(printScale: value);
+    state = state.copyWith(printScale: value, hasUnsavedChanges: true);
   }
 
   Future<SaveDesignResult> saveDesign({String? forceName}) async {
     final repo = ref.read(designsRepositoryProvider);
-    final name = (forceName ?? state.designName).trim();
+    var name = (forceName ?? state.designName).trim();
     if (name.isEmpty) {
-      return const SaveDesignResult(
-        success: false,
-        message: 'Design name is required.',
-      );
+      name = 'My look';
     }
     state = state.copyWith(isSaving: true, designName: name);
-    String? printImageUrl = state.printImagePath;
-    if (printImageUrl != null &&
-        printImageUrl.isNotEmpty &&
-        !printImageUrl.startsWith('http')) {
-      final upload = await repo.uploadPrintImage(filePath: printImageUrl);
+
+    Future<String?> uploadBytes(List<int> bytes, String filename) async {
+      final r = await repo.uploadPrintBytes(bytes: bytes, filename: filename);
+      return r.fold((_) => null, (u) => u);
+    }
+
+    Future<Uint8List?> loadBundle(String assetKey) async {
+      try {
+        final bd = await rootBundle.load(assetKey);
+        return bd.buffer.asUint8List();
+      } on Exception {
+        return null;
+      }
+    }
+
+    String? catalogFlatUrl;
+    final catalogPath = state.selectedCatalogDesignPath.trim();
+    if (catalogPath.isNotEmpty) {
+      final raw = await loadBundle(catalogPath);
+      if (raw != null && raw.isNotEmpty) {
+        catalogFlatUrl = await uploadBytes(raw, 'catalog-flat.png');
+        if (catalogFlatUrl == null) {
+          state = state.copyWith(isSaving: false);
+          return const SaveDesignResult(
+            success: false,
+            message: 'Could not upload catalogue design image.',
+          );
+        }
+      }
+    }
+
+    String? editorMannequinUrl;
+    final custom = state.customMannequinImagePath?.trim();
+    if (custom != null && custom.isNotEmpty) {
+      if (custom.startsWith('http')) {
+        editorMannequinUrl = custom;
+      } else {
+        final up = await repo.uploadPrintImage(filePath: custom);
+        editorMannequinUrl = up.fold((_) => null, (u) => u);
+        if (editorMannequinUrl == null) {
+          state = state.copyWith(isSaving: false);
+          return const SaveDesignResult(
+            success: false,
+            message: 'Could not upload custom mannequin photo.',
+          );
+        }
+      }
+    } else {
+      final mPath = builtInMannequinAssetPath(state.mannequinId);
+      if (mPath != null) {
+        final raw = await loadBundle(mPath);
+        if (raw != null && raw.isNotEmpty) {
+          editorMannequinUrl = await uploadBytes(raw, 'mannequin-ref.png');
+          if (editorMannequinUrl == null) {
+            state = state.copyWith(isSaving: false);
+            return const SaveDesignResult(
+              success: false,
+              message: 'Could not upload mannequin reference.',
+            );
+          }
+        }
+      }
+    }
+
+    String? printImageUrl = catalogFlatUrl;
+    if (printImageUrl == null || printImageUrl.isEmpty) {
+      printImageUrl = state.printImagePath;
+      if (printImageUrl != null &&
+          printImageUrl.isNotEmpty &&
+          !printImageUrl.startsWith('http')) {
+        final upload = await repo.uploadPrintImage(filePath: printImageUrl);
+        final uploaded = upload.fold<String?>((e) {
+          state = state.copyWith(isSaving: false);
+          return null;
+        }, (url) => url);
+        if (uploaded == null) {
+          return const SaveDesignResult(
+            success: false,
+            message: 'Could not upload print image.',
+          );
+        }
+        printImageUrl = uploaded;
+        state = state.copyWith(printImagePath: uploaded);
+      }
+    } else {
+      state = state.copyWith(printImagePath: catalogFlatUrl);
+    }
+
+    String? sketchImageUrl = state.sketchImagePath;
+    if (sketchImageUrl != null &&
+        sketchImageUrl.isNotEmpty &&
+        !sketchImageUrl.startsWith('http')) {
+      final upload = await repo.uploadPrintImage(filePath: sketchImageUrl);
       final uploaded = upload.fold<String?>((e) {
         state = state.copyWith(isSaving: false);
         return null;
@@ -528,11 +750,11 @@ class EditorNotifier extends StateNotifier<EditorState> {
       if (uploaded == null) {
         return const SaveDesignResult(
           success: false,
-          message: 'Could not upload print image.',
+          message: 'Could not upload sketch image.',
         );
       }
-      printImageUrl = uploaded;
-      state = state.copyWith(printImagePath: uploaded);
+      sketchImageUrl = uploaded;
+      state = state.copyWith(sketchImagePath: uploaded);
     }
 
     final payload = <String, dynamic>{
@@ -544,6 +766,7 @@ class EditorNotifier extends StateNotifier<EditorState> {
       'fabricQuality': state.fabricQuality,
       'patternId': state.selectedPatternId,
       'printImageUrl': printImageUrl,
+      'sketchImageUrl': sketchImageUrl,
       'printPlacement': state.printPlacement.name,
       'printOffsetX': state.printOffsetX,
       'printOffsetY': state.printOffsetY,
@@ -577,6 +800,11 @@ class EditorNotifier extends StateNotifier<EditorState> {
             )
             .toList(growable: false),
         'exportTier': 'editor',
+        'selectedCatalogDesignPath': state.selectedCatalogDesignPath,
+        'aiLookUserPrompt': state.aiLookUserPrompt.trim(),
+        'aiLookPromptSuffix': kAiLookPromptSuffix,
+        if (editorMannequinUrl != null && editorMannequinUrl.isNotEmpty)
+          'editorMannequinImageUrl': editorMannequinUrl,
       },
       'textLayers': state.textLayers
           .map(
@@ -592,21 +820,129 @@ class EditorNotifier extends StateNotifier<EditorState> {
           )
           .toList(growable: false),
     };
-    final result = await repo.createDesign(payload: payload);
+
+    final existingId = state.remoteDesignId;
+    final Either<AppException, GarmentDesign> resultEither =
+        existingId != null && existingId.isNotEmpty
+            ? await repo.updateDesign(id: existingId, payload: payload)
+            : await repo.createDesign(payload: payload);
+
     state = state.copyWith(isSaving: false);
-    return result.fold(
+    return resultEither.fold(
       (e) => SaveDesignResult(
         success: false,
         message: designErrorMessage(e, fallback: 'Could not save design.'),
       ),
       (design) {
         ref.read(myDesignsProvider.notifier).reload();
+        state = state.copyWith(
+          remoteDesignId: design.id,
+          hasUnsavedChanges: false,
+        );
         return SaveDesignResult(
           success: true,
           designId: design.id,
         );
       },
     );
+  }
+
+  /// Saves the current design, starts `/ai/design-render`, polls until complete.
+  Future<GenerateLookResult> generateRefinedLook() async {
+    state = state.copyWith(
+      lookGenerating: true,
+      unsetLookError: true,
+    );
+    final saved = await saveDesign();
+    if (!saved.success || saved.designId == null) {
+      final msg = saved.message ?? 'Save failed';
+      state = state.copyWith(
+        lookGenerating: false,
+        lookGenerationError: msg,
+      );
+      return GenerateLookResult(success: false, message: msg);
+    }
+
+    final previewRepo = ref.read(renderPreviewRepositoryProvider);
+    final start = await previewRepo.startRender(designId: saved.designId!);
+    if (start.isLeft()) {
+      final msg = designErrorMessage(
+        start.fold((l) => l, (_) => throw StateError('right')),
+        fallback: 'Could not start render.',
+      );
+      state = state.copyWith(
+        lookGenerating: false,
+        lookGenerationError: msg,
+      );
+      return GenerateLookResult(success: false, message: msg);
+    }
+
+    final job = start.fold((_) => throw StateError('left'), (r) => r);
+    final jobId = job.jobId;
+    if (jobId.isEmpty) {
+      const msg = 'Missing job id';
+      state = state.copyWith(lookGenerating: false, lookGenerationError: msg);
+      return const GenerateLookResult(success: false, message: msg);
+    }
+
+    for (var attempt = 0; attempt < 90; attempt++) {
+      await Future<void>.delayed(const Duration(seconds: 1));
+      final polled = await previewRepo.getRenderStatus(jobId: jobId);
+      final exit = polled.fold(
+        (e) {
+          final msg =
+              designErrorMessage(e, fallback: 'Could not load render status.');
+          state = state.copyWith(
+            lookGenerating: false,
+            lookGenerationError: msg,
+          );
+          return GenerateLookResult(success: false, message: msg);
+        },
+        (j) {
+          if (j.status == 'completed') {
+            final url = j.artifacts['heroFrontUrl'];
+            if (url != null && url.isNotEmpty) {
+              state = state.copyWith(
+                lookGenerating: false,
+                refinedLookUrl: url,
+                heroMode: EditorHeroMode.look,
+                unsetLookError: true,
+                hasUnsavedChanges: true,
+              );
+              return const GenerateLookResult(success: true);
+            }
+            const msg = 'No preview URL in response';
+            state = state.copyWith(
+              lookGenerating: false,
+              lookGenerationError: msg,
+            );
+            return const GenerateLookResult(success: false, message: msg);
+          }
+          if (j.status == 'failed') {
+            var msg = j.error ?? 'Render failed';
+            if (msg.contains('Design has no renderable preview source') ||
+                msg.contains('no renderable preview')) {
+              msg =
+                  'Add a print or sketch, pick a catalogue mannequin with a preview, or configure AI preview on the server (GEMINI_API_KEY), then save and try again.';
+            }
+            state = state.copyWith(
+              lookGenerating: false,
+              lookGenerationError: msg,
+            );
+            return GenerateLookResult(success: false, message: msg);
+          }
+          return null;
+        },
+      );
+      if (exit != null) return exit;
+    }
+
+    const msg = 'Timed out waiting for preview.';
+    state = state.copyWith(
+      lookGenerating: false,
+      lookGenerationError: msg,
+    );
+    return const GenerateLookResult(success: false, message: msg);
   }
 
   String? _normalizedMannequinIdForApi() {

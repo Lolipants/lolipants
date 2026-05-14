@@ -5,11 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/features/editor/data/built_in_mannequin_assets.dart';
 import 'package:lolipants/features/editor/providers/editor_provider.dart';
 
 /// Render-only mannequin viewer for the Phase 3A shell.
 class MannequinViewer extends StatelessWidget {
   const MannequinViewer({
+    required this.mannequinId,
     required this.garmentType,
     required this.primaryColour,
     required this.accentColour,
@@ -28,6 +30,8 @@ class MannequinViewer extends StatelessWidget {
     super.key,
   });
 
+  /// Local or API mannequin id; used to resolve bundled body assets.
+  final String mannequinId;
   final String garmentType;
   final Color primaryColour;
   final Color accentColour;
@@ -65,22 +69,43 @@ class MannequinViewer extends StatelessWidget {
                 height: height,
                 child: Stack(
                   children: [
-                    Positioned.fill(
-                      child: CustomPaint(
-                        painter: _MannequinPainter(
-                          garmentType: garmentType,
-                          primaryColour: primaryColour,
-                          accentColour: accentColour,
-                          fabricProfile: fabricProfile,
-                        ),
-                      ),
-                    ),
+                    // Reference body: user photo replaces bundled asset when set.
                     if (customMannequinImagePath != null)
                       Positioned.fill(
                         child: Opacity(
-                          opacity: 0.2,
+                          opacity: 0.85,
                           child:
                               _AdaptiveImage(path: customMannequinImagePath!),
+                        ),
+                      )
+                    else if (builtInMannequinAssetPath(mannequinId) != null)
+                      Positioned.fill(
+                        child: ColoredBox(
+                          // Transparent PNG mannequins read on dark compose card.
+                          color: const Color(0xFFE8E4EA),
+                          child: Image.asset(
+                            builtInMannequinAssetPath(mannequinId)!,
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, __, ___) => const Center(
+                              child: Icon(
+                                Icons.person_outlined,
+                                color: AppColors.fog,
+                                size: 48,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    if (customMannequinImagePath == null &&
+                        builtInMannequinAssetPath(mannequinId) == null)
+                      Positioned.fill(
+                        child: CustomPaint(
+                          painter: _MannequinPainter(
+                            garmentType: garmentType,
+                            primaryColour: primaryColour,
+                            accentColour: accentColour,
+                            fabricProfile: fabricProfile,
+                          ),
                         ),
                       ),
                     if (printImagePath != null)
@@ -205,9 +230,11 @@ class _MannequinPainter extends CustomPainter {
         _paintAbaya(canvas, size, fillPaint, accentPaint, outlinePaint, gloss);
       case 'bisht':
         _paintThobe(canvas, size, fillPaint, accentPaint, outlinePaint, gloss);
-        _paintBishtCloak(canvas, size, fillPaint, accentPaint, outlinePaint, gloss);
+        _paintBishtCloak(
+            canvas, size, fillPaint, accentPaint, outlinePaint, gloss);
       case 'kandura':
-        _paintKandura(canvas, size, fillPaint, accentPaint, outlinePaint, gloss);
+        _paintKandura(
+            canvas, size, fillPaint, accentPaint, outlinePaint, gloss);
       case 'suit':
         _paintSuit(canvas, size, fillPaint, accentPaint, outlinePaint, gloss);
       case 'thobe':
@@ -604,8 +631,9 @@ class _PrintOverlay extends StatelessWidget {
           top: (placement == PrintPlacement.chest ? 90 : 120) + offsetY,
         ),
         child: GestureDetector(
-          onPanUpdate:
-              onDragUpdate == null ? null : (details) => onDragUpdate!(details.delta),
+          onPanUpdate: onDragUpdate == null
+              ? null
+              : (details) => onDragUpdate!(details.delta),
           child: Transform.translate(
             offset: Offset(offsetX, 0),
             child: ClipRRect(
@@ -646,6 +674,15 @@ class _AdaptiveImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (path.startsWith('assets/')) {
+      return Image.asset(
+        path,
+        width: width,
+        height: height,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _fallback(),
+      );
+    }
     final isRemote = path.startsWith('http://') || path.startsWith('https://');
     if (isRemote) {
       return CachedNetworkImage(
