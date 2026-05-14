@@ -7,6 +7,20 @@ import 'package:lolipants/core/config/app_features.dart';
 /// zellige, maghreb diamonds) that decorates [RegionStyleButton] tiles.
 enum Region { gulf, levant, maghreb, modern }
 
+/// Bundled flat-lay PNG per preset id for Home/Browse thumbnails. Unknown ids
+/// fall back to the geometric pattern in `RegionStyleButton`.
+const Map<String, String> kRegionPresetPreviewAssetById = {
+  'qa_thobe': 'assets/images/designs/design_gulf_qatari_thobe_warm_white.png',
+  'sa_bisht': 'assets/images/designs/design_gulf_sa_bisht_black_gold.png',
+  'ae_kandura': 'assets/images/designs/design_gulf_ae_kandura_white.png',
+  'om_dishdasha': 'assets/images/designs/design_gulf_om_dishdasha_green.png',
+  'lev_kaftan': 'assets/images/designs/design_lev_kaftan_aubergine.png',
+  'lev_jubbah': 'assets/images/designs/design_lev_jubbah_emerald.png',
+  'ma_djellaba': 'assets/images/designs/design_mag_djellaba_burgundy_hood.png',
+  'ma_gandoura': 'assets/images/designs/design_mag_gandoura_white_grey.png',
+  'mod_minimal': 'assets/images/designs/design_mod_thobe_grey_minimal.png',
+};
+
 Region _regionFromToken(String? token) {
   switch (token?.toLowerCase().trim()) {
     case 'gulf':
@@ -34,16 +48,8 @@ class RegionStylePreset {
     required this.primaryColour,
     required this.accentColour,
     this.fabricId,
+    this.previewAssetPath,
   });
-
-  final String id;
-  final String title;
-  final String subtitle;
-  final Region region;
-  final String garmentType;
-  final Color primaryColour;
-  final Color accentColour;
-  final String? fabricId;
 
   factory RegionStylePreset.fromApi(Map<String, dynamic> json) {
     Color parseColor(dynamic value, Color fallback) {
@@ -60,18 +66,56 @@ class RegionStylePreset {
       return fallback;
     }
 
+    String? parsePreviewPath() {
+      final raw = json['previewAssetPath'] ?? json['preview_asset_path'];
+      if (raw is String) {
+        final t = raw.trim();
+        if (t.isNotEmpty) return t;
+      }
+      return null;
+    }
+
+    final id = json['id']?.toString() ?? '';
+
     return RegionStylePreset(
-      id: json['id']?.toString() ?? '',
+      id: id,
       title: json['title']?.toString() ?? json['name']?.toString() ?? 'Preset',
       subtitle: json['subtitle']?.toString() ?? '',
       region: _regionFromToken(json['region']?.toString()),
       garmentType: json['garmentType']?.toString() ??
           json['garment_type']?.toString() ??
           'thobe',
-      primaryColour: parseColor(json['primaryColour'] ?? json['primary_colour'], const Color(0xFF14110D)),
-      accentColour: parseColor(json['accentColour'] ?? json['accent_colour'], const Color(0xFFC9A84C)),
+      primaryColour: parseColor(
+        json['primaryColour'] ?? json['primary_colour'],
+        const Color(0xFF14110D),
+      ),
+      accentColour: parseColor(
+        json['accentColour'] ?? json['accent_colour'],
+        const Color(0xFFC9A84C),
+      ),
       fabricId: json['fabricId']?.toString() ?? json['fabric_id']?.toString(),
+      previewAssetPath: parsePreviewPath(),
     );
+  }
+
+  final String id;
+  final String title;
+  final String subtitle;
+  final Region region;
+  final String garmentType;
+  final Color primaryColour;
+  final Color accentColour;
+  final String? fabricId;
+
+  /// Optional override from the catalog API; otherwise
+  /// [kRegionPresetPreviewAssetById].
+  final String? previewAssetPath;
+
+  /// Asset path for list thumbnails, or null to use geometric fallback only.
+  String? get resolvedPreviewAssetPath {
+    final direct = previewAssetPath;
+    if (direct != null && direct.isNotEmpty) return direct;
+    return kRegionPresetPreviewAssetById[id];
   }
 }
 

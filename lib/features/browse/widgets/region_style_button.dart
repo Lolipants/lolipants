@@ -109,27 +109,47 @@ class _RegionPatch extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final assetPath = preset.resolvedPreviewAssetPath;
     return SizedBox(
       width: 64,
       height: 64,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(14),
-        child: CustomPaint(
-          painter: RegionPatternPainter(
-            primary: preset.primaryColour,
-            accent: preset.accentColour,
-            region: preset.region,
-          ),
-          child: const SizedBox.expand(),
-        ),
+        child: assetPath != null
+            ? Image.asset(
+                assetPath,
+                fit: BoxFit.cover,
+                width: 64,
+                height: 64,
+                errorBuilder: (context, error, stackTrace) =>
+                    _RegionPatternFallback(preset: preset),
+              )
+            : _RegionPatternFallback(preset: preset),
       ),
     );
   }
 }
 
-/// Paints a small regional ornament on the square patch that leads each
-/// [RegionStyleButton]. Uses geometric primitives only (no image assets) so
-/// the widget stays self-contained.
+class _RegionPatternFallback extends StatelessWidget {
+  const _RegionPatternFallback({required this.preset});
+
+  final RegionStylePreset preset;
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      painter: RegionPatternPainter(
+        primary: preset.primaryColour,
+        accent: preset.accentColour,
+        region: preset.region,
+      ),
+      child: const SizedBox.expand(),
+    );
+  }
+}
+
+/// Paints a small regional ornament when no bundled preview image is available
+/// or [Image.asset] fails to load.
 class RegionPatternPainter extends CustomPainter {
   RegionPatternPainter({
     required this.primary,
