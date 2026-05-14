@@ -79,18 +79,41 @@ class _SocialAuthRowState extends ConsumerState<SocialAuthRow> {
       children: [
         _SocialButton(
           label: 'Continue with Google',
-          icon: Icons.g_mobiledata,
+          leading: _googleBrandIcon(),
           loading: _busy,
           onPressed: _runGoogle,
         ),
         const SizedBox(height: AppSpacing.sm),
         _SocialButton(
           label: 'Email me a sign-in code',
-          icon: Icons.mail_outline,
+          leading: Icon(Icons.mail_outline, color: AppColors.gold, size: 24),
           loading: false,
           onPressed: _busy ? null : () => context.push('/otp'),
         ),
       ],
+    );
+  }
+
+  /// Google "G" on white circle — reads on dark outlined buttons even if the
+  /// PNG has an opaque square background.
+  static Widget _googleBrandIcon() {
+    return SizedBox(
+      width: 24,
+      height: 24,
+      child: DecoratedBox(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(2),
+          child: Image.asset(
+            'assets/google/google_logo.png',
+            fit: BoxFit.contain,
+            semanticLabel: 'Google',
+          ),
+        ),
+      ),
     );
   }
 }
@@ -98,13 +121,13 @@ class _SocialAuthRowState extends ConsumerState<SocialAuthRow> {
 class _SocialButton extends StatelessWidget {
   const _SocialButton({
     required this.label,
-    required this.icon,
+    required this.leading,
     required this.loading,
     required this.onPressed,
   });
 
   final String label;
-  final IconData icon;
+  final Widget leading;
   final bool loading;
   final VoidCallback? onPressed;
 
@@ -126,7 +149,7 @@ class _SocialButton extends StatelessWidget {
               height: 16,
               child: CircularProgressIndicator(strokeWidth: 2),
             )
-          : Icon(icon, color: AppColors.gold),
+          : leading,
       label: Text(label),
     );
   }

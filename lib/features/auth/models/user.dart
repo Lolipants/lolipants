@@ -59,6 +59,7 @@ class User {
     required this.email,
     this.role,
     this.adminScopes = const <String>[],
+    this.imageUrl,
   });
 
   /// Parses [json] from Better Auth or local cache.
@@ -69,6 +70,7 @@ class User {
       email: json['email']?.toString() ?? '',
       role: json['role']?.toString(),
       adminScopes: _parseScopes(json['adminScopes'] ?? json['admin_scopes']),
+      imageUrl: json['image']?.toString() ?? json['imageUrl']?.toString(),
     );
   }
 
@@ -87,6 +89,9 @@ class User {
   /// Scopes granted to an admin account. Empty for non-admin users. Contains
   /// [AdminScopes.superAdmin] for super admins.
   final List<String> adminScopes;
+
+  /// Profile image URL from Better Auth (`image` field).
+  final String? imageUrl;
 
   /// Normalised lowercase role. Defaults to [UserRoles.user] when absent or
   /// when the server sends an unknown value (avoids bad routing in [homeForRole]).
@@ -139,6 +144,7 @@ class User {
       email: email,
       role: newRole,
       adminScopes: newScopes,
+      imageUrl: imageUrl,
     );
   }
 
@@ -149,6 +155,7 @@ class User {
         'email': email,
         if (role != null) 'role': role,
         if (adminScopes.isNotEmpty) 'adminScopes': adminScopes,
+        if (imageUrl != null && imageUrl!.isNotEmpty) 'image': imageUrl,
       };
 
   /// Encodes this user as a JSON string.

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:lolipants/core/config/app_features.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lolipants/core/config/app_features.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_strings.dart';
@@ -34,20 +34,25 @@ class ProfileScreen extends ConsumerWidget {
                     radius: 80,
                     backgroundColor: AppColors.ember,
                     foregroundColor: AppColors.gold,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border:
-                            Border.all(color: AppColors.borderStrong, width: 2),
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        user?.initials ?? '?',
-                        style: AppTextStyles.displayMedium.copyWith(
-                          color: AppColors.gold,
-                        ),
-                      ),
-                    ),
+                    backgroundImage: _profileAvatarImage(user),
+                    child: _profileAvatarImage(user) != null
+                        ? null
+                        : Container(
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: AppColors.borderStrong,
+                                width: 2,
+                              ),
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              user?.initials ?? '?',
+                              style: AppTextStyles.displayMedium.copyWith(
+                                color: AppColors.gold,
+                              ),
+                            ),
+                          ),
                   ),
                 ),
                 const SizedBox(height: AppSpacing.lg),
@@ -124,6 +129,16 @@ class ProfileScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  static ImageProvider? _profileAvatarImage(User? user) {
+    final raw = user?.imageUrl?.trim() ?? '';
+    if (raw.isEmpty) return null;
+    final uri = Uri.tryParse(raw);
+    if (uri == null) return null;
+    if (!(uri.isScheme('http') || uri.isScheme('https'))) return null;
+    if (uri.host.isEmpty) return null;
+    return NetworkImage(raw);
   }
 
   Future<void> _confirmLogOut(BuildContext context, WidgetRef ref) async {

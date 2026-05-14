@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,6 +6,7 @@ import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/features/editor/data/bundled_design_assets.dart';
 import 'package:lolipants/features/editor/models/garment_design.dart';
 import 'package:lolipants/features/editor/providers/designs_providers.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
@@ -265,16 +267,11 @@ class _DesignTile extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                  child: ColoredBox(
                     color: AppColors.ember,
-                    borderRadius: BorderRadius.circular(AppRadius.sm),
-                  ),
-                  child: const Center(
-                    child: Icon(
-                      Icons.design_services_outlined,
-                      color: AppColors.gold,
-                    ),
+                    child: _DesignThumbnail(design: design),
                   ),
                 ),
               ),
@@ -292,6 +289,70 @@ class _DesignTile extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Prefer remote print/sketch URLs, then bundled flat from [GarmentDesign.renderMetadata].
+class _DesignThumbnail extends StatelessWidget {
+  const _DesignThumbnail({required this.design});
+
+  final GarmentDesign design;
+
+  static String? _firstHttpUrl(String? a, String? b) {
+    for (final u in [a, b]) {
+      final s = u?.trim();
+      if (s != null && s.isNotEmpty && s.startsWith('http')) return s;
+    }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final remote = _firstHttpUrl(design.printImageUrl, design.sketchImageUrl);
+    if (remote != null) {
+      return CachedNetworkImage(
+        imageUrl: remote,
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: double.infinity,
+        placeholder: (_, __) => const Center(
+          child: SizedBox(
+            width: 24,
+            height: 24,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+        errorWidget: (_, __, ___) => const _ThumbnailPlaceholder(),
+      );
+    }
+
+    final assetPath =
+        catalogDesignAssetFromRenderMetadata(design.renderMetadata);
+    if (assetPath != null) {
+      return Image.asset(
+        assetPath,
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: double.infinity,
+        errorBuilder: (_, __, ___) => const _ThumbnailPlaceholder(),
+      );
+    }
+
+    return const _ThumbnailPlaceholder();
+  }
+}
+
+class _ThumbnailPlaceholder extends StatelessWidget {
+  const _ThumbnailPlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Icon(
+        Icons.design_services_outlined,
+        color: AppColors.gold,
       ),
     );
   }

@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/errors/app_exception.dart';
 import 'package:lolipants/features/auth/providers/auth_providers.dart';
 import 'package:lolipants/features/editor/providers/designs_providers.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
@@ -27,14 +28,23 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   bool _saving = false;
   String? _avatarUrl;
   String? _error;
+  bool _seededFromSession = false;
+  bool _uploadingAvatar = false;
+  double _uploadProgress = 0;
 
   @override
   void initState() {
     super.initState();
+    _seedFromAuthIfReady();
+  }
+
+  void _seedFromAuthIfReady() {
+    if (_seededFromSession) return;
     final auth = ref.read(authProvider).value;
-    if (auth is AuthAuthenticated) {
-      _nameController.text = auth.user.name;
-    }
+    if (auth is! AuthAuthenticated) return;
+    _seededFromSession = true;
+    _nameController.text = auth.user.name;
+    _avatarUrl = auth.user.imageUrl;
   }
 
   @override
@@ -45,6 +55,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(authProvider);
+    _seedFromAuthIfReady();
     final auth = ref.watch(authProvider).value;
     final user = auth is AuthAuthenticated ? auth.user : null;
 
@@ -73,10 +85,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                         radius: 64,
                         backgroundColor: AppColors.ember,
                         foregroundColor: AppColors.gold,
-                        backgroundImage: _avatarUrl != null
-                            ? NetworkImage(_avatarUrl!)
-                            : null,
-                        child: _avatarUrl != null
+                        backgroundImage: _safeNetworkImage(_avatarUrl),
+                        child: _safeNetworkImage(_avatarUrl) != null
                             ? null
                             : Text(
                                 user?.initials ?? '?',
@@ -93,11 +103,22 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                           shape: const CircleBorder(),
                           child: InkWell(
                             customBorder: const CircleBorder(),
-                            onTap: _pickAvatar,
-                            child: const Padding(
-                              padding: EdgeInsets.all(AppSpacing.sm),
-                              child:
-                                  Icon(Icons.camera_alt, color: AppColors.ink),
+                            onTap: _uploadingAvatar ? null : _pickAvatar,
+                            child: Padding(
+                              padding: const EdgeInsets.all(AppSpacing.sm),
+                              child: _uploadingAvatar
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: AppColors.ink,
+                                      ),
+                                    )
+                                  : const Icon(
+                                      Icons.camera_alt,
+                                      color: AppColors.ink,
+                                    ),
                             ),
                           ),
                         ),
@@ -106,6 +127,18 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   ),
                 ),
                 const SizedBox(height: AppSpacing.xl),
+                if (_uploadingAvatar) ...[
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
+                    child: LinearProgressIndicator(
+                      value: _uploadProgress > 0 ? _uploadProgress : null,
+                      minHeight: 6,
+                      backgroundColor: AppColors.borderSubtle,
+                      color: AppColors.gold,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                ],
                 LolipantsTextField(
                   controller: _nameController,
                   label: 'Name · الاسم',
@@ -138,9 +171,11 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 if (_error != null) ...[
-                  Text(_error!,
-                      style: AppTextStyles.bodySmall
-                          .copyWith(color: AppColors.rubyLight)),
+                  Text(
+                    _error!,
+                    style: AppTextStyles.bodySmall
+                        .copyWith(color: AppColors.rubyLight),
+                  ),
                   const SizedBox(height: AppSpacing.md),
                 ],
                 LolipantsButton(
@@ -160,23 +195,56 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         await _picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
     if (picked == null) return;
     final repo = ref.read(designsRepositoryProvider);
-    final upload = await repo.uploadPrintImage(filePath: picked.path);
-    upload.fold(
-      (_) {
+    setState(() {
+      _uploadingAvatar = true;
+      _uploadProgress = 0;
+      _error = null;
+    });
+    final upload = await repo.uploadPrintImage(
+      filePath: picked.path,
+      onSendProgress: (sent, total) {
         if (!mounted) return;
-        setState(() => _error = 'Could not upload avatar.');
+        if (total <= 0) return;
+        setState(() => _uploadProgress = sent / total);
+      },
+    );
+    upload.fold(
+      (err) {
+        if (!mounted) return;
+        setState(() {
+          _uploadingAvatar = false;
+          _error = err is ServerException && err.message.isNotEmpty
+              ? err.message
+              : 'Could not upload photo. Check connection and try again.';
+        });
       },
       (url) {
         if (!mounted) return;
         setState(() {
           _avatarUrl = url;
           _error = null;
+          _uploadingAvatar = false;
         });
+        _persistProfile(closeOnSuccess: false);
       },
     );
   }
 
+  static ImageProvider? _safeNetworkImage(String? url) {
+    final raw = url?.trim() ?? '';
+    if (raw.isEmpty) return null;
+    final uri = Uri.tryParse(raw);
+    if (uri == null) return null;
+    if (!(uri.isScheme('http') || uri.isScheme('https'))) return null;
+    if (uri.host.isEmpty) return null;
+    return NetworkImage(raw);
+  }
+
   Future<void> _save() async {
+    await _persistProfile(closeOnSuccess: true);
+  }
+
+  Future<void> _persistProfile({required bool closeOnSuccess}) async {
     final name = _nameController.text.trim();
     if (name.isEmpty) {
       setState(() => _error = 'Name is required.');
@@ -186,15 +254,26 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       _saving = true;
       _error = null;
     });
-    final result =
-        await ref.read(authProvider.notifier).updateProfile(name: name);
+    final result = await ref.read(authProvider.notifier).updateProfile(
+          name: name,
+          image: _avatarUrl,
+        );
     if (!mounted) return;
     result.fold(
-      (_) => setState(() {
+      (err) => setState(() {
         _saving = false;
-        _error = 'Could not update profile.';
+        _error = err is AuthException && err.message.isNotEmpty
+            ? err.message
+            : 'Could not update profile.';
       }),
-      (_) => context.pop(),
+      (_) {
+        if (!mounted) return;
+        if (closeOnSuccess) {
+          context.pop();
+          return;
+        }
+        setState(() => _saving = false);
+      },
     );
   }
 }

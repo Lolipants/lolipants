@@ -23,11 +23,13 @@ class _Slide {
     required this.titleEn,
     required this.titleAr,
     required this.bodyEn,
+    required this.imageAsset,
   });
 
   final String titleEn;
   final String titleAr;
   final String bodyEn;
+  final String imageAsset;
 }
 
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
@@ -40,16 +42,19 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       titleEn: 'Design your fashion',
       titleAr: 'صمم أزياءك',
       bodyEn: AppStrings.onboardingSlide1Body,
+      imageAsset: 'assets/images/onboarding_screen1.jpg',
     ),
     _Slide(
       titleEn: 'Rooted in heritage',
       titleAr: 'مستوحى من تراثك',
       bodyEn: AppStrings.onboardingSlide2Body,
+      imageAsset: 'assets/images/onboarding_screen2.jpg',
     ),
     _Slide(
       titleEn: 'Made by master tailors',
       titleAr: 'مصنوع بأيدي محترفين',
       bodyEn: AppStrings.onboardingSlide3Body,
+      imageAsset: 'assets/images/onboarding_screen3.jpg',
     ),
   ];
 
@@ -105,11 +110,25 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                         children: [
                           Expanded(
                             flex: 55,
-                            child: Center(
-                              child: Icon(
-                                Icons.auto_awesome,
-                                size: 72,
-                                color: AppColors.gold.withValues(alpha: 0.35),
+                            child: Padding(
+                              padding: const EdgeInsets.fromLTRB(
+                                AppSpacing.lg,
+                                AppSpacing.sm,
+                                AppSpacing.lg,
+                                AppSpacing.md,
+                              ),
+                              child: ClipRRect(
+                                borderRadius:
+                                    BorderRadius.circular(AppRadius.xl),
+                                child: ColoredBox(
+                                  color: AppColors.ink,
+                                  child: Image.asset(
+                                    s.imageAsset,
+                                    fit: BoxFit.cover,
+                                    alignment: Alignment.center,
+                                    gaplessPlayback: true,
+                                  ),
+                                ),
                               ),
                             ),
                           ),

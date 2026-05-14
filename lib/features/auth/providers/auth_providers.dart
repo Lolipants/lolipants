@@ -200,9 +200,10 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   /// Updates the current user's display name and refreshes local state.
   Future<Either<AppException, User>> updateProfile({
     required String name,
+    String? image,
   }) async {
     final repo = ref.read(authRepositoryProvider);
-    final result = await repo.updateProfile(name: name);
+    final result = await repo.updateProfile(name: name, image: image);
     result.fold(
       (_) {},
       (user) => state = AsyncValue.data(AuthAuthenticated(user)),

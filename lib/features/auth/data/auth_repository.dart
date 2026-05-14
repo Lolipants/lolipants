@@ -73,22 +73,27 @@ class AuthRepository {
     return right(null);
   }
 
-  /// Patches the current user's display name via better-auth.
+  /// Patches the current user's display name (and optional avatar URL) via
+  /// better-auth. The `/update-user` endpoint returns `{ status: true }` only,
+  /// so we refresh the session to obtain the updated user.
   Future<Either<AppException, User>> updateProfile({
     required String name,
+    String? image,
   }) async {
     try {
-      final response = await _dio.post<Map<String, dynamic>>(
+      await _dio.post<Map<String, dynamic>>(
         ApiEndpoints.authUpdateUser,
-        data: {'name': name},
+        data: {
+          'name': name,
+          if (image != null && image.trim().isNotEmpty) 'image': image.trim(),
+        },
       );
-      final user = _parseUser(response.data);
-      if (user != null) {
-        final merged = await _tryMergeAppProfile(user);
-        await _storage.writeUserJson(merged.toJsonString());
-        return right(merged);
-      }
-      return left(const UnknownException());
+      final sessionResult = await getSession();
+      return sessionResult.fold(
+        left,
+        (user) =>
+            user != null ? right(user) : left(const UnknownException()),
+      );
     } on DioException catch (e) {
       return left(_mapDio(e));
     } on Exception {
