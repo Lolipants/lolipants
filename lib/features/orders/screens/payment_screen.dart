@@ -8,11 +8,9 @@ import 'package:lolipants/core/config/app_features.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
-import 'package:lolipants/core/push/onesignal_bootstrap.dart';
 import 'package:lolipants/features/orders/models/checkout_draft.dart';
 import 'package:lolipants/features/orders/providers/checkout_providers.dart';
 import 'package:lolipants/features/orders/providers/orders_providers.dart';
-import 'package:lolipants/features/settings/data/push_repository.dart';
 import 'package:lolipants/features/settings/providers/settings_provider.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
 import 'package:lolipants/shared/widgets/error_banner.dart';
@@ -235,12 +233,11 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
   Future<void> _ensurePushRegistered() async {
     final settings = ref.read(settingsProvider);
     if (settings.pushEnabled) return;
-    final granted = await requestPushPermission();
-    if (!granted) return;
-    await ref.read(settingsProvider.notifier).setPushEnabled(true);
-    final playerId = await currentPlayerId();
-    if (playerId == null || playerId.isEmpty) return;
-    await ref.read(pushRepositoryProvider).registerPlayerId(playerId);
+    await ref.read(settingsProvider.notifier).applyPushPreference(
+          want: true,
+          requestOsPermission: true,
+          persistWhenOneSignalMissing: true,
+        );
   }
 
   void _fail(String message) {

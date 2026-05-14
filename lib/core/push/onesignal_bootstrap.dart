@@ -7,6 +7,13 @@ import 'package:onesignal_flutter/onesignal_flutter.dart';
 
 final _log = Logger('lolipants.onesignal');
 
+/// Returns true when `ONESIGNAL_APP_ID` is set so the native SDK was
+/// initialised in [initOneSignal].
+bool isOneSignalAppConfigured() {
+  final appId = dotenv.env['ONESIGNAL_APP_ID']?.trim();
+  return appId != null && appId.isNotEmpty;
+}
+
 /// Initialises the OneSignal SDK. Safe to call once per app run; subsequent
 /// calls are no-ops. Uses the `ONESIGNAL_APP_ID` from `.env` — when the env
 /// var is absent we log and skip (push simply stays off).
@@ -17,8 +24,10 @@ Future<void> initOneSignal() async {
     return;
   }
   try {
-    OneSignal.Debug.setLogLevel(kDebugMode ? OSLogLevel.warn : OSLogLevel.error);
-    OneSignal.initialize(appId);
+    await OneSignal.Debug.setLogLevel(
+      kDebugMode ? OSLogLevel.warn : OSLogLevel.error,
+    );
+    await OneSignal.initialize(appId);
 
     // Deep link open handler — push payloads can include a
     // `{ "route": "/orders/<id>" }` additionalData entry that we forward to
@@ -35,6 +44,20 @@ Future<void> initOneSignal() async {
     });
   } on Object catch (err, stack) {
     _log.warning('OneSignal initialisation failed', err, stack);
+  }
+}
+
+/// Subscribes or unsubscribes this device on OneSignal (no-op if not configured).
+Future<void> setOneSignalPushOptIn({required bool want}) async {
+  if (!isOneSignalAppConfigured()) return;
+  try {
+    if (want) {
+      await OneSignal.User.pushSubscription.optIn();
+    } else {
+      await OneSignal.User.pushSubscription.optOut();
+    }
+  } on Object catch (err, stack) {
+    _log.warning('OneSignal opt-in/out failed', err, stack);
   }
 }
 

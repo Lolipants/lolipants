@@ -16,12 +16,27 @@ class PushRepository {
   Future<Either<AppException, void>> registerPlayerId(
       String oneSignalId,) async {
     try {
-      await _dio.post<void>('/users/push-token', data: {
-        'oneSignalId': oneSignalId,
-      });
+      await _dio.post<void>(
+        '/users/push-token',
+        data: {
+          'oneSignalId': oneSignalId,
+        },
+      );
       return right(null);
     } on DioException catch (e) {
       return left(NetworkException(e.message ?? 'push-token failed'));
+    } on Object catch (e) {
+      return left(NetworkException(e.toString()));
+    }
+  }
+
+  /// Clears the stored OneSignal id for the current user (opt-out / settings).
+  Future<Either<AppException, void>> clearPushToken() async {
+    try {
+      await _dio.delete<void>('/users/push-token');
+      return right(null);
+    } on DioException catch (e) {
+      return left(NetworkException(e.message ?? 'push-token delete failed'));
     } on Object catch (e) {
       return left(NetworkException(e.toString()));
     }
