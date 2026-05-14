@@ -38,11 +38,13 @@ class Stmt {
       if (!design || design.user_id !== b[1]) return null;
       return {
         print_image_url: design.print_image_url ?? null,
+        sketch_image_url: design.sketch_image_url ?? null,
         render_metadata: design.render_metadata ?? null,
         garment_type: design.garment_type ?? "thobe",
         mannequin_id: design.mannequin_id ?? null,
         primary_colour: design.primary_colour ?? "#162F28",
         accent_colour: design.accent_colour ?? "#C9A84C",
+        fabric_quality: design.fabric_quality ?? "standard",
         mannequin_preview_url: null,
       } as T;
     }
@@ -186,7 +188,12 @@ const env = {
 async function req(
   method: string,
   path: string,
-  options: { token?: string; body?: unknown; formData?: FormData } = {},
+  options: {
+    token?: string;
+    body?: unknown;
+    formData?: FormData;
+    env?: Record<string, unknown>;
+  } = {},
 ) {
   const pending: Promise<unknown>[] = [];
   const headers = new Headers();
@@ -197,7 +204,8 @@ async function req(
     headers,
     body: options.formData ?? (options.body !== undefined ? JSON.stringify(options.body) : undefined),
   });
-  const response = await app.fetch(request, env, {
+  const runtimeEnv = (options.env ?? env) as typeof env;
+  const response = await app.fetch(request, runtimeEnv, {
     waitUntil: (p: Promise<unknown>) => {
       pending.push(p);
     },
@@ -208,6 +216,9 @@ async function req(
 }
 
 describe("AI render job endpoints", () => {
+  const miniPngB64 =
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+
   beforeEach(() => {
     mockDb.designs.clear();
     mockDb.mannequinJobs.clear();
@@ -221,6 +232,8 @@ describe("AI render job endpoints", () => {
       user_id: "user-1",
       mannequin_id: null,
       print_image_url: "https://files.example.com/uploads/u/p.png",
+      garment_type: "thobe",
+      fabric_quality: "standard",
       render_metadata: JSON.stringify({
         mannequinTemplateId: "male_thobe_v1",
         fabricProfile: "standard",
@@ -258,6 +271,8 @@ describe("AI render job endpoints", () => {
       user_id: "user-1",
       mannequin_id: null,
       print_image_url: "https://files.example.com/uploads/u/fallback.png",
+      garment_type: "thobe",
+      fabric_quality: "standard",
       render_metadata: JSON.stringify({
         mannequinTemplateId: "default_thobe_v1",
         fabricProfile: "standard",
@@ -285,6 +300,97 @@ describe("AI render job endpoints", () => {
     expect(body.artifacts.heroFrontUrl).toBe(
       "https://files.example.com/uploads/u/fallback.png",
     );
+  });
+
+  it("uses Gemini and uploads to R2 when GEMINI_API_KEY is set", async () => {
+    const puts: string[] = [];
+    const envGemini = {
+      ...env,
+      GEMINI_API_KEY: "gemini-test-key",
+      R2: {
+        put: async (key: string) => {
+          puts.push(String(key));
+        },
+      } as unknown as R2Bucket,
+    };
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const u =
+          typeof input === "string"
+            ? input
+            : input instanceof URL
+              ? input.href
+              : (input as Request).url;
+        if (u.includes("generativelanguage.googleapis.com")) {
+          return new Response(
+            JSON.stringify({
+              candidates: [
+                {
+                  content: {
+                    parts: [
+                      {
+                        inline_data: {
+                          mime_type: "image/png",
+                          data: miniPngB64,
+                        },
+                      },
+                    ],
+                  },
+                },
+              ],
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          );
+        }
+        return new Response(new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]), {
+          status: 200,
+          headers: { "content-type": "image/png" },
+        });
+      }),
+    );
+
+    mockDb.designs.set("design-gemini", {
+      id: "design-gemini",
+      user_id: "user-1",
+      mannequin_id: null,
+      garment_type: "thobe",
+      fabric_quality: "standard",
+      primary_colour: "#162F28",
+      accent_colour: "#C9A84C",
+      print_image_url: "https://files.example.com/uploads/u/p.png",
+      render_metadata: JSON.stringify({
+        mannequinTemplateId: "default_thobe_v1",
+        fabricProfile: "standard",
+        printTransform: { placement: "chest", x: 0, y: 0, scale: 40 },
+        textLayers: [],
+      }),
+    });
+
+    const start = await req("POST", "/ai/design-render", {
+      token: "customer-token",
+      body: { designId: "design-gemini" },
+      env: envGemini as unknown as typeof env,
+    });
+    expect(start.status).toBe(202);
+    const startBody = (await start.json()) as { jobId: string };
+
+    const status = await req("GET", `/ai/design-render/${startBody.jobId}`, {
+      token: "customer-token",
+      env: envGemini as unknown as typeof env,
+    });
+    expect(status.status).toBe(200);
+    const body = (await status.json()) as {
+      artifacts: Record<string, string>;
+    };
+    expect(body.artifacts.heroFrontUrl?.startsWith("https://files.example.com/renders/")).toBe(
+      true,
+    );
+    expect(body.artifacts.renderMode).toBe("gemini_image_v1");
+    expect(puts.length).toBeGreaterThan(0);
+
+    vi.unstubAllGlobals();
   });
 });
 

@@ -4,6 +4,10 @@ export type Env = {
   AUTH_SERVICE: Fetcher;
   BETTER_AUTH_BASE_URL: string;
   OPENAI_API_KEY: string;
+  /** Google AI Studio key for Gemini native image generation (design-render refinement). */
+  GEMINI_API_KEY?: string;
+  /** Defaults to gemini-2.5-flash-image when GEMINI_API_KEY is set. */
+  GEMINI_IMAGE_MODEL?: string;
   TAP_SECRET_KEY: string;
   ONESIGNAL_API_KEY: string;
   ONESIGNAL_APP_ID: string;

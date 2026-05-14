@@ -1,8 +1,18 @@
 import { Hono } from "hono";
 import { apiError } from "../lib/http";
+import {
+  buildGarmentLookPrompt,
+  DEFAULT_LOLIPANTS_LOOK_SUFFIX,
+  fetchUrlAsInlinePart,
+  generateGarmentLookImage,
+  type GeminiInlinePart,
+} from "../lib/geminiImageClient";
 import { normalizeRenderMetadata } from "../lib/renderNormalization";
 import { requireAuth } from "../middleware/auth";
 import type { AppVariables, Env } from "../types";
+
+const DEFAULT_GEMINI_IMAGE_MODEL = "gemini-2.5-flash-image";
+const MAX_REFERENCE_IMAGE_BYTES = 4 * 1024 * 1024;
 
 export const aiRoutes = new Hono<{ Bindings: Env; Variables: AppVariables }>();
 aiRoutes.use("*", requireAuth);
@@ -37,11 +47,13 @@ type DesignRenderJobRow = {
 
 type DesignRenderSourceRow = {
   print_image_url: string | null;
+  sketch_image_url: string | null;
   render_metadata: string | null;
   garment_type: string | null;
   mannequin_id: string | null;
   primary_colour: string | null;
   accent_colour: string | null;
+  fabric_quality: string | null;
 };
 
 aiRoutes.post("/design", async (c) => {
@@ -217,13 +229,15 @@ aiRoutes.post("/design-render", async (c) => {
     return apiError(c, 404, "DESIGN_NOT_FOUND", "Design not found");
   }
 
+  const renderProvider = c.env.GEMINI_API_KEY?.trim() ? "gemini" : "template";
+
   const jobId = crypto.randomUUID();
   await c.env.DB.prepare(
     `INSERT INTO design_render_jobs (
       id, user_id, design_id, mannequin_id, status, provider, provider_status, started_at
-    ) VALUES (?, ?, ?, ?, 'queued', 'template', 'queued', datetime('now'))`,
+    ) VALUES (?, ?, ?, ?, 'queued', ?, 'queued', datetime('now'))`,
   )
-    .bind(jobId, userId, designId, design.mannequin_id)
+    .bind(jobId, userId, designId, design.mannequin_id, renderProvider)
     .run();
 
   c.executionCtx.waitUntil(_advanceDesignRenderJob(c.env, jobId));
@@ -282,8 +296,8 @@ async function _advanceDesignRenderJob(env: Env, jobId: string) {
     .run();
 
   const design = await env.DB.prepare(
-    `SELECT d.print_image_url, d.render_metadata, d.garment_type, d.mannequin_id,
-      d.primary_colour, d.accent_colour, mo.preview_url AS mannequin_preview_url
+    `SELECT d.print_image_url, d.sketch_image_url, d.render_metadata, d.garment_type, d.mannequin_id,
+      d.primary_colour, d.accent_colour, d.fabric_quality, mo.preview_url AS mannequin_preview_url
      FROM designs d
      LEFT JOIN mannequin_options mo ON mo.id = d.mannequin_id
      WHERE d.id = ? AND d.user_id = ?`,
@@ -306,7 +320,12 @@ async function _advanceDesignRenderJob(env: Env, jobId: string) {
     templateId: normalized.templateId,
     materialPreset: normalized.materialPreset,
   });
-  if ((artifacts.heroFrontUrl ?? "").length === 0) {
+  const geminiKey = env.GEMINI_API_KEY?.trim();
+  const hasRasterSource = (artifacts.heroFrontUrl ?? "").trim().length > 0;
+
+  // Without a print/mannequin preview URL, the deterministic pipeline has nothing
+  // to echo. Gemini can still generate from garment metadata alone when configured.
+  if (!hasRasterSource && !geminiKey) {
     await env.DB.prepare(
       `UPDATE design_render_jobs
        SET status = 'failed', provider_status = 'failed', error_message = ?,
@@ -315,13 +334,45 @@ async function _advanceDesignRenderJob(env: Env, jobId: string) {
        WHERE id = ?`,
     )
       .bind(
-        "Design has no renderable preview source",
+        "No print or mannequin preview on file. Add a print (or sketch), pick a catalogue mannequin with a preview, or set GEMINI_API_KEY for AI-only previews.",
         JSON.stringify(_fallbackArtifacts(design?.print_image_url ?? null)),
         jobId,
       )
       .run();
-    console.warn(JSON.stringify({ event: "design_render_failed", jobId, error: "missing_print_image" }));
+    console.warn(JSON.stringify({ event: "design_render_failed", jobId, error: "no_raster_no_gemini" }));
     return;
+  }
+
+  let finalArtifacts: Record<string, string> = { ...artifacts };
+  if (geminiKey) {
+    const geminiResult = await _runGeminiGarmentRefinement({
+      env,
+      jobId,
+      userId: row.user_id,
+      design: design ?? null,
+      baseArtifacts: artifacts,
+      normalizedTemplateId: normalized.templateId,
+      geminiKey,
+    });
+    if (geminiResult) {
+      finalArtifacts = geminiResult;
+    } else if (!hasRasterSource) {
+      await env.DB.prepare(
+        `UPDATE design_render_jobs
+         SET status = 'failed', provider_status = 'failed', error_message = ?,
+           artifact_urls = ?,
+           failed_at = datetime('now'), updated_at = datetime('now')
+         WHERE id = ?`,
+      )
+        .bind(
+          "AI preview failed. Add a print or sketch image, save, and try again.",
+          JSON.stringify(_fallbackArtifacts(design?.print_image_url ?? null)),
+          jobId,
+        )
+        .run();
+      console.warn(JSON.stringify({ event: "design_render_failed", jobId, error: "gemini_failed_no_fallback" }));
+      return;
+    }
   }
 
   const elapsedMs = Date.now() - startMs;
@@ -331,7 +382,7 @@ async function _advanceDesignRenderJob(env: Env, jobId: string) {
        completed_at = datetime('now'), updated_at = datetime('now')
      WHERE id = ?`,
   )
-    .bind(1, JSON.stringify(artifacts), jobId)
+    .bind(1, JSON.stringify(finalArtifacts), jobId)
     .run();
   console.info(
     JSON.stringify({
@@ -341,8 +392,161 @@ async function _advanceDesignRenderJob(env: Env, jobId: string) {
       elapsedMs,
       templateId: normalized.templateId,
       materialPreset: normalized.materialPreset,
+      renderMode: finalArtifacts["renderMode"] ?? artifacts["renderMode"],
     }),
   );
+}
+
+function _readEditorRenderHints(renderMetadata: string | null): {
+  editorMannequinImageUrl: string | null;
+  aiLookUserPrompt: string | null;
+  aiLookPromptSuffix: string | null;
+} {
+  const empty = {
+    editorMannequinImageUrl: null as string | null,
+    aiLookUserPrompt: null as string | null,
+    aiLookPromptSuffix: null as string | null,
+  };
+  if (!renderMetadata?.trim()) return empty;
+  try {
+    const o = JSON.parse(renderMetadata) as Record<string, unknown>;
+    const pick = (k: string) => (typeof o[k] === "string" ? (o[k] as string).trim() : "");
+    const man = pick("editorMannequinImageUrl");
+    const user = pick("aiLookUserPrompt");
+    const suf = pick("aiLookPromptSuffix");
+    return {
+      editorMannequinImageUrl: man.length > 0 ? man : null,
+      aiLookUserPrompt: user.length > 0 ? user : null,
+      aiLookPromptSuffix: suf.length > 0 ? suf : null,
+    };
+  } catch {
+    return empty;
+  }
+}
+
+async function _runGeminiGarmentRefinement(input: {
+  env: Env;
+  jobId: string;
+  userId: string;
+  design: (DesignRenderSourceRow & { mannequin_preview_url: string | null }) | null;
+  baseArtifacts: Record<string, string>;
+  normalizedTemplateId: string;
+  geminiKey: string;
+}): Promise<Record<string, string> | null> {
+  const { env, jobId, userId, design, baseArtifacts, normalizedTemplateId, geminiKey } = input;
+  const model =
+    env.GEMINI_IMAGE_MODEL?.trim() && env.GEMINI_IMAGE_MODEL.trim().length > 0
+      ? env.GEMINI_IMAGE_MODEL.trim()
+      : DEFAULT_GEMINI_IMAGE_MODEL;
+
+  const placement = _readPrintPlacement(design?.render_metadata ?? null);
+  const textSummary = _summarizeTextLayers(design?.render_metadata ?? null);
+  const hints = _readEditorRenderHints(design?.render_metadata ?? null);
+
+  const prompt = buildGarmentLookPrompt({
+    garmentType: design?.garment_type ?? "garment",
+    primaryColour: design?.primary_colour ?? "#162F28",
+    accentColour: design?.accent_colour ?? "#C9A84C",
+    fabricQuality: design?.fabric_quality ?? "standard",
+    printPlacement: placement,
+    textLayersSummary: textSummary,
+    userExtra: hints.aiLookUserPrompt,
+    brandSuffix: hints.aiLookPromptSuffix ?? DEFAULT_LOLIPANTS_LOOK_SUFFIX,
+  });
+
+  const refs: GeminiInlinePart[] = [];
+  const candidates: Array<{ url: string | null; caption: string }> = [
+    {
+      url: design?.print_image_url ?? null,
+      caption: "Reference — catalogue garment flat (apply to model):",
+    },
+    {
+      url: hints.editorMannequinImageUrl ?? design?.mannequin_preview_url ?? null,
+      caption: "Reference — body pose / proportions (optional):",
+    },
+    { url: design?.sketch_image_url ?? null, caption: "Reference — silhouette / sketch (optional):" },
+  ];
+
+  for (const c of candidates) {
+    if (!c.url?.trim()) continue;
+    const part = await fetchUrlAsInlinePart(c.url, fetch, MAX_REFERENCE_IMAGE_BYTES);
+    if (part) {
+      refs.push({ ...part, caption: c.caption });
+    }
+    if (refs.length >= 3) break;
+  }
+
+  const gen = await generateGarmentLookImage({
+    apiKey: geminiKey,
+    model,
+    prompt,
+    referenceParts: refs,
+  });
+
+  if (!gen.ok) {
+    console.warn(JSON.stringify({ event: "gemini_render_skipped", jobId, error: gen.error }));
+    return null;
+  }
+
+  const ext = gen.mimeType.includes("jpeg") || gen.mimeType.includes("jpg") ? "jpg" : "png";
+  const objectKey = `renders/${userId}/${jobId}.${ext}`;
+  try {
+    await env.R2.put(objectKey, gen.bytes, {
+      httpMetadata: { contentType: gen.mimeType },
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.warn(JSON.stringify({ event: "gemini_r2_upload_failed", jobId, error: msg }));
+    return null;
+  }
+
+  const baseUrl = env.CLOUDFLARE_R2_BASE_URL.replace(/\/+$/, "");
+  const publicUrl = `${baseUrl}/${objectKey}`;
+
+  return {
+    ...baseArtifacts,
+    fallbackPreviewUrl: baseArtifacts["heroFrontUrl"] ?? "",
+    thumbnailUrl: publicUrl,
+    heroFrontUrl: publicUrl,
+    heroSideUrl: baseArtifacts["heroSideUrl"] ?? publicUrl,
+    heroBackUrl: baseArtifacts["heroBackUrl"] ?? publicUrl,
+    templateId: normalizedTemplateId,
+    materialPreset: baseArtifacts["materialPreset"] ?? "",
+    renderMode: "gemini_image_v1",
+    geminiModel: model,
+    deterministicHeroUrl: baseArtifacts["heroFrontUrl"] ?? "",
+  };
+}
+
+function _readPrintPlacement(renderMetadata: string | null): string | null {
+  if (!renderMetadata?.trim()) return null;
+  try {
+    const meta = JSON.parse(renderMetadata) as Record<string, unknown>;
+    const pt = meta["printTransform"] as Record<string, unknown> | undefined;
+    const pl = pt?.["placement"] ?? meta["printPlacement"];
+    return typeof pl === "string" ? pl : null;
+  } catch {
+    return null;
+  }
+}
+
+function _summarizeTextLayers(renderMetadata: string | null): string | null {
+  if (!renderMetadata?.trim()) return null;
+  try {
+    const meta = JSON.parse(renderMetadata) as Record<string, unknown>;
+    const raw = meta["textLayers"];
+    if (!Array.isArray(raw) || raw.length === 0) return null;
+    const parts: string[] = [];
+    for (const layer of raw.slice(0, 6)) {
+      if (typeof layer !== "object" || layer === null) continue;
+      const L = layer as Record<string, unknown>;
+      const text = typeof L["text"] === "string" ? L["text"] : "";
+      if (text.trim()) parts.push(text.trim());
+    }
+    return parts.length > 0 ? parts.join(" · ") : null;
+  } catch {
+    return null;
+  }
 }
 
 function _buildDeterministicArtifacts(input: {

@@ -43,8 +43,8 @@ designRoutes.post("/", async (c) => {
 
   await c.env.DB.prepare(
     `INSERT INTO designs (id, user_id, name, garment_type, mannequin_id, fabric_id, fabric_quality,
-      primary_colour, accent_colour, pattern_id, print_image_url, preset_style_id, text_layers, render_metadata, is_public)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      primary_colour, accent_colour, pattern_id, print_image_url, sketch_image_url, preset_style_id, text_layers, render_metadata, is_public)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   )
     .bind(
       id,
@@ -58,6 +58,7 @@ designRoutes.post("/", async (c) => {
       body.accentColour ?? null,
       body.patternId ?? null,
       body.printImageUrl ?? null,
+      body.sketchImageUrl ?? null,
       body.presetStyleId ?? null,
       JSON.stringify(body.textLayers ?? []),
       JSON.stringify(renderMetadata),
@@ -105,7 +106,7 @@ designRoutes.patch("/:id", async (c) => {
   await c.env.DB.prepare(
     `UPDATE designs SET
       name = ?, garment_type = ?, mannequin_id = ?, fabric_id = ?, fabric_quality = ?,
-      primary_colour = ?, accent_colour = ?, pattern_id = ?, print_image_url = ?,
+      primary_colour = ?, accent_colour = ?, pattern_id = ?, print_image_url = ?, sketch_image_url = ?,
       preset_style_id = ?, text_layers = ?, render_metadata = ?, is_public = ?, updated_at = datetime('now')
       WHERE id = ? AND user_id = ?`,
   )
@@ -119,6 +120,9 @@ designRoutes.patch("/:id", async (c) => {
       body.accentColour ?? existing.accent_colour,
       body.patternId ?? existing.pattern_id,
       body.printImageUrl ?? existing.print_image_url,
+      Object.prototype.hasOwnProperty.call(body, "sketchImageUrl")
+        ? body.sketchImageUrl ?? null
+        : existing.sketch_image_url,
       body.presetStyleId ?? existing.preset_style_id,
       body.textLayers ? JSON.stringify(body.textLayers) : existing.text_layers,
       Object.prototype.hasOwnProperty.call(body, "renderMetadata")
