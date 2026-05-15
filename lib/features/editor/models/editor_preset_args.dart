@@ -16,6 +16,7 @@ class EditorPresetArgs {
     this.fabricId,
     this.patternId,
     this.mannequinId,
+    this.catalogDesignPath,
   });
 
   final String? presetId;
@@ -27,6 +28,9 @@ class EditorPresetArgs {
   final String? patternId;
   final String? mannequinId;
 
+  /// Bundled `assets/images/designs/...` flat-lay to show when opening from a preset.
+  final String? catalogDesignPath;
+
   Map<String, dynamic> toJson() {
     return {
       'presetId': presetId,
@@ -37,6 +41,7 @@ class EditorPresetArgs {
       'fabricId': fabricId,
       'patternId': patternId,
       'mannequinId': mannequinId,
+      'catalogDesignPath': catalogDesignPath,
     };
   }
 
@@ -55,6 +60,7 @@ class EditorPresetArgs {
       fabricId: json['fabricId']?.toString(),
       patternId: json['patternId']?.toString(),
       mannequinId: json['mannequinId']?.toString(),
+      catalogDesignPath: json['catalogDesignPath']?.toString(),
     );
   }
 }

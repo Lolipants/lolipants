@@ -9,6 +9,7 @@ import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/features/orders/models/checkout_draft.dart';
+import 'package:lolipants/features/orders/models/order_design_draft.dart';
 import 'package:lolipants/features/orders/providers/checkout_providers.dart';
 import 'package:lolipants/features/orders/providers/orders_providers.dart';
 import 'package:lolipants/features/settings/providers/settings_provider.dart';
@@ -17,10 +18,11 @@ import 'package:lolipants/shared/widgets/error_banner.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
 
 /// Step-4 checkout screen. Calls `POST /orders` (idempotent), then
-/// `POST /payments/intent`, then either the real Tap SDK when wired up
-/// or the server-side sandbox confirmation. All three requests share the
-/// draft's [CheckoutDraft.idempotencyKey] so a retry never creates two
-/// orders.
+/// `POST /payments/intent`, then confirms via **manual Tap token entry** in
+/// release builds or the server-side sandbox path in debug / mock mode.
+/// The Tap Flutter SDK is intentionally not bundled until product requests it.
+/// All three requests share the draft's [CheckoutDraft.idempotencyKey] so a
+/// retry never creates two orders.
 class PaymentScreen extends ConsumerStatefulWidget {
   /// Default constructor.
   const PaymentScreen({super.key});
@@ -59,6 +61,8 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
                 expanded: _expanded,
                 onToggle: () => setState(() => _expanded = !_expanded),
               ),
+              const SizedBox(height: AppSpacing.md),
+              _DesignFabricSummary(design: draft.design),
               const SizedBox(height: AppSpacing.lg),
               if (_errorMessage != null) ...[
                 ErrorBanner(
@@ -83,8 +87,9 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
                       kFeatureMockPayment
                           ? 'Demo payment mode is active. No real card will be '
                               'charged in this build.'
-                          : 'Payments are processed by Tap. Your card details '
-                              'never touch our servers.',
+                          : 'Card payments: this build collects a Tap-compatible '
+                              'token manually (no Tap Flutter SDK). Your card '
+                              'details never touch our servers.',
                       style: AppTextStyles.bodySmall,
                     ),
                   ],
@@ -246,6 +251,41 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
       _processing = false;
       _errorMessage = message;
     });
+  }
+}
+
+class _DesignFabricSummary extends StatelessWidget {
+  const _DesignFabricSummary({required this.design});
+
+  final OrderDesignDraft design;
+
+  @override
+  Widget build(BuildContext context) {
+    final rawId = design.fabricId?.trim();
+    if (rawId == null || rawId.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    final q = design.fabricQuality?.trim();
+    final line = (q == null || q.isEmpty)
+        ? rawId
+        : '$rawId · ${q.replaceAll('_', ' ')}';
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.smoke,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: AppColors.borderSubtle),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Fabric', style: AppTextStyles.titleSmall),
+          const SizedBox(height: AppSpacing.xs),
+          Text(line, style: AppTextStyles.bodyMedium),
+        ],
+      ),
+    );
   }
 }
 

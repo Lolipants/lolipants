@@ -83,9 +83,7 @@ class _OrderSummaryScreenState extends ConsumerState<OrderSummaryScreen> {
         draft?.design ?? widget.designDraft ?? _fallbackDraft();
     final quote = draft?.quote;
 
-    final fabric = (design.fabricId?.trim().isNotEmpty ?? false)
-        ? design.fabricId!.trim()
-        : '-';
+    final fabric = _fabricSummary(design);
     final pattern = (design.patternId?.trim().isNotEmpty ?? false)
         ? design.patternId!.trim()
         : '-';
@@ -200,6 +198,14 @@ class _OrderSummaryScreenState extends ConsumerState<OrderSummaryScreen> {
 
   bool _hasUsableSizing(BodyMeasurements m) =>
       m.height != null && m.chest != null && m.waist != null;
+}
+
+String _fabricSummary(OrderDesignDraft design) {
+  final rawId = design.fabricId?.trim();
+  if (rawId == null || rawId.isEmpty) return '-';
+  final q = design.fabricQuality?.trim();
+  if (q == null || q.isEmpty) return rawId;
+  return '$rawId · ${q.replaceAll('_', ' ')}';
 }
 
 class _PriceBreakdown extends StatelessWidget {

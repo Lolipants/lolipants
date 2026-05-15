@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -40,6 +41,98 @@ class DesignerProfileScreen extends ConsumerWidget {
     context.push('/order/summary', extra: design);
   }
 
+  void _previewShowcaseItem(
+    WidgetRef ref,
+    BuildContext context,
+    ShowcaseItem item,
+  ) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.58,
+          minChildSize: 0.35,
+          maxChildSize: 0.92,
+          builder: (_, scrollController) {
+            return DecoratedBox(
+              decoration: const BoxDecoration(
+                color: AppColors.stone,
+                borderRadius: BorderRadius.vertical(
+                  top: Radius.circular(AppRadius.lg),
+                ),
+              ),
+              child: ListView(
+                controller: scrollController,
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.xl,
+                  AppSpacing.md,
+                  AppSpacing.xl,
+                  AppSpacing.xl,
+                ),
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      margin: const EdgeInsets.only(bottom: AppSpacing.md),
+                      decoration: BoxDecoration(
+                        color: AppColors.borderDefault,
+                        borderRadius: BorderRadius.circular(100),
+                      ),
+                    ),
+                  ),
+                  Text(item.name, style: AppTextStyles.titleLarge),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    item.garmentType,
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.fog,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    'by ${item.designer.name}',
+                    style: AppTextStyles.bodyMedium,
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  if (item.previewImageUrl != null &&
+                      item.previewImageUrl!.trim().isNotEmpty)
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                      child: AspectRatio(
+                        aspectRatio: 3 / 4,
+                        child: CachedNetworkImage(
+                          imageUrl: item.previewImageUrl!,
+                          fit: BoxFit.cover,
+                          errorWidget: (_, __, ___) => const Center(
+                            child: Icon(
+                              Icons.image_not_supported_outlined,
+                              color: AppColors.fog,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: AppSpacing.lg),
+                  LolipantsButton(
+                    label: 'Order this design',
+                    onPressed: () {
+                      Navigator.of(sheetContext).pop();
+                      _orderShowcaseItem(ref, context, item);
+                    },
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profileAsync = ref.watch(designerProfileProvider(designerId));
@@ -61,6 +154,7 @@ class DesignerProfileScreen extends ConsumerWidget {
                     .read(designerProfileProvider(designerId).notifier)
                     .toggleFollow(),
                 onOrder: (item) => _orderShowcaseItem(ref, context, item),
+                onPreview: (item) => _previewShowcaseItem(ref, context, item),
               ),
               loading: () => const Center(
                 child: CircularProgressIndicator(color: AppColors.gold),
@@ -86,11 +180,13 @@ class _Body extends ConsumerWidget {
     required this.profile,
     required this.onToggleFollow,
     required this.onOrder,
+    required this.onPreview,
   });
 
   final DesignerProfile profile;
   final VoidCallback onToggleFollow;
   final ValueChanged<ShowcaseItem> onOrder;
+  final ValueChanged<ShowcaseItem> onPreview;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -135,7 +231,7 @@ class _Body extends ConsumerWidget {
                     final item = items[index];
                     return ShowcaseCard(
                       item: item,
-                      onTap: () {},
+                      onTap: () => onPreview(item),
                       onOrder: () => onOrder(item),
                     );
                   },

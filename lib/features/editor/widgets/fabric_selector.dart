@@ -47,9 +47,15 @@ class FabricSelector extends StatelessWidget {
             children: [
               for (final fabric in availableFabrics)
                 ChoiceChip(
-                  label: Text('${fabric.name} (${fabric.quality})'),
+                  label: Text(
+                    fabric.nameAr.isNotEmpty
+                        ? '${fabric.name} · ${fabric.nameAr}'
+                        : fabric.name,
+                  ),
                   selected: selectedFabric == fabric.id,
-                  onSelected: (_) => onFabricSelected(fabric.id),
+                  onSelected: fabric.isAvailable
+                      ? (_) => onFabricSelected(fabric.id)
+                      : null,
                 ),
             ],
           ),

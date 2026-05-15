@@ -8,41 +8,64 @@ import 'package:lolipants/features/editor/data/bundled_design_assets.dart';
 class CatalogDesignPicker extends StatelessWidget {
   const CatalogDesignPicker({
     super.key,
+    required this.sections,
     required this.selectedPath,
     required this.onSelected,
+    this.compact = false,
   });
+
+  /// Usually from [catalogSectionsFor]; may be a filtered view.
+  final List<(String sectionTitle, List<String> paths)> sections;
 
   final String selectedPath;
   final ValueChanged<String> onSelected;
 
+  /// Tighter rows and copy for the editor bottom sheet.
+  final bool compact;
+
   @override
   Widget build(BuildContext context) {
+    final rowH = compact ? 88.0 : 108.0;
+    final thumbW = compact ? 72.0 : 84.0;
+    final labelSize = compact ? 9.0 : 10.0;
+    final sectionStyle = AppTextStyles.titleSmall.copyWith(
+      color: AppColors.gold,
+      fontSize: compact ? 12 : null,
+    );
+
     return ListView(
-      padding: const EdgeInsets.fromLTRB(
+      padding: EdgeInsets.fromLTRB(
         AppSpacing.md,
-        AppSpacing.sm,
+        compact ? 6 : AppSpacing.sm,
         AppSpacing.md,
-        AppSpacing.md,
+        compact ? AppSpacing.sm : AppSpacing.md,
       ),
       children: [
         Text(
-          'Pick a catalogue flat — used with AI and your mannequin.',
-          style: AppTextStyles.bodySmall.copyWith(color: AppColors.fog),
+          compact
+              ? 'Catalogue flats'
+              : 'Pick a catalogue flat — used with AI and your mannequin.',
+          maxLines: compact ? 1 : 3,
+          overflow: TextOverflow.ellipsis,
+          style: AppTextStyles.bodySmall.copyWith(
+            color: AppColors.fog,
+            fontSize: compact ? 11 : null,
+          ),
         ),
-        const SizedBox(height: AppSpacing.sm),
-        for (final section in kBundledDesignCatalog) ...[
+        SizedBox(height: compact ? 4 : AppSpacing.sm),
+        for (final section in sections) ...[
           Text(
             section.$1,
-            style: AppTextStyles.titleSmall.copyWith(color: AppColors.gold),
+            style: sectionStyle,
           ),
-          const SizedBox(height: AppSpacing.xs),
+          SizedBox(height: compact ? 2 : AppSpacing.xs),
           SizedBox(
-            height: 108,
+            height: rowH,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: section.$2.length,
               separatorBuilder: (_, __) =>
-                  const SizedBox(width: AppSpacing.sm),
+                  SizedBox(width: compact ? AppSpacing.xs : AppSpacing.sm),
               itemBuilder: (context, i) {
                 final path = section.$2[i];
                 final sel = path == selectedPath;
@@ -50,8 +73,8 @@ class CatalogDesignPicker extends StatelessWidget {
                   onTap: () => onSelected(path),
                   borderRadius: BorderRadius.circular(AppRadius.md),
                   child: Container(
-                    width: 84,
-                    padding: const EdgeInsets.all(4),
+                    width: thumbW,
+                    padding: EdgeInsets.all(compact ? 3 : 4),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(AppRadius.md),
                       border: Border.all(
@@ -70,10 +93,10 @@ class CatalogDesignPicker extends StatelessWidget {
                               child: Image.asset(
                                 path,
                                 fit: BoxFit.contain,
-                                errorBuilder: (_, __, ___) => const Center(
+                                errorBuilder: (_, __, ___) => Center(
                                   child: Icon(
                                     Icons.image_not_supported_outlined,
-                                    size: 20,
+                                    size: compact ? 16 : 20,
                                     color: AppColors.fog,
                                   ),
                                 ),
@@ -81,14 +104,14 @@ class CatalogDesignPicker extends StatelessWidget {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        SizedBox(height: compact ? 2 : 4),
                         Text(
                           catalogDesignLabel(path),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.center,
                           style: AppTextStyles.bodySmall.copyWith(
-                            fontSize: 10,
+                            fontSize: labelSize,
                             color: sel ? AppColors.gold : AppColors.dust,
                           ),
                         ),
@@ -99,7 +122,7 @@ class CatalogDesignPicker extends StatelessWidget {
               },
             ),
           ),
-          const SizedBox(height: AppSpacing.md),
+          SizedBox(height: compact ? AppSpacing.sm : AppSpacing.md),
         ],
       ],
     );

@@ -7,6 +7,7 @@ class OrderDesignDraft {
     required this.primaryColour,
     this.accentColour,
     this.fabricId,
+    this.fabricQuality,
     this.patternId,
     this.mannequinId,
     this.previewImageUrl,
@@ -20,6 +21,10 @@ class OrderDesignDraft {
   final String primaryColour;
   final String? accentColour;
   final String? fabricId;
+
+  /// Editor fabric tier (`standard` / `premium` / `suit_grade`); display-only in checkout.
+  final String? fabricQuality;
+
   final String? patternId;
   final String? mannequinId;
   final String? previewImageUrl;
@@ -38,6 +43,7 @@ class OrderDesignDraft {
       'primaryColour': primaryColour,
       'accentColour': accentColour,
       'fabricId': fabricId,
+      'fabricQuality': fabricQuality,
       'patternId': patternId,
       'mannequinId': mannequinId,
       'previewImageUrl': previewImageUrl,
