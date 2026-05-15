@@ -5,11 +5,11 @@ import 'package:image_picker/image_picker.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/features/admin/providers/admin_providers.dart';
+import 'package:lolipants/features/admin/screens/admin_configurator_cms_tab.dart';
 import 'package:lolipants/features/editor/providers/designs_providers.dart';
 
-/// Simple CMS over the four resource families the admin backend exposes:
-/// mannequins, fabrics, patterns (preset.type='pattern'), and full presets.
-/// Form fields are shaped per resource per the column whitelist in admin.ts.
+/// CMS for catalogue assets (mannequins, fabrics, patterns, presets) and the
+/// modular configurator (templates → slots → options).
 class AdminCmsScreen extends ConsumerStatefulWidget {
   /// Creates the screen.
   const AdminCmsScreen({super.key});
@@ -19,14 +19,16 @@ class AdminCmsScreen extends ConsumerStatefulWidget {
 }
 
 class _AdminCmsScreenState extends ConsumerState<AdminCmsScreen>
-    with SingleTickerProviderStateMixin {
-  static const _resources = ['mannequins', 'fabrics', 'patterns', 'presets'];
-  late final TabController _tabs =
-      TabController(length: _resources.length, vsync: this);
+    with TickerProviderStateMixin {
+  static const _assetResources = ['mannequins', 'fabrics', 'patterns', 'presets'];
+  late final TabController _sectionTabs = TabController(length: 2, vsync: this);
+  late final TabController _assetTabs =
+      TabController(length: _assetResources.length, vsync: this);
 
   @override
   void dispose() {
-    _tabs.dispose();
+    _sectionTabs.dispose();
+    _assetTabs.dispose();
     super.dispose();
   }
 
@@ -35,15 +37,35 @@ class _AdminCmsScreenState extends ConsumerState<AdminCmsScreen>
     return Column(
       children: [
         TabBar(
-          controller: _tabs,
-          isScrollable: true,
-          tabs: [for (final r in _resources) Tab(text: r)],
+          controller: _sectionTabs,
+          tabs: const [
+            Tab(text: 'Assets'),
+            Tab(text: 'Configurator'),
+          ],
         ),
         Expanded(
           child: TabBarView(
-            controller: _tabs,
+            controller: _sectionTabs,
             children: [
-              for (final r in _resources) _ResourceList(resource: r),
+              Column(
+                children: [
+                  TabBar(
+                    controller: _assetTabs,
+                    isScrollable: true,
+                    tabs: [for (final r in _assetResources) Tab(text: r)],
+                  ),
+                  Expanded(
+                    child: TabBarView(
+                      controller: _assetTabs,
+                      children: [
+                        for (final r in _assetResources)
+                          _ResourceList(resource: r),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const AdminConfiguratorCmsTab(),
             ],
           ),
         ),

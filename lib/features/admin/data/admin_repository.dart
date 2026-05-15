@@ -108,6 +108,63 @@ class AdminRepository {
   Future<Either<AppException, List<Map<String, dynamic>>>> listCms(String resource) =>
       _getList('/cms/$resource');
 
+  Future<Either<AppException, List<Map<String, dynamic>>>> listConfiguratorCms(
+    String resource, {
+    String? templateId,
+    String? slotId,
+  }) {
+    return _getList(
+      '/cms/configurator/$resource',
+      query: {
+        if (templateId != null && templateId.isNotEmpty) 'templateId': templateId,
+        if (slotId != null && slotId.isNotEmpty) 'slotId': slotId,
+      },
+    );
+  }
+
+  Future<Either<AppException, Map<String, dynamic>>> createConfiguratorCms(
+    String resource,
+    Map<String, dynamic> body,
+  ) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '${ApiEndpoints.admin}/cms/configurator/$resource',
+        data: body,
+        options: await _authOptions(),
+      );
+      return right(response.data ?? const <String, dynamic>{});
+    } on DioException catch (e) {
+      return left(_mapDio(e));
+    } on Exception {
+      return left(const UnknownException());
+    }
+  }
+
+  Future<Either<AppException, Map<String, dynamic>>> updateConfiguratorCms(
+    String resource,
+    String id,
+    Map<String, dynamic> body,
+  ) {
+    return _patch('/cms/configurator/$resource/$id', body);
+  }
+
+  Future<Either<AppException, void>> deleteConfiguratorCms(
+    String resource,
+    String id,
+  ) async {
+    try {
+      await _dio.delete<dynamic>(
+        '${ApiEndpoints.admin}/cms/configurator/$resource/$id',
+        options: await _authOptions(),
+      );
+      return right(null);
+    } on DioException catch (e) {
+      return left(_mapDio(e));
+    } on Exception {
+      return left(const UnknownException());
+    }
+  }
+
   Future<Either<AppException, Map<String, dynamic>>> createCms(
     String resource,
     Map<String, dynamic> body,

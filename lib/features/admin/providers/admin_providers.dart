@@ -84,6 +84,46 @@ final adminCmsListProvider = FutureProvider.autoDispose
   );
 });
 
+/// Configurator CMS listing with optional parent filters.
+@immutable
+class AdminConfiguratorFilter {
+  const AdminConfiguratorFilter({
+    required this.resource,
+    this.templateId,
+    this.slotId,
+  });
+
+  final String resource;
+  final String? templateId;
+  final String? slotId;
+
+  @override
+  bool operator ==(Object other) {
+    return other is AdminConfiguratorFilter &&
+        other.resource == resource &&
+        other.templateId == templateId &&
+        other.slotId == slotId;
+  }
+
+  @override
+  int get hashCode => Object.hash(resource, templateId, slotId);
+}
+
+final adminConfiguratorListProvider = FutureProvider.autoDispose
+    .family<List<Map<String, dynamic>>, AdminConfiguratorFilter>(
+        (ref, filter) async {
+  final repo = ref.watch(adminRepositoryProvider);
+  final result = await repo.listConfiguratorCms(
+    filter.resource,
+    templateId: filter.templateId,
+    slotId: filter.slotId,
+  );
+  return result.fold<List<Map<String, dynamic>>>(
+    (e) => throw AdminProviderException(e),
+    (list) => list,
+  );
+});
+
 /// Dashboard summary counts.
 final adminStatsProvider =
     FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
