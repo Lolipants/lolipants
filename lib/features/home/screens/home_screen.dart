@@ -2,13 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/features/editor/widgets/ai_prompt_bar.dart';
-import 'package:lolipants/features/home/widgets/category_pills.dart';
 import 'package:lolipants/features/home/widgets/hero_banner.dart';
 import 'package:lolipants/features/home/widgets/home_header.dart';
 import 'package:lolipants/features/home/widgets/style_grid.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
 
-/// Authenticated home feed: greeting, hero, categories, and style grid.
+/// Authenticated home feed: greeting, hero (AI), and style grid.
 class HomeScreen extends ConsumerWidget {
   /// Creates the home tab screen.
   const HomeScreen({super.key});
@@ -49,8 +48,6 @@ class HomeScreen extends ConsumerWidget {
                     delegate: SliverChildListDelegate([
                       const HomeHeader(),
                       HeroBanner(onTryNow: () => _openAiPrompt(context)),
-                      const SizedBox(height: AppSpacing.lg),
-                      const CategoryPills(),
                       const SizedBox(height: AppSpacing.xl),
                       const StyleGrid(),
                     ]),
