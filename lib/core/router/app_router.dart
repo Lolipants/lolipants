@@ -151,6 +151,12 @@ String? _redirectLogic(AsyncValue<AuthState> auth, String location) {
       (location == '/community' || location.startsWith('/community/'))) {
     return '/home';
   }
+  if (!kFeatureCasual) {
+    final casualCategory = RegExp(r'^/browse/c/casual/?$');
+    if (casualCategory.hasMatch(location)) {
+      return '/browse';
+    }
+  }
   if (!kFeatureMens) {
     final menCategory = RegExp(r'^/browse/c/men/?$');
     if (menCategory.hasMatch(location)) {
