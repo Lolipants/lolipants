@@ -4,6 +4,52 @@
 const String kDefaultCatalogDesignPath =
     'assets/images/designs/design_gulf_abaya_black_closed.png';
 
+/// Garment types that use the Casual catalogue lane and casual-first QA flows.
+const Set<String> kCasualGarmentTypes = {'tshirt', 'polo', 'jumpsuit'};
+
+/// Catalogue subsection for the editor Designs strip.
+enum DesignCatalogFilter {
+  /// Gulf, Levant, Maghreb, Casual basics, Modern (`design_mod_*`).
+  all,
+
+  /// Gulf, Levant, Maghreb only.
+  traditional,
+
+  /// `design_casual_*` flat-lays (tees, hoodies, long sleeves, trousers).
+  casual,
+
+  /// Modern modest pieces (`design_mod_*` only).
+  modern,
+}
+
+/// Section title for [kCasualFlatlayPaths] in [kBundledDesignCatalog] and the
+/// **Casual** filter.
+const String kCasualDesignCatalogSectionTitle =
+    'Casual — Tees, hoodies & trousers';
+
+/// Flat-lays when **Casual** is selected (`design_casual_*`).
+/// `design_mod_*` pieces live only under **Modern** — see that list.
+const List<String> kCasualFlatlayPaths = <String>[
+  'assets/images/designs/design_casual_tee_crew_white.png',
+  'assets/images/designs/design_casual_tee_crew_heather_grey.png',
+  'assets/images/designs/design_casual_tee_crew_black.png',
+  'assets/images/designs/design_casual_hoodie_pullover_white.png',
+  'assets/images/designs/design_casual_hoodie_pullover_heather_grey.png',
+  'assets/images/designs/design_casual_hoodie_pullover_black.png',
+  'assets/images/designs/design_casual_longsleeve_crew_white.png',
+  'assets/images/designs/design_casual_longsleeve_crew_grey_marl.png',
+  'assets/images/designs/design_casual_longsleeve_crew_black.png',
+  'assets/images/designs/design_casual_trousers_chino_offwhite.png',
+  'assets/images/designs/design_casual_trousers_charcoal_jogger.png',
+  'assets/images/designs/design_casual_trousers_slim_black.png',
+];
+
+const Set<String> _traditionalSectionTitles = {
+  'Traditional — Gulf',
+  'Levant & Iraq',
+  'Maghreb',
+};
+
 /// Section title → asset paths (stable order for UI).
 const List<(String sectionTitle, List<String> paths)> kBundledDesignCatalog = [
   (
@@ -56,6 +102,10 @@ const List<(String sectionTitle, List<String> paths)> kBundledDesignCatalog = [
     ],
   ),
   (
+    kCasualDesignCatalogSectionTitle,
+    kCasualFlatlayPaths,
+  ),
+  (
     'Modern',
     <String>[
       'assets/images/designs/design_mod_abaya_athleisure_black.png',
@@ -72,15 +122,47 @@ const List<(String sectionTitle, List<String> paths)> kBundledDesignCatalog = [
       'assets/images/designs/design_mod_abaya_slate_tech.png',
       'assets/images/designs/design_mod_abaya_trench_khaki.png',
       'assets/images/designs/design_mod_bisht_dove_graphite.png',
-      'assets/images/designs/design_mod_coatdress_camel.png',
-      'assets/images/designs/design_mod_dress_denim_indigo.png',
-      'assets/images/designs/design_mod_jumpsuit_green.png',
       'assets/images/designs/design_mod_thobe_grey_minimal.png',
-      'assets/images/designs/design_mod_topcoat_navy.png',
       'assets/images/designs/design_mod_tunic_charcoal_stripe.png',
+      'assets/images/designs/design_mod_jumpsuit_green.png',
+      'assets/images/designs/design_mod_dress_denim_indigo.png',
+      'assets/images/designs/design_mod_topcoat_navy.png',
+      'assets/images/designs/design_mod_coatdress_camel.png',
+      'assets/images/designs/design_mod_mens_shirt_longline_ecru.png',
+      'assets/images/designs/design_mod_mens_overshirt_olive_linen.png',
+      'assets/images/designs/design_mod_mens_shacket_camel.png',
+      'assets/images/designs/design_mod_mens_hoodie_zip_charcoal.png',
+      'assets/images/designs/design_mod_mens_overcoat_navy_midnight.png',
+      'assets/images/designs/design_mod_mens_anorak_sand.png',
+      'assets/images/designs/design_mod_mens_cardigan_long_charcoal.png',
+      'assets/images/designs/design_mod_mens_trousers_wide_pleat_stone.png',
+      'assets/images/designs/design_mod_mens_jacket_utility_sage.png',
+      'assets/images/designs/design_mod_mens_polo_longline_black.png',
     ],
   ),
 ];
+
+/// Subset of [kBundledDesignCatalog] for the editor filter control.
+List<(String sectionTitle, List<String> paths)> catalogSectionsFor(
+  DesignCatalogFilter mode,
+) {
+  switch (mode) {
+    case DesignCatalogFilter.all:
+      return kBundledDesignCatalog;
+    case DesignCatalogFilter.casual:
+      return kBundledDesignCatalog
+          .where((s) => s.$1 == kCasualDesignCatalogSectionTitle)
+          .toList(growable: false);
+    case DesignCatalogFilter.traditional:
+      return kBundledDesignCatalog
+          .where((s) => _traditionalSectionTitles.contains(s.$1))
+          .toList(growable: false);
+    case DesignCatalogFilter.modern:
+      return kBundledDesignCatalog
+          .where((s) => s.$1 == 'Modern')
+          .toList(growable: false);
+  }
+}
 
 /// Human-readable label from `assets/.../design_foo_bar.png`.
 String catalogDesignLabel(String assetPath) {
