@@ -14,7 +14,13 @@ Flutter client for Lolipants (custom garments, orders, community, tailor/deliver
 1. Copy `.env.example` to `.env` and set `BETTER_AUTH_BASE_URL` and `API_BASE_URL` (see comments in `.env.example`).
 2. Run `flutter pub get`, then `flutter run`.
 
+For **slim MVP** exports you can also pass `--dart-define=FEATURE_CASUAL=false` to hide the Casual browse lane and related presets (women-first / traditional-only pilots).
+
 For worker env vars, use each package’s `.dev.vars.example` as a template.
+
+## Payments (Tap)
+
+The checkout flow creates orders and payment intents against the Worker, then confirms using a **manual Tap token** entry sheet on release builds (or sandbox / mock shortcuts in debug and `FEATURE_MOCK_PAYMENT` builds). The **Tap Flutter SDK is not bundled** until product explicitly requests in-app card collection; see `lib/features/orders/screens/payment_screen.dart`.
 
 ## Store builds (App Store / Play)
 
