@@ -1,7 +1,6 @@
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart' show rootBundle;
@@ -17,8 +16,14 @@ import 'package:lolipants/features/editor/models/garment_design.dart';
 import 'package:lolipants/features/community/providers/community_providers.dart';
 import 'package:lolipants/features/editor/data/bundled_design_assets.dart';
 import 'package:lolipants/features/editor/providers/editor_provider.dart';
+import 'package:lolipants/core/config/app_features.dart';
 import 'package:lolipants/features/editor/widgets/editor_bottom_panel.dart';
+import 'package:lolipants/features/editor/widgets/editor_build_color_panel.dart';
+import 'package:lolipants/features/editor/widgets/editor_build_panel.dart';
+import 'package:lolipants/features/editor/widgets/editor_hero_preview.dart';
+import 'package:lolipants/features/editor/widgets/editor_panel_tabs.dart';
 import 'package:lolipants/features/editor/widgets/editor_studio_prompt_card.dart';
+import 'package:lolipants/features/editor/widgets/fabric_selector.dart';
 import 'package:lolipants/features/orders/models/order_design_draft.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
@@ -47,13 +52,15 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
   bool _seededPreset = false;
   bool _sharing = false;
   final GlobalKey _heroCaptureKey = GlobalKey();
+  late final EditorNotifier _editorNotifier;
 
   @override
   void initState() {
     super.initState();
+    _editorNotifier = ref.read(editorProvider.notifier);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final notifier = ref.read(editorProvider.notifier);
+      final notifier = _editorNotifier;
       final initialMannequin =
           widget.bootstrap?.mannequinId ?? widget.initialMannequinId;
       if (!_seededInitialMannequin && initialMannequin != null) {
@@ -76,6 +83,12 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
       }
       notifier.loadFabrics();
     });
+  }
+
+  @override
+  void dispose() {
+    _editorNotifier.resetConfigurator();
+    super.dispose();
   }
 
   @override
@@ -106,10 +119,10 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                       Expanded(
                         child: Padding(
                           padding: const EdgeInsets.fromLTRB(
-                            AppSpacing.md,
                             AppSpacing.sm,
-                            AppSpacing.md,
+                            4,
                             AppSpacing.sm,
+                            4,
                           ),
                           child: DecoratedBox(
                             decoration: BoxDecoration(
@@ -138,82 +151,10 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                                       key: _heroCaptureKey,
                                       child: ColoredBox(
                                         color: Colors.white,
-                                        child: editor.heroMode ==
-                                                EditorHeroMode.compose
-                                            ? InteractiveViewer(
-                                                minScale: 0.85,
-                                                maxScale: 3,
-                                                child: Center(
-                                                  child: Image.asset(
-                                                    editor.selectedCatalogDesignPath
-                                                            .trim()
-                                                            .isEmpty
-                                                        ? kDefaultCatalogDesignPath
-                                                        : editor
-                                                            .selectedCatalogDesignPath,
-                                                    fit: BoxFit.contain,
-                                                    errorBuilder:
-                                                        (_, __, ___) => Center(
-                                                      child: Text(
-                                                        'Design asset missing',
-                                                        style: AppTextStyles
-                                                            .bodySmall,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ),
-                                              )
-                                            : editor.refinedLookUrl !=
-                                                        null &&
-                                                    editor.refinedLookUrl!
-                                                        .isNotEmpty
-                                                ? CachedNetworkImage(
-                                                    imageUrl: editor
-                                                        .refinedLookUrl!,
-                                                    fit: BoxFit.contain,
-                                                    placeholder: (_, __) =>
-                                                        const Center(
-                                                      child:
-                                                          CircularProgressIndicator(),
-                                                    ),
-                                                  )
-                                                : Center(
-                                                    child: Padding(
-                                                      padding:
-                                                          const EdgeInsets.all(
-                                                        AppSpacing.lg,
-                                                      ),
-                                                      child: Column(
-                                                        mainAxisSize:
-                                                            MainAxisSize.min,
-                                                        children: [
-                                                          Icon(
-                                                            Icons
-                                                                .checkroom_outlined,
-                                                            size: 48,
-                                                            color: AppColors
-                                                                .fog,
-                                                          ),
-                                                          const SizedBox(
-                                                            height:
-                                                                AppSpacing.sm,
-                                                          ),
-                                                          Text(
-                                                            AppStrings
-                                                                .editorHeroAiOutputEmpty,
-                                                            textAlign: TextAlign
-                                                                .center,
-                                                            style: AppTextStyles
-                                                                .bodyMedium
-                                                                .copyWith(
-                                                              color: AppColors
-                                                                  .fog,
-                                                            ),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                  ),
+                                        child: EditorHeroPreview(
+                                          state: editor,
+                                          activeTab: editor.activeTab,
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -227,6 +168,32 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                                         ),
                                       ),
                                     ),
+                                  Positioned(
+                                    bottom: 6,
+                                    right: 6,
+                                    child: IconButton.filledTonal(
+                                      tooltip: AppStrings.editorTabFabric,
+                                      style: IconButton.styleFrom(
+                                        visualDensity: VisualDensity.compact,
+                                        tapTargetSize:
+                                            MaterialTapTargetSize.shrinkWrap,
+                                        padding: const EdgeInsets.all(6),
+                                        minimumSize: const Size(40, 40),
+                                      ),
+                                      onPressed: () {
+                                        if (editor.activeTab ==
+                                            EditorTab.build) {
+                                          _showBuildColorSheet(context);
+                                        } else {
+                                          _showFabricPicker(context);
+                                        }
+                                      },
+                                      icon: const Icon(
+                                        Icons.palette_outlined,
+                                        size: 22,
+                                      ),
+                                    ),
+                                  ),
                                   if (editor.heroMode == EditorHeroMode.look &&
                                       editor.refinedLookUrl != null &&
                                       editor.refinedLookUrl!.isNotEmpty)
@@ -295,19 +262,160 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                         key: ValueKey<Object>(
                           '${editor.remoteDesignId ?? 'new'}|${editor.selectedCatalogDesignPath}',
                         ),
+                        compact: true,
                         onGenerate: () => _generateLook(context),
                       ),
                     ],
                   ),
                 ),
-                EditorBottomPanel(
-                  state: editor,
-                  onCatalogDesignSelected: notifier.setCatalogDesignPath,
-                ),
+                if (kFeatureConfiguratorBuild)
+                  EditorPanelTabs(
+                    activeTab: editor.activeTab,
+                    onTabChanged: notifier.setTab,
+                  ),
+                if (editor.activeTab == EditorTab.build &&
+                    kFeatureConfiguratorBuild)
+                  const EditorBuildPanel()
+                else
+                  EditorBottomPanel(
+                    state: editor,
+                    onCatalogDesignSelected: notifier.setCatalogDesignPath,
+                    onCatalogFilterChanged: notifier.setCatalogFilter,
+                  ),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showBuildColorSheet(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.42,
+        minChildSize: 0.28,
+        maxChildSize: 0.7,
+        builder: (_, scrollController) {
+          return DecoratedBox(
+            decoration: const BoxDecoration(
+              color: AppColors.stone,
+              borderRadius: BorderRadius.vertical(
+                top: Radius.circular(AppRadius.lg),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.md,
+                    AppSpacing.sm,
+                    AppSpacing.md,
+                    AppSpacing.xs,
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          AppStrings.editorBuildTabColor,
+                          style: AppTextStyles.titleMedium,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.of(sheetContext).pop(),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1, color: AppColors.borderSubtle),
+                Expanded(
+                  child: SingleChildScrollView(
+                    controller: scrollController,
+                    child: const EditorBuildColorPanel(),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _showFabricPicker(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.44,
+        minChildSize: 0.28,
+        maxChildSize: 0.75,
+        builder: (_, scrollController) {
+          return DecoratedBox(
+            decoration: const BoxDecoration(
+              color: AppColors.stone,
+              borderRadius: BorderRadius.vertical(
+                top: Radius.circular(AppRadius.lg),
+              ),
+            ),
+            child: Consumer(
+              builder: (context, ref, _) {
+                final ed = ref.watch(editorProvider);
+                final fabricNotifier = ref.read(editorProvider.notifier);
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.md,
+                        AppSpacing.sm,
+                        AppSpacing.md,
+                        AppSpacing.xs,
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              AppStrings.editorTabFabric,
+                              style: AppTextStyles.titleMedium,
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close),
+                            onPressed: () => Navigator.of(sheetContext).pop(),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Divider(height: 1, color: AppColors.borderSubtle),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        controller: scrollController,
+                        padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+                        child: FabricSelector(
+                          selectedFabric: ed.selectedFabricId,
+                          availableFabrics: ed.availableFabrics,
+                          quality: ed.fabricQuality,
+                          onFabricSelected: fabricNotifier.setFabric,
+                          onQualitySelected:
+                              fabricNotifier.setFabricQuality,
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          );
+        },
       ),
     );
   }
@@ -398,6 +506,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
         primaryColour: _toHex(editor.primaryColour),
         accentColour: _toHex(editor.accentColour),
         fabricId: editor.selectedFabricId,
+        fabricQuality: editor.fabricQuality,
         patternId: editor.selectedPatternId,
         mannequinId: editor.mannequinId,
       ),

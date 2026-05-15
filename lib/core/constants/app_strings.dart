@@ -205,6 +205,12 @@ class AppStrings {
   /// Section header (Arabic).
   static const String sectionTraditionalStylesAr = 'الأزياء التقليدية';
 
+  /// Home designs strip (English): Gulf, modern, casual mix.
+  static const String sectionFeaturedDesigns = 'Featured designs';
+
+  /// Home designs strip (Arabic).
+  static const String sectionFeaturedDesignsAr = 'تصاميم مميزة';
+
   /// See all link (English).
   static const String seeAll = 'See all';
 
@@ -227,10 +233,10 @@ class AppStrings {
   static const String originGulf = 'Gulf';
 
   /// Browse screen header (English).
-  static const String browseHeader = 'Traditional styles';
+  static const String browseHeader = 'Browse designs';
 
   /// Browse screen header (Arabic).
-  static const String browseHeaderAr = 'الأزياء التقليدية';
+  static const String browseHeaderAr = 'تصفح التصاميم';
 
   /// Orders empty title (English).
   static const String ordersEmpty = 'No orders yet';
@@ -364,14 +370,15 @@ class AppStrings {
   static const String filter = 'Filter';
 
   /// Browse subtitle (English).
-  static const String chooseYourRegion = 'Choose your region';
+  static const String chooseYourRegion =
+      'Gulf, Levant, Maghreb, modern, casual';
 
   /// Featured eyebrow (English).
   static const String featuredEyebrow = 'Featured · مميز';
 
   /// Featured body (English).
   static const String featuredBody =
-      'Hand-embroidered Jalabiya with traditional motifs';
+      'Flat-lay designs from Gulf classics to modern and casual basics.';
 
   /// Featured row caption (English).
   static const String featuredCollection = 'Gulf collection · 2025';
@@ -747,6 +754,20 @@ class AppStrings {
   static const String editorExitConfirm =
       'Exit without saving? / الخروج بدون حفظ؟';
   static const String editorTabDesigns = 'Designs';
+  static const String editorTabBuild = 'Build';
+  static const String editorTabBuildAr = 'صمّم';
+  static const String editorBuildSummaryTitle = 'Your design';
+  static const String editorBuildPickTemplate = 'Choose a template';
+  static const String editorBuildSelectSlot = 'Select options for each part';
+  static const String editorBuildTabColor = 'Color';
+  static const String editorBuildTabColorAr = 'اللون';
+  static const String editorBuildColorPrimary = 'Garment colour / لون القماش';
+  static const String editorBuildColorAccent = 'Trim & accent / الزخرفة';
+  static const String editorBuildHeroEmpty =
+      'Pick a template and options to preview on your mannequin.';
+  static const String editorBuildReset = 'Reset build / إعادة ضبط';
+  static const String editorBuildResetHint =
+      'Choose a template above to add garment parts, or keep mannequin only.';
   static const String editorTabFabric = 'Fabric';
   static const String editorTabPattern = 'Pattern';
   static const String editorTabEmbroidery = 'Embroidery';
