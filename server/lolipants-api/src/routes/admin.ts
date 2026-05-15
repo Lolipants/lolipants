@@ -651,6 +651,160 @@ adminRoutes.patch("/cms/:resource/:id", requireAdmin(AdminScopes.cms), async (c)
   return c.json(row);
 });
 
+// ------- /admin/configurator/* (cms) ---------------------------------------
+
+type ConfiguratorTable = "configurator_templates" | "configurator_slots" | "configurator_options";
+
+const CONFIGURATOR_RESOURCES: Record<
+  string,
+  { table: ConfiguratorTable; columns: readonly string[]; required: readonly string[] }
+> = {
+  configurator_templates: {
+    table: "configurator_templates",
+    columns: [
+      "name_en",
+      "name_ar",
+      "garment_type",
+      "region_tag",
+      "sort_order",
+      "is_active",
+      "required_slot_keys",
+    ],
+    required: ["name_en", "name_ar"],
+  },
+  configurator_slots: {
+    table: "configurator_slots",
+    columns: ["template_id", "slot_key", "title_en", "title_ar", "sort_order", "is_active"],
+    required: ["template_id", "slot_key", "title_en", "title_ar"],
+  },
+  configurator_options: {
+    table: "configurator_options",
+    columns: [
+      "slot_id",
+      "option_key",
+      "label_en",
+      "label_ar",
+      "asset_url",
+      "metadata_json",
+      "sort_order",
+      "is_active",
+    ],
+    required: ["slot_id", "option_key", "label_en", "label_ar"],
+  },
+};
+
+adminRoutes.get(
+  "/cms/configurator/:resource",
+  requireAdmin(AdminScopes.cms),
+  async (c) => {
+    const resource = c.req.param("resource");
+    const cfg = CONFIGURATOR_RESOURCES[resource];
+    if (!cfg) return apiError(c, 404, "UNKNOWN_RESOURCE", "Unknown configurator resource");
+
+    const templateId = c.req.query("templateId")?.trim() ?? "";
+    const slotId = c.req.query("slotId")?.trim() ?? "";
+
+    if (resource === "configurator_slots" && templateId.length > 0) {
+      const { results } = await c.env.DB.prepare(
+        `SELECT * FROM ${cfg.table} WHERE template_id = ? ORDER BY sort_order ASC LIMIT 500`,
+      )
+        .bind(templateId)
+        .all();
+      return c.json(results);
+    }
+    if (resource === "configurator_options" && slotId.length > 0) {
+      const { results } = await c.env.DB.prepare(
+        `SELECT * FROM ${cfg.table} WHERE slot_id = ? ORDER BY sort_order ASC LIMIT 500`,
+      )
+        .bind(slotId)
+        .all();
+      return c.json(results);
+    }
+
+    const { results } = await c.env.DB.prepare(
+      `SELECT * FROM ${cfg.table} ORDER BY sort_order ASC, created_at DESC LIMIT 500`,
+    ).all();
+    return c.json(results);
+  },
+);
+
+adminRoutes.post(
+  "/cms/configurator/:resource",
+  requireAdmin(AdminScopes.cms),
+  async (c) => {
+    const resource = c.req.param("resource");
+    const cfg = CONFIGURATOR_RESOURCES[resource];
+    if (!cfg) return apiError(c, 404, "UNKNOWN_RESOURCE", "Unknown configurator resource");
+    const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+    for (const field of cfg.required) {
+      if (!body[field] || String(body[field]).trim().length === 0) {
+        return apiError(c, 400, "FIELD_REQUIRED", `${field} is required`);
+      }
+    }
+    const id = uuidv4();
+    const cols = ["id", ...cfg.columns.filter((col) => col in body)];
+    const values = [id, ...cols.slice(1).map((col) => body[col])];
+    const placeholders = cols.map(() => "?").join(", ");
+    await c.env.DB.prepare(
+      `INSERT INTO ${cfg.table} (${cols.join(", ")}) VALUES (${placeholders})`,
+    )
+      .bind(...(values as Array<string | number | null>))
+      .run();
+    const row = await c.env.DB.prepare(`SELECT * FROM ${cfg.table} WHERE id = ?`)
+      .bind(id)
+      .first<Record<string, unknown>>();
+    return c.json(row, 201);
+  },
+);
+
+adminRoutes.patch(
+  "/cms/configurator/:resource/:id",
+  requireAdmin(AdminScopes.cms),
+  async (c) => {
+    const resource = c.req.param("resource");
+    const cfg = CONFIGURATOR_RESOURCES[resource];
+    if (!cfg) return apiError(c, 404, "UNKNOWN_RESOURCE", "Unknown configurator resource");
+    const id = c.req.param("id");
+    const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+    const setClauses: string[] = [];
+    const bindings: Array<string | number | null> = [];
+    for (const col of cfg.columns) {
+      if (body[col] !== undefined) {
+        setClauses.push(`${col} = ?`);
+        bindings.push(body[col] as string | number | null);
+      }
+    }
+    if (resource === "configurator_templates") {
+      setClauses.push("updated_at = datetime('now')");
+    }
+    if (setClauses.length === 0) {
+      return apiError(c, 400, "NO_FIELDS", "Nothing to update");
+    }
+    bindings.push(id);
+    const table = cfg.table;
+    await c.env.DB.prepare(`UPDATE ${table} SET ${setClauses.join(", ")} WHERE id = ?`)
+      .bind(...bindings)
+      .run();
+    const row = await c.env.DB.prepare(`SELECT * FROM ${table} WHERE id = ?`)
+      .bind(id)
+      .first<Record<string, unknown>>();
+    return c.json(row);
+  },
+);
+
+adminRoutes.delete(
+  "/cms/configurator/:resource/:id",
+  requireAdmin(AdminScopes.cms),
+  async (c) => {
+    const resource = c.req.param("resource");
+    const cfg = CONFIGURATOR_RESOURCES[resource];
+    if (!cfg) return apiError(c, 404, "UNKNOWN_RESOURCE", "Unknown configurator resource");
+    const id = c.req.param("id");
+    await c.env.DB.prepare(`DELETE FROM ${cfg.table} WHERE id = ?`).bind(id).run();
+    return c.json({ deleted: true, id });
+  },
+);
+
 adminRoutes.delete("/cms/:resource/:id", requireAdmin(AdminScopes.cms), async (c) => {
   const resource = c.req.param("resource");
   let cfg = CMS_TABLES[resource];
