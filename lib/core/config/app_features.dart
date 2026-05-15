@@ -6,6 +6,7 @@
 /// `--dart-define=FEATURE_AI_EDITOR_TAB=false`
 /// `--dart-define=FEATURE_MENS=false` (women-first MVP: hide men/kids browse
 /// entries and non-women mannequin defaults in the editor)
+/// `--dart-define=FEATURE_CASUAL=false` (hide Casual browse lane + presets)
 ///
 /// Debug defaults stay `true` so developers see the full surface unless they
 /// opt into the slim MVP preview.
@@ -35,6 +36,18 @@ const bool kFeatureAiEditorTab = bool.fromEnvironment(
 /// Set to `false` for a women-first MVP export.
 const bool kFeatureMens = bool.fromEnvironment(
   'FEATURE_MENS',
+  defaultValue: true,
+);
+
+/// Casual lane (T-shirts, polos, etc.) in browse/home and editor catalogue filter.
+const bool kFeatureCasual = bool.fromEnvironment(
+  'FEATURE_CASUAL',
+  defaultValue: true,
+);
+
+/// Editor **Build** tab: modular slot/option configurator (Design yourself).
+const bool kFeatureConfiguratorBuild = bool.fromEnvironment(
+  'FEATURE_CONFIGURATOR_BUILD',
   defaultValue: true,
 );
 

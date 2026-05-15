@@ -60,6 +60,9 @@ abstract final class ApiEndpoints {
   /// Presets collection path.
   static const String presets = '/presets';
 
+  /// Modular configurator catalogue (templates, slots, options).
+  static const String configuratorTemplates = '/configurator/templates';
+
   /// Upload endpoint.
   static const String upload = '/upload';
 
