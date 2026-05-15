@@ -23,7 +23,7 @@ class CategoryDetailScreen extends StatelessWidget {
   /// mapping is intentionally generous so "men" matches thobes, bishts, etc.
   static const Map<String, List<String>> _categoryGarments = {
     'all': <String>[],
-    'men': ['thobe', 'bisht', 'kandura', 'dishdasha', 'jubbah', 'suit'],
+    'men': ['thobe', 'bisht', 'kandura', 'dishdasha', 'jubbah', 'suit', 'coat'],
     'women': ['abaya', 'kaftan', 'dress', 'jalabiya'],
     'kids': ['dishdasha', 'kandura', 'thobe', 'dress'],
     'wedding': ['bisht', 'kaftan', 'dress', 'djellaba'],
@@ -31,38 +31,53 @@ class CategoryDetailScreen extends StatelessWidget {
   };
 
   static const Map<String, String> _categoryTitles = {
-    'all': 'All traditional styles',
+    'all': 'All designs',
     'men': 'Men',
     'women': 'Women',
     'kids': 'Kids',
     'wedding': 'Wedding',
     'accessories': 'Accessories',
+    'casual': 'Casual & T-shirts',
   };
 
   static const Map<String, String> _categoryTitlesAr = {
-    'all': 'جميع الأزياء التقليدية',
+    'all': 'جميع التصاميم',
     'men': 'رجال',
     'women': 'نساء',
     'kids': 'أطفال',
     'wedding': 'عرس',
     'accessories': 'إكسسوارات',
+    'casual': 'كاجوال وقمصان',
   };
 
   @override
   Widget build(BuildContext context) {
     final key = category.toLowerCase().trim();
+    if (!kFeatureCasual && key == 'casual') {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted) context.go('/browse');
+      });
+      return const SizedBox.shrink();
+    }
     if (!kFeatureMens && (key == 'men' || key == 'kids')) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (context.mounted) context.go('/browse');
       });
       return const SizedBox.shrink();
     }
-    final garments = _categoryGarments[key] ?? const <String>[];
-    final presets = garments.isEmpty
-        ? kRegionPresets
-        : kRegionPresets
-            .where((p) => garments.contains(p.garmentType))
-            .toList(growable: false);
+    final List<RegionStylePreset> presets;
+    if (key == 'casual') {
+      presets = kRegionPresets
+          .where((p) => p.id.startsWith('casual_'))
+          .toList(growable: false);
+    } else {
+      final garments = _categoryGarments[key] ?? const <String>[];
+      presets = garments.isEmpty
+          ? kRegionPresets
+          : kRegionPresets
+              .where((p) => garments.contains(p.garmentType))
+              .toList(growable: false);
+    }
     final titleEn = _categoryTitles[key] ?? 'Browse';
     final titleAr = _categoryTitlesAr[key] ?? '';
 

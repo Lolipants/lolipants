@@ -8,8 +8,8 @@ import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/features/browse/data/region_presets.dart';
 import 'package:lolipants/features/editor/models/editor_preset_args.dart';
 
-/// Rounded-rectangle long button used by the Home "Traditional styles" block
-/// and the Browse tab to launch the editor pre-seeded with a regional preset.
+/// Rounded-rectangle long button used on Home and Browse to open the editor
+/// with a seeded `RegionStylePreset`.
 ///
 /// Replaces the earlier 2x2 grids of `StyleCard` / `CountryCard`.
 class RegionStyleButton extends StatelessWidget {
@@ -26,6 +26,11 @@ class RegionStyleButton extends StatelessWidget {
   final VoidCallback? onTap;
 
   void _defaultTap(BuildContext context) {
+    final preview = preset.resolvedPreviewAssetPath;
+    final catalogPath =
+        preview != null && preview.startsWith('assets/images/designs/')
+            ? preview
+            : null;
     final presetArgs = EditorPresetArgs(
       presetId: preset.id,
       designName: preset.title,
@@ -33,6 +38,7 @@ class RegionStyleButton extends StatelessWidget {
       primaryColour: preset.primaryColour,
       accentColour: preset.accentColour,
       fabricId: preset.fabricId,
+      catalogDesignPath: catalogPath,
     );
     context.push(
       '/editor',

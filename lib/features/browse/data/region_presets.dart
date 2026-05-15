@@ -4,7 +4,7 @@ import 'package:lolipants/core/config/app_features.dart';
 /// Cultural region of a traditional style preset.
 ///
 /// Used to pick the region-specific pattern painter (gulf arches, levant
-/// zellige, maghreb diamonds) that decorates [RegionStyleButton] tiles.
+/// zellige, maghreb diamonds) that decorates `RegionStyleButton` tiles.
 enum Region { gulf, levant, maghreb, modern }
 
 /// Bundled flat-lay PNG per preset id for Home/Browse thumbnails. Unknown ids
@@ -19,6 +19,34 @@ const Map<String, String> kRegionPresetPreviewAssetById = {
   'ma_djellaba': 'assets/images/designs/design_mag_djellaba_burgundy_hood.png',
   'ma_gandoura': 'assets/images/designs/design_mag_gandoura_white_grey.png',
   'mod_minimal': 'assets/images/designs/design_mod_thobe_grey_minimal.png',
+  'casual_tee':
+      'assets/images/designs/design_casual_tee_crew_white.png',
+  'casual_polo':
+      'assets/images/designs/design_casual_longsleeve_crew_white.png',
+  'casual_jumpsuit': 'assets/images/designs/design_mod_jumpsuit_green.png',
+  'casual_denim': 'assets/images/designs/design_mod_dress_denim_indigo.png',
+  'casual_coat':
+      'assets/images/designs/design_mod_mens_overcoat_navy_midnight.png',
+  'mens_shirt_ecru':
+      'assets/images/designs/design_mod_mens_shirt_longline_ecru.png',
+  'mens_overshirt_olive':
+      'assets/images/designs/design_mod_mens_overshirt_olive_linen.png',
+  'mens_shacket_camel':
+      'assets/images/designs/design_mod_mens_shacket_camel.png',
+  'mens_hoodie_zip_charcoal':
+      'assets/images/designs/design_mod_mens_hoodie_zip_charcoal.png',
+  'mens_overcoat_navy':
+      'assets/images/designs/design_mod_mens_overcoat_navy_midnight.png',
+  'mens_anorak_sand':
+      'assets/images/designs/design_mod_mens_anorak_sand.png',
+  'mens_cardigan_charcoal':
+      'assets/images/designs/design_mod_mens_cardigan_long_charcoal.png',
+  'mens_trousers_stone':
+      'assets/images/designs/design_mod_mens_trousers_wide_pleat_stone.png',
+  'mens_jacket_sage':
+      'assets/images/designs/design_mod_mens_jacket_utility_sage.png',
+  'mens_polo_black':
+      'assets/images/designs/design_mod_mens_polo_longline_black.png',
 };
 
 Region _regionFromToken(String? token) {
@@ -207,12 +235,147 @@ const List<RegionStylePreset> kRegionPresets = [
     primaryColour: Color(0xFF14110D),
     accentColour: Color(0xFFC9A84C),
   ),
+  RegionStylePreset(
+    id: 'casual_tee',
+    title: 'Casual Everyday Tee',
+    subtitle: 'T-shirt · print-ready',
+    region: Region.modern,
+    garmentType: 'tshirt',
+    primaryColour: Color(0xFF2A2A2A),
+    accentColour: Color(0xFFC9A84C),
+  ),
+  RegionStylePreset(
+    id: 'casual_polo',
+    title: 'Relaxed Polo',
+    subtitle: 'Polo · weekend',
+    region: Region.modern,
+    garmentType: 'polo',
+    primaryColour: Color(0xFF1E3D2F),
+    accentColour: Color(0xFFE2C06A),
+  ),
+  RegionStylePreset(
+    id: 'casual_jumpsuit',
+    title: 'Casual Jumpsuit',
+    subtitle: 'Jumpsuit · modern',
+    region: Region.modern,
+    garmentType: 'jumpsuit',
+    primaryColour: Color(0xFF1A2E1A),
+    accentColour: Color(0xFFC9A84C),
+  ),
+  RegionStylePreset(
+    id: 'casual_denim',
+    title: 'Denim Dress',
+    subtitle: 'Dress · casual',
+    region: Region.modern,
+    garmentType: 'dress',
+    primaryColour: Color(0xFF1C2742),
+    accentColour: Color(0xFFE2C06A),
+  ),
+  RegionStylePreset(
+    id: 'casual_coat',
+    title: 'Layered Coat',
+    subtitle: 'Coat · street',
+    region: Region.modern,
+    garmentType: 'coat',
+    primaryColour: Color(0xFF222831),
+    accentColour: Color(0xFFC9A84C),
+  ),
+  RegionStylePreset(
+    id: 'mens_shirt_ecru',
+    title: 'Longline shirt',
+    subtitle: 'Men · modern modest',
+    region: Region.modern,
+    garmentType: 'thobe',
+    primaryColour: Color(0xFFEDE6D8),
+    accentColour: Color(0xFFC9A84C),
+  ),
+  RegionStylePreset(
+    id: 'mens_overshirt_olive',
+    title: 'Linen overshirt',
+    subtitle: 'Men · casual office',
+    region: Region.modern,
+    garmentType: 'thobe',
+    primaryColour: Color(0xFF5C6648),
+    accentColour: Color(0xFFE2C06A),
+  ),
+  RegionStylePreset(
+    id: 'mens_shacket_camel',
+    title: 'Shacket',
+    subtitle: 'Men · shirt-jacket',
+    region: Region.modern,
+    garmentType: 'thobe',
+    primaryColour: Color(0xFFC4A574),
+    accentColour: Color(0xFF4A3728),
+  ),
+  RegionStylePreset(
+    id: 'mens_hoodie_zip_charcoal',
+    title: 'Zip hoodie',
+    subtitle: 'Men · longline',
+    region: Region.modern,
+    garmentType: 'thobe',
+    primaryColour: Color(0xFF3A3A3A),
+    accentColour: Color(0xFF9E9E9E),
+  ),
+  RegionStylePreset(
+    id: 'mens_overcoat_navy',
+    title: 'Slim overcoat',
+    subtitle: 'Men · navy',
+    region: Region.modern,
+    garmentType: 'coat',
+    primaryColour: Color(0xFF1A2740),
+    accentColour: Color(0xFFC9A84C),
+  ),
+  RegionStylePreset(
+    id: 'mens_anorak_sand',
+    title: 'Packable anorak',
+    subtitle: 'Men · technical',
+    region: Region.modern,
+    garmentType: 'coat',
+    primaryColour: Color(0xFFD8CBB0),
+    accentColour: Color(0xFF6B5B45),
+  ),
+  RegionStylePreset(
+    id: 'mens_cardigan_charcoal',
+    title: 'Long cardigan',
+    subtitle: 'Men · knit',
+    region: Region.modern,
+    garmentType: 'thobe',
+    primaryColour: Color(0xFF2E2E2E),
+    accentColour: Color(0xFFC9A84C),
+  ),
+  RegionStylePreset(
+    id: 'mens_trousers_stone',
+    title: 'Wide-leg trousers',
+    subtitle: 'Men · pleated',
+    region: Region.modern,
+    garmentType: 'suit',
+    primaryColour: Color(0xFFBFB5A8),
+    accentColour: Color(0xFF4A3728),
+  ),
+  RegionStylePreset(
+    id: 'mens_jacket_sage',
+    title: 'Utility jacket',
+    subtitle: 'Men · field',
+    region: Region.modern,
+    garmentType: 'coat',
+    primaryColour: Color(0xFF7A8F78),
+    accentColour: Color(0xFFE2C06A),
+  ),
+  RegionStylePreset(
+    id: 'mens_polo_black',
+    title: 'Longline polo',
+    subtitle: 'Men · knit',
+    region: Region.modern,
+    garmentType: 'thobe',
+    primaryColour: Color(0xFF141414),
+    accentColour: Color(0xFFC9A84C),
+  ),
 ];
 
 /// Garment types aligned with the "Men" browse category
-/// ([CategoryDetailScreen._categoryGarments]).
+/// (`CategoryDetailScreen` men list).
 ///
-/// When [kFeatureMens] is false, these are hidden from home/browse style lists.
+/// When kFeatureMens is false, these are hidden from home/browse style lists.
 const Set<String> kMensCategoryGarmentTypes = {
   'thobe',
   'bisht',
@@ -220,12 +383,80 @@ const Set<String> kMensCategoryGarmentTypes = {
   'dishdasha',
   'jubbah',
   'suit',
+  'coat',
 };
 
 List<RegionStylePreset> _presetsForAudience() {
   if (kFeatureMens) return kRegionPresets;
   return kRegionPresets
       .where((p) => !kMensCategoryGarmentTypes.contains(p.garmentType))
+      .toList(growable: false);
+}
+
+/// Curated first row on Home (Gulf + casual + modern mix).
+List<RegionStylePreset> regionPresetsForHomeShowcase() {
+  final pool = _presetsForAudience();
+  if (pool.isEmpty) return const [];
+
+  List<String> preferredIds() {
+    if (kFeatureMens) {
+      return const [
+        'qa_thobe',
+        'casual_tee',
+        'mens_anorak_sand',
+        'lev_kaftan',
+      ];
+    }
+    return const [
+      'lev_kaftan',
+      'ma_djellaba',
+      'casual_tee',
+      'casual_denim',
+    ];
+  }
+
+  final byId = {for (final p in pool) p.id: p};
+  final out = <RegionStylePreset>[];
+  for (final id in preferredIds()) {
+    final p = byId[id];
+    if (p != null) out.add(p);
+  }
+  for (final p in pool) {
+    if (out.length >= 4) break;
+    if (!out.any((e) => e.id == p.id)) out.add(p);
+  }
+  return out.take(4).toList(growable: false);
+}
+
+/// First browse pill that has at least one preset in the home-grid pool
+/// (`regionPresetsForHomeGrid`).
+String defaultBrowseCatalogPill() {
+  final pool = regionPresetsForHomeGrid();
+  const regionOrder = ['gulf', 'levant', 'maghreb', 'modern'];
+  for (final name in regionOrder) {
+    final r = Region.values.byName(name);
+    if (pool.any((p) => p.region == r)) return name;
+  }
+  if (kFeatureCasual && pool.any((p) => p.id.startsWith('casual_'))) {
+    return 'casual';
+  }
+  return 'modern';
+}
+
+/// Browse hub: [pill] is `gulf`, `levant`, `maghreb`, `modern`, or `casual`.
+List<RegionStylePreset> regionPresetsForBrowsePill(
+  String pill,
+  List<RegionStylePreset> source,
+) {
+  final key = pill.trim().toLowerCase();
+  if (key == 'casual') {
+    return source
+        .where((p) => p.id.startsWith('casual_'))
+        .toList(growable: false);
+  }
+  final region = Region.values.byName(key);
+  return source
+      .where((p) => p.region == region)
       .toList(growable: false);
 }
 

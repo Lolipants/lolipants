@@ -11,7 +11,7 @@ import 'package:lolipants/features/browse/widgets/featured_strip.dart';
 import 'package:lolipants/features/browse/widgets/region_style_button.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
 
-/// Region browse hub (Phase 2C).
+/// Region and casual browse hub: Gulf, Levant, Maghreb, Modern, Casual.
 class BrowseScreen extends ConsumerStatefulWidget {
   const BrowseScreen({super.key});
 
@@ -20,27 +20,19 @@ class BrowseScreen extends ConsumerStatefulWidget {
 }
 
 class _BrowseScreenState extends ConsumerState<BrowseScreen> {
-  late Region _selected;
+  late String _pill;
 
   @override
   void initState() {
     super.initState();
-    _selected = _initialRegionWithPresets();
-  }
-
-  static Region _initialRegionWithPresets() {
-    if (kFeatureMens) return Region.gulf;
-    for (final r in Region.values) {
-      if (regionPresetsFor(r).isNotEmpty) return r;
-    }
-    return Region.gulf;
+    _pill = defaultBrowseCatalogPill();
   }
 
   @override
   Widget build(BuildContext context) {
     final presetCatalog = ref.watch(presetCatalogProvider).valueOrNull;
     final source = presetCatalog ?? regionPresetsForHomeGrid();
-    final presets = source.where((p) => p.region == _selected).toList(growable: false);
+    final presets = regionPresetsForBrowsePill(_pill, source);
     return Scaffold(
       body: Stack(
         children: [
@@ -79,9 +71,9 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
                           style: AppTextStyles.bodyMedium,
                         ),
                         const SizedBox(height: AppSpacing.lg),
-                        _RegionPillsRow(
-                          selected: _selected,
-                          onChanged: (r) => setState(() => _selected = r),
+                        _BrowsePillsRow(
+                          selected: _pill,
+                          onChanged: (v) => setState(() => _pill = v),
                         ),
                         const SizedBox(height: AppSpacing.xl),
                         for (final preset in presets) ...[
@@ -104,25 +96,29 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
   }
 }
 
-class _RegionPillsRow extends StatelessWidget {
-  const _RegionPillsRow({required this.selected, required this.onChanged});
+class _BrowsePillsRow extends StatelessWidget {
+  const _BrowsePillsRow({
+    required this.selected,
+    required this.onChanged,
+  });
 
-  final Region selected;
-  final ValueChanged<Region> onChanged;
+  final String selected;
+  final ValueChanged<String> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    const regions = <(Region, String)>[
-      (Region.gulf, 'Gulf'),
-      (Region.levant, 'Levant'),
-      (Region.maghreb, 'Maghreb'),
-      (Region.modern, 'Modern'),
+    final pills = <(String, String)>[
+      ('gulf', 'Gulf'),
+      ('levant', 'Levant'),
+      ('maghreb', 'Maghreb'),
+      ('modern', 'Modern'),
+      if (kFeatureCasual) ('casual', 'Casual'),
     ];
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
-          for (final entry in regions) ...[
+          for (final entry in pills) ...[
             _Pill(
               label: entry.$2,
               on: entry.$1 == selected,
