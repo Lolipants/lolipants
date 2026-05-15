@@ -27,8 +27,7 @@ class MannequinSelectorScreen extends ConsumerStatefulWidget {
 
 class _MannequinSelectorScreenState
     extends ConsumerState<MannequinSelectorScreen> {
-  /// One tile per bundled asset M1.png–M6.png; ids match
-  /// `kBuiltInMannequinAssets`.
+  /// One tile per bundled mannequin PNG; ids match [kBuiltInMannequinAssets].
   static const _bundledMannequins = <MannequinOption>[
     MannequinOption(
       id: 'petite_female',
