@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { v4 as uuidv4 } from "uuid";
 import { apiError } from "../lib/http";
 import { orderStatusTemplates, sendToUser } from "../lib/onesignal";
+import { pickNearestTailor } from "../lib/tailorAssignment";
 import { requireAuth, requireRole } from "../middleware/auth";
 import type { AppVariables, Env } from "../types";
 
@@ -34,23 +35,68 @@ const statusTransitions: Record<string, ReadonlySet<string>> = {
   cancelled: new Set(),
 };
 
-const cityDeliveryFees: Record<string, number> = {
-  doha: 20,
-  default: 25,
-};
-
-const BASE_PRICE = 350;
-
-function fabricFeeFor(quality: string | null | undefined): number {
-  const q = (quality ?? "").toLowerCase();
-  if (q === "premium") return 120;
-  if (q === "suit_grade") return 180;
-  return 60;
+function parseCoord(
+  raw: string | undefined,
+  field: string,
+): { ok: true; value: number } | { ok: false; message: string } {
+  if (raw == null || raw.trim() === "") {
+    return { ok: false, message: `${field} is required` };
+  }
+  const value = Number(raw);
+  if (!Number.isFinite(value)) {
+    return { ok: false, message: `${field} must be a number` };
+  }
+  return { ok: true, value };
 }
 
-function deliveryFeeFor(city: string): number {
-  const key = city.trim().toLowerCase();
-  return cityDeliveryFees[key] ?? cityDeliveryFees.default;
+function pricesMatch(
+  a: { base: number; fabric: number; delivery: number; total: number },
+  b: { base: number; fabric: number; delivery: number; total: number },
+): boolean {
+  const eps = 0.01;
+  return (
+    Math.abs(a.base - b.base) < eps &&
+    Math.abs(a.fabric - b.fabric) < eps &&
+    Math.abs(a.delivery - b.delivery) < eps &&
+    Math.abs(a.total - b.total) < eps
+  );
+}
+
+async function assignTailorAndQuote(
+  db: D1Database,
+  input: {
+    design: {
+      garment_type: string;
+      fabric_quality: string | null;
+    };
+    city: string;
+    deliveryLat: number;
+    deliveryLng: number;
+  },
+) {
+  const assigned = await pickNearestTailor({
+    db,
+    deliveryLat: input.deliveryLat,
+    deliveryLng: input.deliveryLng,
+    city: input.city,
+    design: input.design,
+  });
+  if (!assigned) return null;
+  return {
+    tailorId: assigned.tailorId,
+    tailorName: assigned.tailorName,
+    shopName: assigned.shopName,
+    distanceKm: Math.round(assigned.distanceKm * 10) / 10,
+    pricePlanId: assigned.quote.planId,
+    assignmentMethod: "proximity" as const,
+    basePrice: assigned.quote.basePrice,
+    fabricFee: assigned.quote.fabricFee,
+    deliveryFee: assigned.quote.deliveryFee,
+    total: assigned.quote.total,
+    currency: assigned.quote.currency,
+    fabricQuality: assigned.quote.fabricQuality,
+    garmentType: assigned.quote.garmentType,
+  };
 }
 
 orderRoutes.get("/", async (c) => {
@@ -67,14 +113,33 @@ orderRoutes.get("/quote", async (c) => {
   const userId = c.get("userId") as string;
   const designId = (c.req.query("designId") ?? "").trim();
   const city = (c.req.query("city") ?? "Doha").trim();
+  const latParsed = parseCoord(c.req.query("deliveryLat"), "deliveryLat");
+  const lngParsed = parseCoord(c.req.query("deliveryLng"), "deliveryLng");
+  if (!latParsed.ok) {
+    return apiError(c, 400, "DELIVERY_LAT_REQUIRED", latParsed.message);
+  }
+  if (!lngParsed.ok) {
+    return apiError(c, 400, "DELIVERY_LNG_REQUIRED", lngParsed.message);
+  }
+  if (latParsed.value < -90 || latParsed.value > 90) {
+    return apiError(c, 400, "INVALID_LAT", "deliveryLat out of range");
+  }
+  if (lngParsed.value < -180 || lngParsed.value > 180) {
+    return apiError(c, 400, "INVALID_LNG", "deliveryLng out of range");
+  }
   if (!designId) {
     return apiError(c, 400, "DESIGN_ID_REQUIRED", "designId is required");
   }
   const design = await c.env.DB.prepare(
-    "SELECT id, user_id, fabric_quality FROM designs WHERE id = ?",
+    "SELECT id, user_id, garment_type, fabric_quality FROM designs WHERE id = ?",
   )
     .bind(designId)
-    .first<{ id: string; user_id: string; fabric_quality: string | null }>();
+    .first<{
+      id: string;
+      user_id: string;
+      garment_type: string;
+      fabric_quality: string | null;
+    }>();
   if (!design) return apiError(c, 404, "DESIGN_NOT_FOUND", "Design not found");
   if (design.user_id !== userId) {
     return apiError(
@@ -84,18 +149,43 @@ orderRoutes.get("/quote", async (c) => {
       "You can only quote your own design",
     );
   }
-  const fabricFee = fabricFeeFor(design.fabric_quality);
-  const deliveryFee = deliveryFeeFor(city);
-  const total = BASE_PRICE + fabricFee + deliveryFee;
+
+  const quote = await assignTailorAndQuote(c.env.DB, {
+    design: {
+      garment_type: design.garment_type,
+      fabric_quality: design.fabric_quality,
+    },
+    city,
+    deliveryLat: latParsed.value,
+    deliveryLng: lngParsed.value,
+  });
+  if (!quote) {
+    return apiError(
+      c,
+      404,
+      "NO_TAILOR_AVAILABLE",
+      "No tailor is available near this location for this garment",
+    );
+  }
+
   return c.json({
     designId,
     city,
-    basePrice: BASE_PRICE,
-    fabricFee,
-    deliveryFee,
-    total,
-    currency: "QAR",
-    fabricQuality: design.fabric_quality,
+    deliveryLat: latParsed.value,
+    deliveryLng: lngParsed.value,
+    tailorId: quote.tailorId,
+    tailorName: quote.tailorName,
+    shopName: quote.shopName,
+    distanceKm: quote.distanceKm,
+    pricePlanId: quote.pricePlanId,
+    assignmentMethod: quote.assignmentMethod,
+    basePrice: quote.basePrice,
+    fabricFee: quote.fabricFee,
+    deliveryFee: quote.deliveryFee,
+    total: quote.total,
+    currency: quote.currency,
+    fabricQuality: quote.fabricQuality,
+    garmentType: quote.garmentType,
   });
 });
 
@@ -108,8 +198,7 @@ orderRoutes.get("/queue", requireRole("tailor"), async (c) => {
         .map((s) => s.trim())
         .filter((s) => validOrderStatuses.has(s))
     : [];
-  let query =
-    "SELECT * FROM orders WHERE (tailor_id IS NULL OR tailor_id = ?)";
+  let query = "SELECT * FROM orders WHERE tailor_id = ?";
   const bindings: Array<string> = [tailorId];
   if (statuses.length > 0) {
     const placeholders = statuses.map(() => "?").join(", ");
@@ -134,20 +223,50 @@ orderRoutes.post("/:id/claim", requireRole("tailor"), async (c) => {
   if (!current) {
     return apiError(c, 404, "ORDER_NOT_FOUND", "Order not found");
   }
-  if (current.tailor_id && current.tailor_id !== tailorId) {
+  if (!current.tailor_id) {
+    return apiError(
+      c,
+      409,
+      "TAILOR_NOT_ASSIGNED",
+      "This order has no assigned tailor yet",
+    );
+  }
+  if (current.tailor_id !== tailorId) {
     return apiError(
       c,
       409,
       "ORDER_ALREADY_CLAIMED",
-      "Order already assigned to another tailor",
+      "Order is assigned to another tailor",
     );
   }
-  await c.env.DB.prepare(
-    "UPDATE orders SET tailor_id = ?, updated_at = datetime('now') WHERE id = ? AND (tailor_id IS NULL OR tailor_id = ?)",
+  return c.json({ claimed: true, orderId: id, tailorId, accepted: true });
+});
+
+orderRoutes.get("/tailor/:id", requireRole("tailor"), async (c) => {
+  const tailorId = c.get("userId") as string;
+  const id = c.req.param("id");
+  const order = await c.env.DB.prepare(
+    `SELECT o.*, d.print_image_url AS design_print_image_url,
+            d.sketch_image_url AS design_sketch_image_url
+     FROM orders o
+     LEFT JOIN designs d ON d.id = o.design_id
+     WHERE o.id = ? AND o.tailor_id = ?`,
   )
-    .bind(tailorId, id, tailorId)
-    .run();
-  return c.json({ claimed: true, orderId: id, tailorId });
+    .bind(id, tailorId)
+    .first<Record<string, unknown>>();
+  if (!order) return apiError(c, 404, "ORDER_NOT_FOUND", "Order not found");
+
+  const history = await c.env.DB.prepare(
+    "SELECT * FROM order_status_history WHERE order_id = ? ORDER BY timestamp ASC",
+  )
+    .bind(id)
+    .all();
+  const payment = await c.env.DB.prepare(
+    "SELECT id, status, amount, currency, updated_at FROM payment_transactions WHERE order_id = ? ORDER BY updated_at DESC LIMIT 1",
+  )
+    .bind(id)
+    .first<Record<string, unknown>>();
+  return c.json({ ...order, statusHistory: history.results, payment });
 });
 
 orderRoutes.get("/:id", async (c) => {
@@ -201,10 +320,16 @@ orderRoutes.post("/", async (c) => {
   }
 
   const design = await c.env.DB.prepare(
-    "SELECT id, user_id, fabric_quality, is_public FROM designs WHERE id = ?",
+    "SELECT id, user_id, garment_type, fabric_quality, is_public FROM designs WHERE id = ?",
   )
     .bind(designId)
-    .first<{ id: string; user_id: string; fabric_quality: string | null; is_public: number | null }>();
+    .first<{
+      id: string;
+      user_id: string;
+      garment_type: string;
+      fabric_quality: string | null;
+      is_public: number | null;
+    }>();
   if (!design) return apiError(c, 404, "DESIGN_NOT_FOUND", "Design not found");
   const requestedDesignerId = body.designerId ? String(body.designerId).trim() : "";
   const isOwnDesign = design.user_id === userId;
@@ -225,7 +350,6 @@ orderRoutes.post("/", async (c) => {
       "designerId does not match the design author",
     );
   }
-  // Designer credited with commission is the design author (never the buyer on their own design).
   const designerId = !isOwnDesign ? design.user_id : null;
 
   const deliveryAddress = String(body.deliveryAddress ?? "").trim();
@@ -239,6 +363,27 @@ orderRoutes.post("/", async (c) => {
       "deliveryAddress, deliveryCity, and deliveryPhone are required",
     );
   }
+
+  const latRaw = body.deliveryLat ?? body.delivery_lat;
+  const lngRaw = body.deliveryLng ?? body.delivery_lng;
+  const lat =
+    typeof latRaw === "number" ? latRaw : Number(String(latRaw ?? "").trim());
+  const lng =
+    typeof lngRaw === "number" ? lngRaw : Number(String(lngRaw ?? "").trim());
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    return apiError(
+      c,
+      400,
+      "DELIVERY_COORDS_REQUIRED",
+      "deliveryLat and deliveryLng are required",
+    );
+  }
+
+  const requestedTailorId = String(body.tailorId ?? body.tailor_id ?? "").trim();
+  if (!requestedTailorId) {
+    return apiError(c, 400, "TAILOR_ID_REQUIRED", "tailorId is required");
+  }
+
   const sizing = await c.env.DB.prepare(
     "SELECT id FROM measurements WHERE user_id = ? ORDER BY saved_at DESC LIMIT 1",
   )
@@ -253,27 +398,89 @@ orderRoutes.post("/", async (c) => {
     );
   }
 
-  const deliveryFee = deliveryFeeFor(deliveryCity);
-  const basePrice = BASE_PRICE;
-  const fabricFee = fabricFeeFor(design.fabric_quality);
-  const totalPrice = basePrice + fabricFee + deliveryFee;
+  const quote = await assignTailorAndQuote(c.env.DB, {
+    design: {
+      garment_type: design.garment_type,
+      fabric_quality: design.fabric_quality,
+    },
+    city: deliveryCity,
+    deliveryLat: lat,
+    deliveryLng: lng,
+  });
+  if (!quote) {
+    return apiError(
+      c,
+      404,
+      "NO_TAILOR_AVAILABLE",
+      "No tailor is available near this location for this garment",
+    );
+  }
+  if (quote.tailorId !== requestedTailorId) {
+    return apiError(
+      c,
+      409,
+      "QUOTE_STALE",
+      "Assigned tailor changed. Refresh your quote before paying.",
+    );
+  }
+
+  const clientBase = Number(body.basePrice ?? body.base_price);
+  const clientFabric = Number(body.fabricFee ?? body.fabric_fee);
+  const clientDelivery = Number(body.deliveryFee ?? body.delivery_fee);
+  const clientTotal = Number(body.totalPrice ?? body.total_price);
+  if (
+    Number.isFinite(clientTotal) &&
+    !pricesMatch(
+      {
+        base: clientBase,
+        fabric: clientFabric,
+        delivery: clientDelivery,
+        total: clientTotal,
+      },
+      {
+        base: quote.basePrice,
+        fabric: quote.fabricFee,
+        delivery: quote.deliveryFee,
+        total: quote.total,
+      },
+    )
+  ) {
+    return apiError(
+      c,
+      409,
+      "QUOTE_MISMATCH",
+      "Price no longer matches the server quote. Refresh and try again.",
+    );
+  }
+
+  const basePrice = quote.basePrice;
+  const fabricFee = quote.fabricFee;
+  const deliveryFee = quote.deliveryFee;
+  const totalPrice = quote.total;
   const id = uuidv4();
 
   try {
     await c.env.DB.prepare(
-      `INSERT INTO orders (id, user_id, design_id, designer_id, status, delivery_address, delivery_city,
-        delivery_phone, delivery_notes, base_price, fabric_fee, delivery_fee, total_price, payment_token)
-        VALUES (?, ?, ?, ?, 'placed', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO orders (id, user_id, design_id, designer_id, tailor_id, status,
+        delivery_address, delivery_city, delivery_phone, delivery_notes,
+        delivery_lat, delivery_lng, price_plan_id, assignment_method,
+        base_price, fabric_fee, delivery_fee, total_price, payment_token)
+        VALUES (?, ?, ?, ?, ?, 'placed', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
       .bind(
         id,
         userId,
         designId,
         designerId,
+        quote.tailorId,
         deliveryAddress,
         deliveryCity,
         deliveryPhone,
         body.deliveryNotes ?? null,
+        lat,
+        lng,
+        quote.pricePlanId,
+        quote.assignmentMethod,
         basePrice,
         fabricFee,
         deliveryFee,
@@ -375,11 +582,17 @@ orderRoutes.patch("/:id/status", requireRole("tailor"), async (c) => {
   if (!validOrderStatuses.has(status)) {
     return apiError(c, 400, "INVALID_STATUS", "Invalid order status");
   }
-  const current = await c.env.DB.prepare("SELECT status FROM orders WHERE id = ?")
+  const current = await c.env.DB.prepare(
+    "SELECT status, tailor_id FROM orders WHERE id = ?",
+  )
     .bind(id)
-    .first<{ status: string }>();
+    .first<{ status: string; tailor_id: string | null }>();
   if (!current) {
     return apiError(c, 404, "ORDER_NOT_FOUND", "Order not found");
+  }
+  const role = (c.get("userRole") as string | undefined)?.toLowerCase();
+  if (role === "tailor" && current.tailor_id && current.tailor_id !== userId) {
+    return apiError(c, 403, "FORBIDDEN", "Not your assigned order");
   }
   const allowed = statusTransitions[current.status.toLowerCase()] ?? new Set();
   if (!allowed.has(status)) {
@@ -416,7 +629,6 @@ orderRoutes.patch("/:id/status", requireRole("tailor"), async (c) => {
       .run();
   }
 
-  // Push the order owner on every transition that has a bilingual template.
   const template = orderStatusTemplates[status];
   if (template) {
     const owner = await c.env.DB.prepare(

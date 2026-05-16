@@ -316,6 +316,13 @@ adminRoutes.patch("/role-requests/:id", requireAdmin(AdminScopes.usersMgmt), asy
     .bind(newRole, targetId)
     .run();
 
+  if (newRole === "tailor") {
+    const { seedTailorPricingDefaults } = await import("../lib/tailorPlanSeed");
+    await seedTailorPricingDefaults(c.env.DB, targetId, {
+      acceptingOrders: false,
+    });
+  }
+
   await syncRoleWithAuthWorker(c, targetId, {
     role: newRole,
     adminScopes,

@@ -15,6 +15,7 @@ import { fabricRoutes } from "./routes/fabrics";
 import { measurementRoutes } from "./routes/measurements";
 import { mannequinRoutes } from "./routes/mannequins";
 import { orderRoutes } from "./routes/orders";
+import { tailorPricingRoutes } from "./routes/tailorPricing";
 import { paymentRoutes } from "./routes/payments";
 import { postRoutes } from "./routes/posts";
 import { configuratorRoutes } from "./routes/configurator";
@@ -118,6 +119,7 @@ app.get("/health", (c) => c.json({ status: "ok", env: c.env.ENVIRONMENT }));
 
 app.route("/designs", designRoutes);
 app.route("/orders", orderRoutes);
+app.route("/tailor/pricing", tailorPricingRoutes);
 app.route("/payments", paymentRoutes);
 app.route("/mannequins", mannequinRoutes);
 app.route("/fabrics", fabricRoutes);
