@@ -5,6 +5,10 @@ import type { DrizzleD1Database } from "drizzle-orm/d1";
 import * as schema from "./db/schema";
 import { sendResetPasswordEmail } from "./email/reset_password_email";
 import { sendOtpEmail } from "./email/otp_email";
+import {
+  hashPassword as hashWorkerPassword,
+  verifyPassword as verifyWorkerPassword,
+} from "./crypto/worker_password";
 
 type SocialProviderConfig = {
   clientId?: string;
@@ -82,6 +86,11 @@ export function createAuth({
     emailAndPassword: {
       enabled: true,
       requireEmailVerification: false,
+      password: {
+        hash: hashWorkerPassword,
+        verify: async ({ hash, password }) =>
+          verifyWorkerPassword(hash, password),
+      },
       sendResetPassword: async ({ user, url }) => {
         await sendResetPasswordEmail({
           to: user.email,
