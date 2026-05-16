@@ -50,6 +50,31 @@ class MyDesignsNotifier extends AsyncNotifier<List<GarmentDesign>> {
       );
     });
   }
+
+  /// Deletes a design on the server and removes it from the current list.
+  Future<void> deleteDesign(String id) async {
+    final trimmed = id.trim();
+    if (trimmed.isEmpty) {
+      throw const DesignsProviderException(
+        ServerException(400, 'Design id is missing'),
+      );
+    }
+    final repo = ref.read(designsRepositoryProvider);
+    final result = await repo.deleteDesign(trimmed);
+    result.fold(
+      (e) => throw DesignsProviderException(e),
+      (_) {
+        final current = state.valueOrNull;
+        if (current != null) {
+          state = AsyncData(
+            current.where((d) => d.id != trimmed).toList(growable: false),
+          );
+        } else {
+          ref.invalidateSelf();
+        }
+      },
+    );
+  }
 }
 
 /// Exception wrapper for design provider failures.
@@ -81,6 +106,8 @@ String designErrorMessage(
     statusMessages: const {
       403: 'You do not have permission for this design action.',
       404: 'The requested design could not be found.',
+      409:
+          'This design cannot be deleted because it is linked to an order.',
     },
   );
 }

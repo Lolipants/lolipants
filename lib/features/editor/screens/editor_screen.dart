@@ -24,6 +24,8 @@ import 'package:lolipants/features/editor/widgets/editor_hero_preview.dart';
 import 'package:lolipants/features/editor/widgets/editor_panel_tabs.dart';
 import 'package:lolipants/features/editor/widgets/editor_studio_prompt_card.dart';
 import 'package:lolipants/features/editor/widgets/fabric_selector.dart';
+import 'package:lolipants/features/editor/widgets/image_print_panel.dart';
+import 'package:lolipants/features/editor/widgets/text_tool_panel.dart';
 import 'package:lolipants/features/orders/models/order_design_draft.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
@@ -48,8 +50,7 @@ class EditorScreen extends ConsumerStatefulWidget {
 }
 
 class _EditorScreenState extends ConsumerState<EditorScreen> {
-  bool _seededInitialMannequin = false;
-  bool _seededPreset = false;
+  bool _seededSession = false;
   bool _sharing = false;
   final GlobalKey _heroCaptureKey = GlobalKey();
   late final EditorNotifier _editorNotifier;
@@ -58,31 +59,42 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
   void initState() {
     super.initState();
     _editorNotifier = ref.read(editorProvider.notifier);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final notifier = _editorNotifier;
+    WidgetsBinding.instance.addPostFrameCallback((_) => _seedEditorSession());
+  }
+
+  @override
+  void didUpdateWidget(covariant EditorScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final oldDesignId = oldWidget.design?.id;
+    final newDesignId = widget.design?.id;
+    if (oldDesignId != newDesignId ||
+        oldWidget.preset != widget.preset ||
+        oldWidget.bootstrap?.mannequinId != widget.bootstrap?.mannequinId ||
+        oldWidget.bootstrap?.preset != widget.bootstrap?.preset) {
+      _seededSession = false;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _seedEditorSession());
+    }
+  }
+
+  void _seedEditorSession() {
+    if (!mounted || _seededSession) return;
+    final notifier = _editorNotifier;
+    if (widget.design != null) {
+      notifier.loadDesign(widget.design!);
+    } else {
       final initialMannequin =
           widget.bootstrap?.mannequinId ?? widget.initialMannequinId;
-      if (!_seededInitialMannequin && initialMannequin != null) {
-        notifier.setMannequin(initialMannequin);
-        _seededInitialMannequin = true;
+      notifier.beginNewDesign(
+        mannequinId: initialMannequin,
+        customMannequinImagePath: widget.bootstrap?.customMannequinImagePath,
+      );
+      final preset = widget.bootstrap?.preset ?? widget.preset;
+      if (preset != null) {
+        notifier.loadPreset(preset);
       }
-      final customPath = widget.bootstrap?.customMannequinImagePath;
-      if (customPath != null && customPath.trim().isNotEmpty) {
-        notifier.setCustomMannequinImagePath(customPath.trim());
-      }
-      if (!_seededPreset) {
-        if (widget.design != null) {
-          notifier.loadDesign(widget.design!);
-        } else if (widget.bootstrap?.preset != null) {
-          notifier.loadPreset(widget.bootstrap!.preset!);
-        } else if (widget.preset != null) {
-          notifier.loadPreset(widget.preset!);
-        }
-        _seededPreset = true;
-      }
-      notifier.loadFabrics();
-    });
+    }
+    _seededSession = true;
+    notifier.loadFabrics();
   }
 
   @override
@@ -168,32 +180,16 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                                         ),
                                       ),
                                     ),
-                                  Positioned(
-                                    bottom: 6,
-                                    right: 6,
-                                    child: IconButton.filledTonal(
-                                      tooltip: AppStrings.editorTabFabric,
-                                      style: IconButton.styleFrom(
-                                        visualDensity: VisualDensity.compact,
-                                        tapTargetSize:
-                                            MaterialTapTargetSize.shrinkWrap,
-                                        padding: const EdgeInsets.all(6),
-                                        minimumSize: const Size(40, 40),
-                                      ),
-                                      onPressed: () {
-                                        if (editor.activeTab ==
-                                            EditorTab.build) {
-                                          _showBuildColorSheet(context);
-                                        } else {
-                                          _showFabricPicker(context);
-                                        }
-                                      },
-                                      icon: const Icon(
-                                        Icons.palette_outlined,
-                                        size: 22,
-                                      ),
+                                  if (editor.heroMode == EditorHeroMode.compose)
+                                    _HeroToolButtons(
+                                      editor: editor,
+                                      onPalette: () =>
+                                          _onHeroPalettePressed(context),
+                                      onAddText: () =>
+                                          _showTextToolSheet(context),
+                                      onAddImage: () =>
+                                          _showImagePrintSheet(context),
                                     ),
-                                  ),
                                   if (editor.heroMode == EditorHeroMode.look &&
                                       editor.refinedLookUrl != null &&
                                       editor.refinedLookUrl!.isNotEmpty)
@@ -260,9 +256,11 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                       ),
                       EditorStudioPromptCard(
                         key: ValueKey<Object>(
-                          '${editor.remoteDesignId ?? 'new'}|${editor.selectedCatalogDesignPath}',
+                          '${editor.remoteDesignId ?? 'new'}|${editor.configuratorTemplateId}|${editor.activeTab.name}',
                         ),
-                        compact: true,
+                        buildStrip: kFeatureConfiguratorBuild &&
+                            (editor.activeTab == EditorTab.build ||
+                                editor.activeTab == EditorTab.designs),
                         onGenerate: () => _generateLook(context),
                       ),
                     ],
@@ -341,6 +339,184 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                   ),
                 ),
               ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _onHeroPalettePressed(BuildContext context) {
+    final editor = ref.read(editorProvider);
+    if (kFeatureConfiguratorBuild && editor.activeTab == EditorTab.build) {
+      _showBuildColorSheet(context);
+    } else {
+      _openFabricPicker(context);
+    }
+  }
+
+  Future<void> _openFabricPicker(BuildContext context) async {
+    final notifier = ref.read(editorProvider.notifier);
+    final editor = ref.read(editorProvider);
+    if (editor.availableFabrics.isEmpty) {
+      await notifier.loadFabrics();
+    }
+    if (!context.mounted) return;
+    _showFabricPicker(context);
+  }
+
+  void _showTextToolSheet(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.55,
+        minChildSize: 0.35,
+        maxChildSize: 0.9,
+        builder: (_, scrollController) {
+          return DecoratedBox(
+            decoration: const BoxDecoration(
+              color: AppColors.stone,
+              borderRadius: BorderRadius.vertical(
+                top: Radius.circular(AppRadius.lg),
+              ),
+            ),
+            child: Consumer(
+              builder: (context, ref, _) {
+                final ed = ref.watch(editorProvider);
+                final notifier = ref.read(editorProvider.notifier);
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.md,
+                        AppSpacing.sm,
+                        AppSpacing.md,
+                        AppSpacing.xs,
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              AppStrings.editorTabText,
+                              style: AppTextStyles.titleMedium,
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close),
+                            onPressed: () => Navigator.of(sheetContext).pop(),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Divider(height: 1, color: AppColors.borderSubtle),
+                    Expanded(
+                      child: TextToolPanel(
+                        layers: ed.textLayers,
+                        selectedLayer: notifier.selectedTextLayer,
+                        onAddLayer: notifier.addTextLayer,
+                        onSelectLayer: notifier.selectTextLayer,
+                        onUpdateSelected: ({
+                          String? fontFamily,
+                          double? fontSize,
+                          Color? colour,
+                          double? rotation,
+                        }) =>
+                            notifier.updateSelectedText(
+                          fontFamily: fontFamily,
+                          fontSize: fontSize,
+                          colour: colour,
+                          rotation: rotation,
+                        ),
+                        onRemoveSelected: notifier.removeSelectedText,
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _showImagePrintSheet(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.62,
+        minChildSize: 0.4,
+        maxChildSize: 0.92,
+        builder: (_, scrollController) {
+          return DecoratedBox(
+            decoration: const BoxDecoration(
+              color: AppColors.stone,
+              borderRadius: BorderRadius.vertical(
+                top: Radius.circular(AppRadius.lg),
+              ),
+            ),
+            child: Consumer(
+              builder: (context, ref, _) {
+                final ed = ref.watch(editorProvider);
+                final notifier = ref.read(editorProvider.notifier);
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.md,
+                        AppSpacing.sm,
+                        AppSpacing.md,
+                        AppSpacing.xs,
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              AppStrings.editorAddImage,
+                              style: AppTextStyles.titleMedium,
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close),
+                            onPressed: () => Navigator.of(sheetContext).pop(),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Divider(height: 1, color: AppColors.borderSubtle),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        controller: scrollController,
+                        child: ImagePrintPanel(
+                          imagePath: ed.printImagePath,
+                          sketchPath: ed.sketchImagePath,
+                          placement: ed.printPlacement,
+                          offsetX: ed.printOffsetX,
+                          offsetY: ed.printOffsetY,
+                          scale: ed.printScale,
+                          onImageSelected: notifier.setPrintImagePath,
+                          onSketchSelected: notifier.setSketchImagePath,
+                          onPlacementChanged: notifier.setPrintPlacement,
+                          onOffsetXChanged: notifier.setPrintOffsetX,
+                          onOffsetYChanged: notifier.setPrintOffsetY,
+                          onScaleChanged: notifier.setPrintScale,
+                          minScale: 20,
+                          maxScale: 120,
+                          onApply: () => Navigator.of(sheetContext).pop(),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
           );
         },
@@ -669,6 +845,82 @@ class _SaveDesignNameDialogState extends State<_SaveDesignNameDialog> {
           child: Text(AppStrings.editorSave, style: AppTextStyles.bodyMedium),
         ),
       ],
+    );
+  }
+}
+
+class _HeroToolButtons extends StatelessWidget {
+  const _HeroToolButtons({
+    required this.editor,
+    required this.onPalette,
+    required this.onAddText,
+    required this.onAddImage,
+  });
+
+  final EditorState editor;
+  final VoidCallback onPalette;
+  final VoidCallback onAddText;
+  final VoidCallback onAddImage;
+
+  static final _fabStyle = IconButton.styleFrom(
+    visualDensity: VisualDensity.compact,
+    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    padding: const EdgeInsets.all(6),
+    minimumSize: const Size(40, 40),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final showCasualTools = editor.activeTab == EditorTab.designs &&
+        isCasualEditorContext(
+          selectedCatalogDesignPath: editor.selectedCatalogDesignPath,
+          catalogFilter: editor.catalogFilter,
+        );
+
+    Widget fab({
+      required IconData icon,
+      required String tooltip,
+      required VoidCallback onPressed,
+    }) {
+      return IconButton.filledTonal(
+        tooltip: tooltip,
+        style: _fabStyle,
+        onPressed: onPressed,
+        icon: Icon(icon, size: 22),
+      );
+    }
+
+    return Positioned(
+      bottom: 6,
+      right: 6,
+      child: showCasualTools
+          ? Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                fab(
+                  icon: Icons.text_fields,
+                  tooltip: AppStrings.editorAddText,
+                  onPressed: onAddText,
+                ),
+                const SizedBox(height: 6),
+                fab(
+                  icon: Icons.image_outlined,
+                  tooltip: AppStrings.editorAddImage,
+                  onPressed: onAddImage,
+                ),
+                const SizedBox(height: 6),
+                fab(
+                  icon: Icons.palette_outlined,
+                  tooltip: AppStrings.editorTabFabric,
+                  onPressed: onPalette,
+                ),
+              ],
+            )
+          : fab(
+              icon: Icons.palette_outlined,
+              tooltip: AppStrings.editorTabFabric,
+              onPressed: onPalette,
+            ),
     );
   }
 }

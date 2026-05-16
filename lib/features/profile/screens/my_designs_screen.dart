@@ -24,6 +24,7 @@ class MyDesignsScreen extends ConsumerStatefulWidget {
 
 class _MyDesignsScreenState extends ConsumerState<MyDesignsScreen> {
   bool _isCreating = false;
+  String? _deletingDesignId;
 
   @override
   Widget build(BuildContext context) {
@@ -70,8 +71,9 @@ class _MyDesignsScreenState extends ConsumerState<MyDesignsScreen> {
                       final design = designs[index];
                       return _DesignTile(
                         design: design,
+                        deleting: _deletingDesignId == design.id,
                         onTap: () => _openDesign(design),
-                        onLongPress: () => _confirmDelete(design),
+                        onDelete: () => _confirmDelete(design),
                       );
                     },
                   ),
@@ -241,53 +243,89 @@ class _DesignTile extends StatelessWidget {
   const _DesignTile({
     required this.design,
     required this.onTap,
-    required this.onLongPress,
+    required this.onDelete,
+    this.deleting = false,
   });
 
   final GarmentDesign design;
   final VoidCallback onTap;
-  final VoidCallback onLongPress;
+  final VoidCallback onDelete;
+  final bool deleting;
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        onLongPress: onLongPress,
+      color: AppColors.stone,
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppRadius.md),
-        child: Ink(
-          padding: const EdgeInsets.all(AppSpacing.sm),
-          decoration: BoxDecoration(
-            color: AppColors.stone,
-            borderRadius: BorderRadius.circular(AppRadius.md),
-            border: Border.all(color: AppColors.borderSubtle),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(AppRadius.sm),
-                  child: ColoredBox(
-                    color: AppColors.ember,
-                    child: _DesignThumbnail(design: design),
+        side: const BorderSide(color: AppColors.borderSubtle),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: deleting ? null : onTap,
+        child: Stack(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.sm),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                      child: ColoredBox(
+                        color: AppColors.ember,
+                        child: _DesignThumbnail(design: design),
+                      ),
+                    ),
                   ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    design.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.titleSmall,
+                  ),
+                  Text(
+                    design.garmentType,
+                    style: AppTextStyles.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+            Positioned(
+              top: 0,
+              right: 0,
+              child: deleting
+                  ? const Padding(
+                      padding: EdgeInsets.all(AppSpacing.sm),
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    )
+                  : PopupMenuButton<String>(
+                      icon: const Icon(Icons.more_vert, size: 20),
+                      padding: EdgeInsets.zero,
+                      onSelected: (value) {
+                        if (value == 'delete') onDelete();
+                      },
+                      itemBuilder: (context) => const [
+                        PopupMenuItem<String>(
+                          value: 'delete',
+                          child: Text('Delete'),
+                        ),
+                      ],
+                    ),
+            ),
+            if (deleting)
+              const Positioned.fill(
+                child: ColoredBox(
+                  color: Color(0x66FFFFFF),
                 ),
               ),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                design.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.titleSmall,
-              ),
-              Text(
-                design.garmentType,
-                style: AppTextStyles.bodySmall,
-              ),
-            ],
-          ),
+          ],
         ),
       ),
     );

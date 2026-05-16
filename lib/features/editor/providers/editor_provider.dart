@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:fpdart/fpdart.dart';
-import 'package:flutter/material.dart' show Color, Offset;
+import 'package:flutter/material.dart' show Color, Offset, Size;
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lolipants/core/config/app_features.dart';
@@ -11,12 +11,18 @@ import 'package:lolipants/features/editor/models/design_text_layer.dart';
 import 'package:lolipants/features/editor/models/editor_preset_args.dart';
 import 'package:lolipants/features/editor/models/fabric_option.dart';
 import 'package:lolipants/features/editor/models/garment_design.dart';
+import 'package:lolipants/features/editor/models/print_placement.dart';
+
+export 'package:lolipants/features/editor/models/print_placement.dart';
 import 'package:lolipants/features/editor/models/garment_design_suggestion.dart';
 import 'package:lolipants/features/editor/providers/designs_providers.dart';
 import 'package:lolipants/features/editor/constants/ai_look_prompt_suffix.dart';
 import 'package:lolipants/features/editor/data/built_in_mannequin_assets.dart';
 import 'package:lolipants/features/editor/data/bundled_design_assets.dart';
+import 'package:lolipants/features/editor/data/configurator_defaults.dart';
 import 'package:lolipants/features/editor/data/configurator_metadata.dart';
+import 'package:lolipants/features/editor/data/editor_design_restore.dart';
+import 'package:lolipants/features/editor/widgets/editor_resize_handle.dart';
 import 'package:lolipants/features/editor/models/configurator_catalog.dart';
 
 /// Editor interaction tools shown in the side rail.
@@ -27,9 +33,6 @@ enum EditorTab { designs, build, ai }
 
 /// Hero preview: schematic compose vs Gemini-refined look.
 enum EditorHeroMode { compose, look }
-
-/// Image print placement presets.
-enum PrintPlacement { chest, back, fullFront }
 
 /// Legacy alias for the canonical [DesignTextLayer] model. Kept so existing
 /// call sites keep compiling; new code should use [DesignTextLayer] directly.
@@ -77,6 +80,7 @@ class EditorState {
     required this.selectedEmbroideryId,
     required this.textLayers,
     required this.selectedTextLayerId,
+    required this.isPrintOverlaySelected,
     required this.printImagePath,
     required this.sketchImagePath,
     required this.customMannequinImagePath,
@@ -131,6 +135,7 @@ class EditorState {
       selectedEmbroideryId: 'motif_1',
       textLayers: const <DesignTextLayer>[],
       selectedTextLayerId: null,
+      isPrintOverlaySelected: false,
       printImagePath: null,
       sketchImagePath: null,
       customMannequinImagePath: null,
@@ -168,6 +173,10 @@ class EditorState {
   final String selectedEmbroideryId;
   final List<DesignTextLayer> textLayers;
   final String? selectedTextLayerId;
+
+  /// Whether the print graphic shows resize handles on the flat-lay hero.
+  final bool isPrintOverlaySelected;
+
   final String? printImagePath;
   /// Local path or uploaded HTTPS URL for optional silhouette/sketch reference.
   final String? sketchImagePath;
@@ -226,6 +235,8 @@ class EditorState {
     String? selectedEmbroideryId,
     List<DesignTextLayer>? textLayers,
     String? selectedTextLayerId,
+    bool unsetSelectedTextLayerId = false,
+    bool? isPrintOverlaySelected,
     String? printImagePath,
     String? sketchImagePath,
     String? customMannequinImagePath,
@@ -263,7 +274,11 @@ class EditorState {
       selectedPatternId: selectedPatternId ?? this.selectedPatternId,
       selectedEmbroideryId: selectedEmbroideryId ?? this.selectedEmbroideryId,
       textLayers: textLayers ?? this.textLayers,
-      selectedTextLayerId: selectedTextLayerId ?? this.selectedTextLayerId,
+      selectedTextLayerId: unsetSelectedTextLayerId
+          ? null
+          : (selectedTextLayerId ?? this.selectedTextLayerId),
+      isPrintOverlaySelected:
+          isPrintOverlaySelected ?? this.isPrintOverlaySelected,
       printImagePath: printImagePath ?? this.printImagePath,
       sketchImagePath: sketchImagePath ?? this.sketchImagePath,
       customMannequinImagePath:
@@ -326,10 +341,17 @@ class EditorNotifier extends StateNotifier<EditorState> {
   }
 
   void setCatalogDesignPath(String assetPath) {
+    final isCasual = isCasualCatalogDesignPath(assetPath);
     state = state.copyWith(
       selectedCatalogDesignPath: assetPath,
+      garmentType: isCasual
+          ? garmentTypeFromCatalogDesignPath(assetPath)
+          : state.garmentType,
       hasUnsavedChanges: true,
     );
+    if (isCasual) {
+      loadFabrics();
+    }
   }
 
   void setCatalogFilter(DesignCatalogFilter filter) {
@@ -341,11 +363,18 @@ class EditorNotifier extends StateNotifier<EditorState> {
         path = sections.first.$2.first;
       }
     }
+    final isCasual = filter == DesignCatalogFilter.casual ||
+        isCasualCatalogDesignPath(path);
     state = state.copyWith(
       catalogFilter: filter,
       selectedCatalogDesignPath: path,
+      garmentType:
+          isCasual ? garmentTypeFromCatalogDesignPath(path) : state.garmentType,
       hasUnsavedChanges: true,
     );
+    if (isCasual) {
+      loadFabrics();
+    }
   }
 
   void setAiLookUserPrompt(String value) {
@@ -372,6 +401,26 @@ class EditorNotifier extends StateNotifier<EditorState> {
     state = state.copyWith(activeTab: next);
   }
 
+  /// Applies [kDefaultConfiguratorTemplateId] when build has no valid template.
+  void ensureDefaultConfiguratorTemplate(List<ConfiguratorTemplate> templates) {
+    if (templates.isEmpty) return;
+    final current = state.configuratorTemplateId.trim();
+    if (current.isNotEmpty) {
+      final stillValid = templates.any((t) => t.id == current);
+      if (stillValid && state.configuratorSelections.isNotEmpty) return;
+      if (stillValid && state.configuratorSelections.isEmpty) {
+        setConfiguratorTemplate(current, templates);
+        return;
+      }
+    }
+    final preferred = templates.any(
+      (t) => t.id == kDefaultConfiguratorTemplateId,
+    )
+        ? kDefaultConfiguratorTemplateId
+        : templates.first.id;
+    setConfiguratorTemplate(preferred, templates);
+  }
+
   /// Switches modular configurator template and resets slot picks.
   void setConfiguratorTemplate(
     String templateId,
@@ -388,9 +437,13 @@ class EditorNotifier extends StateNotifier<EditorState> {
 
     final selections = <String, String>{};
     for (final slot in template.slots) {
-      if (slot.options.isNotEmpty) {
-        selections[slot.id] = slot.options.first.id;
-      }
+      if (slot.options.isEmpty) continue;
+      selections[slot.id] = defaultConfiguratorOptionId(
+        slot.slotKey,
+        slot.options
+            .map((o) => (id: o.id, optionKey: o.optionKey))
+            .toList(growable: false),
+      );
     }
     final summary = configuratorSummaryText(
       template: template,
@@ -416,18 +469,34 @@ class EditorNotifier extends StateNotifier<EditorState> {
     );
   }
 
-  /// Clears build layers and garment colours; hero shows mannequin only.
-  void resetConfiguratorBuild() {
+  /// Resets AI colours and restores default modest abaya slot picks.
+  void resetConfiguratorBuild(List<ConfiguratorTemplate> templates) {
     final initial = EditorState.initial();
     state = state.copyWith(
-      configuratorTemplateId: '',
-      configuratorSelections: const {},
-      configuratorSummary: '',
       primaryColour: initial.primaryColour,
       accentColour: initial.accentColour,
       activeTab: EditorTab.build,
+      heroMode: EditorHeroMode.compose,
+      refinedLookUrl: null,
+      lookGenerationError: null,
       hasUnsavedChanges: true,
     );
+    if (templates.isEmpty) {
+      state = state.copyWith(
+        configuratorTemplateId: '',
+        configuratorSelections: const {},
+        configuratorSummary: '',
+      );
+      return;
+    }
+    final preferred = templates.any(
+      (t) => t.id == kDefaultConfiguratorTemplateId,
+    )
+        ? kDefaultConfiguratorTemplateId
+        : templates.first.id;
+    // Must apply defaults directly — [ensureDefaultConfiguratorTemplate] skips
+    // when selections are already set.
+    setConfiguratorTemplate(preferred, templates);
   }
 
   /// Records one slot option and refreshes the build summary.
@@ -456,6 +525,60 @@ class EditorNotifier extends StateNotifier<EditorState> {
 
   void setFabric(String fabricId) {
     state = state.copyWith(selectedFabricId: fabricId, hasUnsavedChanges: true);
+  }
+
+  /// Clears persisted editor session (prints, saved id, configurator) for a
+  /// brand-new design. Call before [loadPreset] when opening `/editor` without
+  /// a [GarmentDesign].
+  void beginNewDesign({
+    String? mannequinId,
+    String? customMannequinImagePath,
+  }) {
+    final initial = EditorState.initial();
+    final trimmedMannequin = mannequinId?.trim();
+    final trimmedCustom = customMannequinImagePath?.trim();
+    state = EditorState(
+      designName: initial.designName,
+      mannequinId: (trimmedMannequin != null && trimmedMannequin.isNotEmpty)
+          ? trimmedMannequin
+          : initial.mannequinId,
+      garmentType: initial.garmentType,
+      primaryColour: initial.primaryColour,
+      accentColour: initial.accentColour,
+      activeTool: initial.activeTool,
+      activeTab: initial.activeTab,
+      fabricQuality: initial.fabricQuality,
+      selectedFabricId: initial.selectedFabricId,
+      availableFabrics: initial.availableFabrics,
+      selectedPatternId: initial.selectedPatternId,
+      selectedEmbroideryId: initial.selectedEmbroideryId,
+      textLayers: const <DesignTextLayer>[],
+      selectedTextLayerId: null,
+      isPrintOverlaySelected: false,
+      printImagePath: null,
+      sketchImagePath: null,
+      customMannequinImagePath:
+          (trimmedCustom != null && trimmedCustom.isNotEmpty)
+              ? trimmedCustom
+              : null,
+      selectedCatalogDesignPath: initial.selectedCatalogDesignPath,
+      catalogFilter: initial.catalogFilter,
+      aiLookUserPrompt: '',
+      printPlacement: initial.printPlacement,
+      printOffsetX: initial.printOffsetX,
+      printOffsetY: initial.printOffsetY,
+      printScale: initial.printScale,
+      isSaving: false,
+      remoteDesignId: null,
+      heroMode: EditorHeroMode.compose,
+      refinedLookUrl: null,
+      lookGenerating: false,
+      lookGenerationError: null,
+      hasUnsavedChanges: false,
+      configuratorTemplateId: '',
+      configuratorSelections: const {},
+      configuratorSummary: '',
+    );
   }
 
   /// Applies a regional preset (garment + palette + optional fabric/pattern)
@@ -502,15 +625,13 @@ class EditorNotifier extends StateNotifier<EditorState> {
   /// Hydrates editor state from a previously saved [GarmentDesign] so the
   /// user can edit it again.
   void loadDesign(GarmentDesign design) {
-    final catalogFromMeta =
-        catalogDesignAssetFromRenderMetadata(design.renderMetadata);
-    final casualDesign = kCasualGarmentTypes.contains(design.garmentType);
+    final snapshot = editorDesignRestoreSnapshot(design);
     final configurator = parseConfiguratorFromRenderMetadata(
       design.renderMetadata,
     );
     state = state.copyWith(
       designName: design.name,
-      garmentType: design.garmentType,
+      garmentType: snapshot.garmentType,
       primaryColour: _parseHexColor(design.primaryColour),
       accentColour: design.accentColour != null && design.accentColour!.isNotEmpty
           ? _parseHexColor(design.accentColour!)
@@ -520,19 +641,25 @@ class EditorNotifier extends StateNotifier<EditorState> {
       selectedPatternId: design.patternId ?? state.selectedPatternId,
       printImagePath: design.printImageUrl,
       sketchImagePath: design.sketchImageUrl,
+      printPlacement: snapshot.printPlacement,
+      printOffsetX: snapshot.printOffsetX,
+      printOffsetY: snapshot.printOffsetY,
+      printScale: snapshot.printScale,
+      textLayers: snapshot.textLayers,
       mannequinId: design.mannequinId ?? state.mannequinId,
       remoteDesignId: design.id,
       activeTool: EditorTool.colour,
       activeTab: EditorTab.designs,
-      selectedCatalogDesignPath:
-          catalogFromMeta ?? state.selectedCatalogDesignPath,
+      selectedCatalogDesignPath: snapshot.catalogDesignPath,
       catalogFilter:
-          casualDesign ? DesignCatalogFilter.casual : DesignCatalogFilter.all,
+          snapshot.isCasual ? DesignCatalogFilter.casual : DesignCatalogFilter.all,
       configuratorTemplateId: configurator.templateId ?? '',
       configuratorSelections: configurator.selections,
       configuratorSummary: configurator.summary ?? '',
       unsetRefinedLook: true,
       heroMode: EditorHeroMode.compose,
+      isPrintOverlaySelected: false,
+      unsetSelectedTextLayerId: true,
       hasUnsavedChanges: false,
     );
     loadFabrics();
@@ -712,6 +839,7 @@ class EditorNotifier extends StateNotifier<EditorState> {
     state = state.copyWith(
       textLayers: [...state.textLayers, layer],
       selectedTextLayerId: layer.id,
+      isPrintOverlaySelected: false,
       activeTool: EditorTool.text,
       activeTab: EditorTab.designs,
       hasUnsavedChanges: true,
@@ -719,7 +847,24 @@ class EditorNotifier extends StateNotifier<EditorState> {
   }
 
   void selectTextLayer(String id) {
-    state = state.copyWith(selectedTextLayerId: id, hasUnsavedChanges: true);
+    state = state.copyWith(
+      selectedTextLayerId: id,
+      isPrintOverlaySelected: false,
+    );
+  }
+
+  void selectPrintOverlay() {
+    state = state.copyWith(
+      isPrintOverlaySelected: true,
+      unsetSelectedTextLayerId: true,
+    );
+  }
+
+  void clearOverlaySelection() {
+    state = state.copyWith(
+      isPrintOverlaySelected: false,
+      unsetSelectedTextLayerId: true,
+    );
   }
 
   void updateSelectedText({
@@ -731,9 +876,27 @@ class EditorNotifier extends StateNotifier<EditorState> {
   }) {
     final selectedId = state.selectedTextLayerId;
     if (selectedId == null) return;
+    updateTextLayer(
+      selectedId,
+      fontFamily: fontFamily,
+      fontSize: fontSize,
+      colour: colour,
+      placement: placement,
+      rotation: rotation,
+    );
+  }
+
+  void updateTextLayer(
+    String layerId, {
+    String? fontFamily,
+    double? fontSize,
+    Color? colour,
+    Offset? placement,
+    double? rotation,
+  }) {
     final updated = <DesignTextLayer>[];
     for (final layer in state.textLayers) {
-      if (layer.id == selectedId) {
+      if (layer.id == layerId) {
         updated.add(
           layer.copyWith(
             fontFamily: fontFamily,
@@ -755,25 +918,75 @@ class EditorNotifier extends StateNotifier<EditorState> {
     if (selectedId == null) return;
     state = state.copyWith(
       textLayers: state.textLayers.where((l) => l.id != selectedId).toList(),
-      selectedTextLayerId: null,
+      unsetSelectedTextLayerId: true,
       hasUnsavedChanges: true,
     );
   }
 
   void setPrintImagePath(String? path) {
+    final hasPrint = path != null && path.trim().isNotEmpty;
     state = state.copyWith(
       printImagePath: path,
-      activeTool: EditorTool.colour,
+      isPrintOverlaySelected: hasPrint,
+      unsetSelectedTextLayerId: hasPrint,
+      activeTool: EditorTool.image,
       hasUnsavedChanges: true,
     );
+    if (path != null && path.isNotEmpty && !path.startsWith('http')) {
+      _uploadAssetPath(
+        path,
+        onUrl: (url) => state = state.copyWith(printImagePath: url),
+      );
+    }
   }
 
   void setSketchImagePath(String? path) {
     state = state.copyWith(
       sketchImagePath: path,
-      activeTool: EditorTool.colour,
+      activeTool: EditorTool.image,
       hasUnsavedChanges: true,
     );
+    if (path != null && path.isNotEmpty && !path.startsWith('http')) {
+      _uploadAssetPath(
+        path,
+        onUrl: (url) => state = state.copyWith(sketchImagePath: url),
+      );
+    }
+  }
+
+  Future<void> _uploadAssetPath(
+    String localPath, {
+    required void Function(String url) onUrl,
+  }) async {
+    final repo = ref.read(designsRepositoryProvider);
+    final result = await repo.uploadPrintImage(filePath: localPath);
+    result.fold((_) {}, onUrl);
+  }
+
+  void adjustPrintScaleByHandle(EditorResizeHandle handle, Offset delta) {
+    if (delta == Offset.zero) return;
+    final next = (state.printScale + editorResizeScaleDelta(handle, delta))
+        .clamp(20.0, 120.0);
+    if (next == state.printScale) return;
+    setPrintScale(next);
+  }
+
+  void adjustTextLayerSizeByHandle(
+    String layerId,
+    EditorResizeHandle handle,
+    Offset delta,
+  ) {
+    DesignTextLayer? layer;
+    for (final l in state.textLayers) {
+      if (l.id == layerId) {
+        layer = l;
+        break;
+      }
+    }
+    if (layer == null) return;
+    final nextSize = (layer.fontSize + editorResizeFontDelta(handle, delta))
+        .clamp(8.0, 96.0);
+    updateTextLayer(layerId, fontSize: nextSize);
   }
 
   void setHeroMode(EditorHeroMode mode) {
@@ -797,6 +1010,47 @@ class EditorNotifier extends StateNotifier<EditorState> {
 
   void setPrintScale(double value) {
     state = state.copyWith(printScale: value, hasUnsavedChanges: true);
+  }
+
+  void nudgePrintOffset(Offset delta) {
+    if (delta == Offset.zero) return;
+    state = state.copyWith(
+      printOffsetX: state.printOffsetX + delta.dx,
+      printOffsetY: state.printOffsetY + delta.dy,
+      hasUnsavedChanges: true,
+    );
+  }
+
+  void nudgeTextLayerPlacement(
+    String layerId,
+    Offset pixelDelta,
+    Size canvasSize,
+  ) {
+    if (pixelDelta == Offset.zero) return;
+    if (canvasSize.width <= 0 || canvasSize.height <= 0) return;
+    DesignTextLayer? layer;
+    for (final l in state.textLayers) {
+      if (l.id == layerId) {
+        layer = l;
+        break;
+      }
+    }
+    if (layer == null) return;
+    final next = Offset(
+      (layer.placement.dx + pixelDelta.dx / canvasSize.width).clamp(0.05, 0.95),
+      (layer.placement.dy + pixelDelta.dy / canvasSize.height).clamp(0.1, 0.98),
+    );
+    if (next == layer.placement) return;
+    updateTextLayer(layerId, placement: next);
+  }
+
+  String _garmentTypeForSave() {
+    final path = state.selectedCatalogDesignPath.trim();
+    if (isCasualCatalogDesignPath(path) ||
+        state.catalogFilter == DesignCatalogFilter.casual) {
+      return garmentTypeFromCatalogDesignPath(path);
+    }
+    return state.garmentType;
   }
 
   Future<SaveDesignResult> saveDesign({String? forceName}) async {
@@ -870,13 +1124,14 @@ class EditorNotifier extends StateNotifier<EditorState> {
       }
     }
 
-    String? printImageUrl = catalogFlatUrl;
-    if (printImageUrl == null || printImageUrl.isEmpty) {
-      printImageUrl = state.printImagePath;
-      if (printImageUrl != null &&
-          printImageUrl.isNotEmpty &&
-          !printImageUrl.startsWith('http')) {
-        final upload = await repo.uploadPrintImage(filePath: printImageUrl);
+    // User artwork to print (separate from catalogue flat-lay reference).
+    String? printArtworkUrl;
+    final userPrint = state.printImagePath?.trim();
+    if (userPrint != null && userPrint.isNotEmpty) {
+      if (userPrint.startsWith('http')) {
+        printArtworkUrl = userPrint;
+      } else {
+        final upload = await repo.uploadPrintImage(filePath: userPrint);
         final uploaded = upload.fold<String?>((e) {
           state = state.copyWith(isSaving: false);
           return null;
@@ -887,17 +1142,16 @@ class EditorNotifier extends StateNotifier<EditorState> {
             message: 'Could not upload print image.',
           );
         }
-        printImageUrl = uploaded;
+        printArtworkUrl = uploaded;
         state = state.copyWith(printImagePath: uploaded);
       }
-    } else {
-      state = state.copyWith(printImagePath: catalogFlatUrl);
     }
 
-    String? sketchImageUrl = state.sketchImagePath;
-    if (sketchImageUrl != null &&
-        sketchImageUrl.isNotEmpty &&
-        !sketchImageUrl.startsWith('http')) {
+    String? sketchImageUrl = state.sketchImagePath?.trim();
+    if (sketchImageUrl != null && sketchImageUrl.isEmpty) {
+      sketchImageUrl = null;
+    }
+    if (sketchImageUrl != null && !sketchImageUrl.startsWith('http')) {
       final upload = await repo.uploadPrintImage(filePath: sketchImageUrl);
       final uploaded = upload.fold<String?>((e) {
         state = state.copyWith(isSaving: false);
@@ -913,15 +1167,17 @@ class EditorNotifier extends StateNotifier<EditorState> {
       state = state.copyWith(sketchImagePath: uploaded);
     }
 
+    final garmentType = _garmentTypeForSave();
+
     final payload = <String, dynamic>{
       'name': name,
-      'garmentType': state.garmentType,
+      'garmentType': garmentType,
       'primaryColour': _colorToHex(state.primaryColour),
       'accentColour': _colorToHex(state.accentColour),
       'fabricId': state.selectedFabricId,
       'fabricQuality': state.fabricQuality,
       'patternId': state.selectedPatternId,
-      'printImageUrl': printImageUrl,
+      'printImageUrl': printArtworkUrl,
       'sketchImageUrl': sketchImageUrl,
       'printPlacement': state.printPlacement.name,
       'printOffsetX': state.printOffsetX,
@@ -931,11 +1187,14 @@ class EditorNotifier extends StateNotifier<EditorState> {
       'customMannequinImagePath': state.customMannequinImagePath,
       'renderMetadata': {
         'mannequinTemplateId': _resolveMannequinTemplateId(),
-        'garmentType': state.garmentType,
+        'garmentType': garmentType,
         'primaryColour': _colorToHex(state.primaryColour),
         'accentColour': _colorToHex(state.accentColour),
         'fabricProfile': state.fabricQuality,
-        'printImageUrl': printImageUrl,
+        'printImageUrl': printArtworkUrl,
+        if (catalogFlatUrl != null && catalogFlatUrl.isNotEmpty)
+          'catalogFlatImageUrl': catalogFlatUrl,
+        'catalogDesignPath': state.selectedCatalogDesignPath,
         'printTransform': {
           'placement': state.printPlacement.name,
           'x': state.printOffsetX,
@@ -999,8 +1258,12 @@ class EditorNotifier extends StateNotifier<EditorState> {
         ref.read(myDesignsProvider.notifier).reload();
         state = state.copyWith(
           remoteDesignId: design.id,
+          garmentType: garmentType,
           hasUnsavedChanges: false,
         );
+        if (kCasualGarmentTypes.contains(garmentType)) {
+          loadFabrics();
+        }
         return SaveDesignResult(
           success: true,
           designId: design.id,
