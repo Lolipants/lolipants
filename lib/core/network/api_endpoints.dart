@@ -95,6 +95,9 @@ abstract final class ApiEndpoints {
   /// Delivery-role collection path.
   static const String delivery = '/delivery';
 
+  /// Tailor workshop location and price plan management.
+  static const String tailorPricing = '/tailor/pricing';
+
   /// Complaints collection path.
   static const String complaints = '/complaints';
 

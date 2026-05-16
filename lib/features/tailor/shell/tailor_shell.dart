@@ -49,6 +49,11 @@ class TailorShell extends ConsumerWidget {
             selectedIcon: Icon(Icons.check_circle),
             label: 'Completed',
           ),
+          NavigationDestination(
+            icon: Icon(Icons.payments_outlined),
+            selectedIcon: Icon(Icons.payments),
+            label: 'Pricing',
+          ),
         ],
       ),
     );
