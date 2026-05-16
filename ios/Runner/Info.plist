@@ -30,6 +30,8 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>Camera access is needed for AI measurement estimation.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Your location is used to assign the nearest tailor and calculate delivery pricing.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Photo library access is needed to select images for measurements and design uploads.</string>
 	<key>CFBundleURLTypes</key>
