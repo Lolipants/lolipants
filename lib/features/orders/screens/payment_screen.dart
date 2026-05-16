@@ -12,6 +12,7 @@ import 'package:lolipants/features/orders/models/checkout_draft.dart';
 import 'package:lolipants/features/orders/models/order_design_draft.dart';
 import 'package:lolipants/features/orders/providers/checkout_providers.dart';
 import 'package:lolipants/features/orders/providers/orders_providers.dart';
+import 'package:lolipants/core/permissions/device_permission_prompt.dart';
 import 'package:lolipants/features/settings/providers/settings_provider.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
 import 'package:lolipants/shared/widgets/error_banner.dart';
@@ -255,9 +256,14 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
   Future<void> _ensurePushRegistered() async {
     final settings = ref.read(settingsProvider);
     if (settings.pushEnabled) return;
+    if (!mounted) return;
+    await DevicePermissionPrompt.ensure(
+      context,
+      AppDevicePermission.notifications,
+    );
+    if (!mounted) return;
     await ref.read(settingsProvider.notifier).applyPushPreference(
           want: true,
-          requestOsPermission: true,
           persistWhenOneSignalMissing: true,
         );
   }

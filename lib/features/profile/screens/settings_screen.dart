@@ -10,6 +10,7 @@ import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/permissions/device_permission_prompt.dart';
 import 'package:lolipants/core/push/onesignal_bootstrap.dart';
 import 'package:lolipants/features/auth/providers/auth_providers.dart';
 import 'package:lolipants/features/music/providers/music_provider.dart';
@@ -86,9 +87,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final messenger = ScaffoldMessenger.of(context);
     try {
       if (want) {
+        final allowed = await DevicePermissionPrompt.ensure(
+          context,
+          AppDevicePermission.notifications,
+        );
+        if (!allowed) {
+          if (!mounted) return;
+          messenger.showSnackBar(
+            SnackBar(
+              content: Text(
+                '${AppStrings.settingsPushPermissionDenied} / '
+                '${AppStrings.settingsPushPermissionDeniedAr}',
+              ),
+            ),
+          );
+          return;
+        }
         final ok = await ref.read(settingsProvider.notifier).applyPushPreference(
               want: true,
-              requestOsPermission: true,
             );
         if (!mounted) return;
         if (!ok) {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:lolipants/core/permissions/device_permission_prompt.dart';
 import 'package:lolipants/core/config/app_features.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
@@ -87,6 +88,12 @@ class _MannequinSelectorScreenState
       ),
     );
     if (source == null) return;
+    if (!mounted) return;
+    final granted = await DevicePermissionPrompt.ensureForImageSource(
+      context,
+      source,
+    );
+    if (!granted) return;
     final picked = await picker.pickImage(source: source, imageQuality: 88);
     if (picked == null) return;
     setState(() {

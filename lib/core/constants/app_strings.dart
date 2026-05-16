@@ -1053,6 +1053,52 @@ class AppStrings {
   static const String settingsPushPermissionDeniedAr =
       'لم يُمنح إذن الإشعارات.';
 
+  /// Shared permission dialog actions.
+  static const String permissionNotNow = 'Not now';
+  static const String permissionContinue = 'Continue';
+  static const String permissionOpenSettings = 'Open Settings';
+
+  static const String permissionCameraTitle = 'Use your camera?';
+  static const String permissionCameraMessage =
+      'Lolipants needs camera access for AI measurements, delivery proof '
+      'photos, and custom mannequin photos.';
+  static const String permissionCameraDeniedTitle = 'Camera access off';
+  static const String permissionCameraDeniedMessage =
+      'Enable camera access in Settings to use this feature.';
+
+  static const String permissionPhotosTitle = 'Access your photos?';
+  static const String permissionPhotosMessage =
+      'Lolipants needs photo library access to add prints, profile pictures, '
+      'and community images.';
+  static const String permissionPhotosDeniedTitle = 'Photo access off';
+  static const String permissionPhotosDeniedMessage =
+      'Enable photo library access in Settings to choose images.';
+
+  static const String permissionLocationTitle = 'Use your location?';
+  static const String permissionLocationMessage =
+      'Your location helps us assign the nearest tailor and calculate '
+      'accurate delivery pricing.';
+  static const String permissionLocationDeniedTitle = 'Location access off';
+  static const String permissionLocationDeniedMessage =
+      'Enable location access in Settings for the best tailor match.';
+
+  static const String permissionNotificationsTitle = 'Enable notifications?';
+  static const String permissionNotificationsMessage =
+      'Get order updates, delivery alerts, and important messages about '
+      'your designs.';
+  static const String permissionNotificationsDeniedTitle =
+      'Notifications off';
+  static const String permissionNotificationsDeniedMessage =
+      'Enable notifications in Settings to receive order and delivery updates.';
+
+  static const String permissionAudioTitle = 'Access your music files?';
+  static const String permissionAudioMessage =
+      'Lolipants needs access to audio files on your device for the in-app '
+      'music player.';
+  static const String permissionAudioDeniedTitle = 'Storage access off';
+  static const String permissionAudioDeniedMessage =
+      'Enable storage or audio access in Settings to import tracks.';
+
   /// Privacy policy link (English).
   static const String settingsPrivacyPolicy = 'Privacy policy';
 

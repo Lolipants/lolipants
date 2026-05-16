@@ -7,11 +7,10 @@ import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/features/browse/data/region_presets.dart';
 import 'package:lolipants/features/browse/providers/preset_providers.dart';
-import 'package:lolipants/features/browse/widgets/featured_strip.dart';
-import 'package:lolipants/features/browse/widgets/region_style_button.dart';
+import 'package:lolipants/features/browse/widgets/featured_design_carousel.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
 
-/// Region and casual browse hub: Gulf, Levant, Maghreb, Modern, Casual.
+/// Region and casual browse hub with a vertical featured design grid.
 class BrowseScreen extends ConsumerStatefulWidget {
   const BrowseScreen({super.key});
 
@@ -33,64 +32,90 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
     final presetCatalog = ref.watch(presetCatalogProvider).valueOrNull;
     final source = presetCatalog ?? regionPresetsForHomeGrid();
     final presets = regionPresetsForBrowsePill(_pill, source);
+
     return Scaffold(
       body: Stack(
         children: [
           const ArabesqueBackground(),
           SafeArea(
-            child: CustomScrollView(
-              slivers: [
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.xl,
-                    AppSpacing.lg,
-                    AppSpacing.xl,
-                    AppSpacing.md,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.xl,
+                AppSpacing.lg,
+                AppSpacing.xl,
+                AppSpacing.lg,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const _BrowseHeader(),
+                  const SizedBox(height: AppSpacing.lg),
+                  _BrowsePillsRow(
+                    selected: _pill,
+                    onChanged: (v) => setState(() => _pill = v),
                   ),
-                  sliver: SliverToBoxAdapter(
+                  const SizedBox(height: AppSpacing.lg),
+                  Expanded(
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Directionality(
-                          textDirection: TextDirection.rtl,
-                          child: Text(
-                            AppStrings.browseHeaderAr,
-                            style: AppTextStyles.arabicLabel.copyWith(
-                              fontSize: 13,
-                              color: AppColors.gold,
-                            ),
+                        Expanded(
+                          child: FeaturedDesignsSection(
+                            presets: presets,
+                            showHeader: false,
+                            fillHeight: true,
                           ),
                         ),
-                        Text(
-                          AppStrings.browseHeader,
-                          style: AppTextStyles.titleLarge,
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                        Text(
-                          AppStrings.chooseYourRegion,
-                          style: AppTextStyles.bodyMedium,
-                        ),
-                        const SizedBox(height: AppSpacing.lg),
-                        _BrowsePillsRow(
-                          selected: _pill,
-                          onChanged: (v) => setState(() => _pill = v),
-                        ),
-                        const SizedBox(height: AppSpacing.xl),
-                        for (final preset in presets) ...[
-                          RegionStyleButton(preset: preset),
-                          const SizedBox(height: AppSpacing.md),
-                        ],
-                        const SizedBox(height: AppSpacing.lg),
-                        const FeaturedStrip(),
-                        const SizedBox(height: AppSpacing.xxl),
+                        const SizedBox(height: AppSpacing.md),
+                        const _BrowseFooterNote(),
                       ],
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _BrowseHeader extends StatelessWidget {
+  const _BrowseHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          AppStrings.browseHeader,
+          style: AppTextStyles.titleLarge.copyWith(
+            letterSpacing: 0.4,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          AppStrings.chooseYourRegion,
+          style: AppTextStyles.bodySmall.copyWith(color: AppColors.fog),
+        ),
+      ],
+    );
+  }
+}
+
+class _BrowseFooterNote extends StatelessWidget {
+  const _BrowseFooterNote();
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      AppStrings.featuredCollection,
+      style: AppTextStyles.labelGold.copyWith(
+        fontSize: 11,
+        letterSpacing: 0.6,
       ),
     );
   }
@@ -147,12 +172,16 @@ class _Pill extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: DecoratedBox(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOutCubic,
         decoration: BoxDecoration(
           color: on ? AppColors.gold : Colors.transparent,
           borderRadius: BorderRadius.circular(100),
           border: Border.all(
-            color: on ? Colors.transparent : AppColors.borderDefault,
+            color: on
+                ? Colors.transparent
+                : AppColors.borderDefault.withValues(alpha: 0.7),
           ),
         ),
         child: Padding(
@@ -164,6 +193,7 @@ class _Pill extends StatelessWidget {
             label,
             style: AppTextStyles.bodySmall.copyWith(
               color: on ? AppColors.ink : AppColors.fog,
+              fontWeight: on ? FontWeight.w600 : FontWeight.w400,
             ),
           ),
         ),

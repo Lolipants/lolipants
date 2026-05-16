@@ -4,6 +4,7 @@ import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/features/music/models/track.dart';
+import 'package:lolipants/core/permissions/device_permission_prompt.dart';
 import 'package:lolipants/features/music/providers/music_provider.dart';
 
 /// Full-height modal sheet showing artwork, transport controls, and the
@@ -87,8 +88,14 @@ class _EmptyQueue extends ConsumerWidget {
           ),
           const SizedBox(height: AppSpacing.xl),
           FilledButton.icon(
-            onPressed: () =>
-                ref.read(musicProvider.notifier).pickAndAddTracks(),
+            onPressed: () async {
+              final granted = await DevicePermissionPrompt.ensure(
+                context,
+                AppDevicePermission.audioFiles,
+              );
+              if (!granted || !context.mounted) return;
+              await ref.read(musicProvider.notifier).pickAndAddTracks();
+            },
             icon: const Icon(Icons.folder_open),
             label: const Text('Choose files'),
             style: FilledButton.styleFrom(
@@ -140,8 +147,14 @@ class _LoadedBody extends StatelessWidget {
           Align(
             alignment: AlignmentDirectional.centerEnd,
             child: TextButton.icon(
-              onPressed: () =>
-                  ref.read(musicProvider.notifier).pickAndAddTracks(),
+              onPressed: () async {
+                final granted = await DevicePermissionPrompt.ensure(
+                  context,
+                  AppDevicePermission.audioFiles,
+                );
+                if (!granted || !context.mounted) return;
+                await ref.read(musicProvider.notifier).pickAndAddTracks();
+              },
               icon: const Icon(
                 Icons.library_add,
                 color: AppColors.gold,

@@ -5,6 +5,7 @@ import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/core/location/delivery_location_service.dart';
+import 'package:lolipants/core/permissions/device_permission_prompt.dart';
 import 'package:lolipants/features/orders/providers/checkout_providers.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
@@ -55,6 +56,13 @@ class _DeliveryDetailsScreenState extends ConsumerState<DeliveryDetailsScreen> {
   Future<void> _collectLocation({bool preferCached = false}) async {
     if (!mounted) return;
     setState(() => _locating = true);
+    if (!preferCached) {
+      await DevicePermissionPrompt.ensure(
+        context,
+        AppDevicePermission.location,
+      );
+    }
+    if (!mounted) return;
     final draft = ref.read(checkoutDraftProvider);
     final resolved = await DeliveryLocationService.resolve(
       cachedLat: draft?.deliveryLat ?? _deliveryLat,

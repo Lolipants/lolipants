@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/permissions/device_permission_prompt.dart';
 import 'package:lolipants/features/music/providers/music_provider.dart';
 import 'package:lolipants/features/music/widgets/music_expanded_player.dart';
 
@@ -41,8 +42,14 @@ class _MusicMiniPlayerState extends ConsumerState<MusicMiniPlayer> {
                   Icons.add_circle_outline,
                   color: AppColors.gold,
                 ),
-                onPressed: () =>
-                    ref.read(musicProvider.notifier).pickAndAddTracks(),
+                onPressed: () async {
+                  final granted = await DevicePermissionPrompt.ensure(
+                    context,
+                    AppDevicePermission.audioFiles,
+                  );
+                  if (!granted || !context.mounted) return;
+                  await ref.read(musicProvider.notifier).pickAndAddTracks();
+                },
               ),
               Expanded(
                 child: InkWell(

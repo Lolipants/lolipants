@@ -35,25 +35,24 @@ class HomeScreen extends ConsumerWidget {
         children: [
           const ArabesqueBackground(),
           SafeArea(
-            child: CustomScrollView(
-              slivers: [
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.xl,
-                    AppSpacing.lg,
-                    AppSpacing.xl,
-                    AppSpacing.xxl,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.xl,
+                AppSpacing.lg,
+                AppSpacing.xl,
+                AppSpacing.lg,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const HomeHeader(),
+                  HeroBanner(onTryNow: () => _openAiPrompt(context)),
+                  const SizedBox(height: AppSpacing.xl),
+                  const Expanded(
+                    child: StyleGrid(),
                   ),
-                  sliver: SliverList(
-                    delegate: SliverChildListDelegate([
-                      const HomeHeader(),
-                      HeroBanner(onTryNow: () => _openAiPrompt(context)),
-                      const SizedBox(height: AppSpacing.xl),
-                      const StyleGrid(),
-                    ]),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],

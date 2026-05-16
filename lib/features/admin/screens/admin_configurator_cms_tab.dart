@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:lolipants/core/permissions/device_permission_prompt.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/features/admin/providers/admin_providers.dart';
@@ -500,6 +501,11 @@ class _ConfiguratorFormDialogState
   }
 
   Future<void> _pickImage() async {
+    final granted = await DevicePermissionPrompt.ensureForImageSource(
+      context,
+      ImageSource.gallery,
+    );
+    if (!granted) return;
     final file = await ImagePicker().pickImage(source: ImageSource.gallery);
     if (file == null) return;
     setState(() => _uploading = true);

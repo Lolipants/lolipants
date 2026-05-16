@@ -11,7 +11,7 @@ import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/features/sizing/models/body_measurements.dart';
 import 'package:lolipants/features/sizing/providers/sizing_providers.dart';
 import 'package:lolipants/features/sizing/services/pose_quality_service.dart';
-import 'package:permission_handler/permission_handler.dart';
+import 'package:lolipants/core/permissions/device_permission_prompt.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
 
@@ -36,7 +36,7 @@ class _AiMeasurementScreenState extends ConsumerState<AiMeasurementScreen> {
   @override
   void initState() {
     super.initState();
-    _initCamera();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _initCamera());
   }
 
   @override
@@ -147,8 +147,11 @@ class _AiMeasurementScreenState extends ConsumerState<AiMeasurementScreen> {
 
   Future<void> _initCamera() async {
     try {
-      final permission = await Permission.camera.request();
-      if (!permission.isGranted) {
+      final granted = await DevicePermissionPrompt.ensure(
+        context,
+        AppDevicePermission.camera,
+      );
+      if (!granted) {
         if (!mounted) return;
         setState(() {
           _error = AppStrings.aiMeasurementCameraPermissionDenied;

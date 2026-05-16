@@ -4,8 +4,9 @@ import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/features/browse/data/region_presets.dart';
+import 'package:lolipants/features/browse/widgets/featured_design_carousel.dart';
+import 'package:lolipants/features/browse/widgets/region_pattern_painter.dart';
 import 'package:lolipants/features/browse/widgets/region_style_button.dart';
-import 'package:lolipants/features/editor/models/editor_preset_args.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
 
@@ -86,17 +87,10 @@ class _StyleDetail extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           AspectRatio(
-            aspectRatio: 16 / 9,
+            aspectRatio: 3 / 4,
             child: ClipRRect(
               borderRadius: BorderRadius.circular(AppRadius.lg),
-              child: CustomPaint(
-                painter: RegionPatternPainter(
-                  primary: preset.primaryColour,
-                  accent: preset.accentColour,
-                  region: preset.region,
-                ),
-                child: const SizedBox.expand(),
-              ),
+              child: _StyleHeroImage(preset: preset),
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -109,22 +103,7 @@ class _StyleDetail extends StatelessWidget {
           const SizedBox(height: AppSpacing.lg),
           LolipantsButton(
             label: 'Design this',
-            onPressed: () {
-              context.push(
-                '/editor',
-                extra: EditorBootstrapArgs(
-                  source: 'garment_style',
-                  preset: EditorPresetArgs(
-                    presetId: preset.id,
-                    designName: preset.title,
-                    garmentType: preset.garmentType,
-                    primaryColour: preset.primaryColour,
-                    accentColour: preset.accentColour,
-                    fabricId: preset.fabricId,
-                  ),
-                ),
-              );
-            },
+            onPressed: () => openRegionStylePreset(context, preset),
           ),
           const SizedBox(height: AppSpacing.xl),
           if (variants.isNotEmpty) ...[
@@ -159,6 +138,26 @@ class _StyleDetail extends StatelessWidget {
       case Region.modern:
         return 'Modern';
     }
+  }
+}
+
+class _StyleHeroImage extends StatelessWidget {
+  const _StyleHeroImage({required this.preset});
+
+  final RegionStylePreset preset;
+
+  @override
+  Widget build(BuildContext context) {
+    final assetPath = preset.resolvedPreviewAssetPath;
+    if (assetPath == null) {
+      return RegionPresetPatternFallback(preset: preset);
+    }
+    return Image.asset(
+      assetPath,
+      fit: BoxFit.cover,
+      alignment: Alignment.topCenter,
+      errorBuilder: (_, __, ___) => RegionPresetPatternFallback(preset: preset),
+    );
   }
 }
 

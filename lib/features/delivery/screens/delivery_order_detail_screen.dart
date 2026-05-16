@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:lolipants/core/permissions/device_permission_prompt.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
@@ -135,6 +136,11 @@ class _DeliveryOrderDetailScreenState
   }
 
   Future<void> _markDelivered() async {
+    final granted = await DevicePermissionPrompt.ensureForImageSource(
+      context,
+      ImageSource.camera,
+    );
+    if (!granted) return;
     final image = await _picker.pickImage(
       source: ImageSource.camera,
       maxWidth: 1600,

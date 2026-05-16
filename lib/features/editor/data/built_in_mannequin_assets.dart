@@ -21,6 +21,9 @@ const Map<String, String> kBuiltInMannequinAssets = {
   'curvey_femal': 'assets/images/mannequins/curvey_femal.png',
 };
 
+/// Mannequin used when opening the editor from home/browse preset tiles.
+const String kPresetCatalogMannequinId = 'petite_female';
+
 /// Asset path for [mannequinId], or null if none (vector-only silhouette).
 String? builtInMannequinAssetPath(String mannequinId) {
   var key = mannequinId.trim().toLowerCase();

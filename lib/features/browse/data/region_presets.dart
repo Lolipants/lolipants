@@ -147,7 +147,7 @@ class RegionStylePreset {
   }
 }
 
-/// Curated list of regional presets shown on Home (first 4) and Browse
+/// Curated list of regional presets shown on Home and Browse
 /// (all, filtered by the region pill row).
 const List<RegionStylePreset> kRegionPresets = [
   // Gulf
@@ -393,18 +393,23 @@ List<RegionStylePreset> _presetsForAudience() {
       .toList(growable: false);
 }
 
-/// Curated first row on Home (Gulf + casual + modern mix).
+/// Curated grid on Home (Gulf + casual + modern mix).
 List<RegionStylePreset> regionPresetsForHomeShowcase() {
+  const homeShowcaseCount = 8;
   final pool = _presetsForAudience();
   if (pool.isEmpty) return const [];
 
   List<String> preferredIds() {
     if (kFeatureMens) {
       return const [
-        'qa_thobe',
-        'casual_tee',
         'mens_anorak_sand',
         'lev_kaftan',
+        'qa_thobe',
+        'casual_tee',
+        'mens_overcoat_navy',
+        'sa_bisht',
+        'mens_shacket_camel',
+        'casual_coat',
       ];
     }
     return const [
@@ -412,6 +417,10 @@ List<RegionStylePreset> regionPresetsForHomeShowcase() {
       'ma_djellaba',
       'casual_tee',
       'casual_denim',
+      'sa_bisht',
+      'ae_kandura',
+      'lev_jubbah',
+      'ma_gandoura',
     ];
   }
 
@@ -422,10 +431,10 @@ List<RegionStylePreset> regionPresetsForHomeShowcase() {
     if (p != null) out.add(p);
   }
   for (final p in pool) {
-    if (out.length >= 4) break;
+    if (out.length >= homeShowcaseCount) break;
     if (!out.any((e) => e.id == p.id)) out.add(p);
   }
-  return out.take(4).toList(growable: false);
+  return out.take(homeShowcaseCount).toList(growable: false);
 }
 
 /// First browse pill that has at least one preset in the home-grid pool

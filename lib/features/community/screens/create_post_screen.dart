@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:lolipants/core/permissions/device_permission_prompt.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
@@ -96,6 +97,11 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
 
   Future<void> _pickImages() async {
     if (_images.length >= _maxImages) return;
+    final granted = await DevicePermissionPrompt.ensure(
+      context,
+      AppDevicePermission.photos,
+    );
+    if (!granted) return;
     try {
       final picked = await _picker.pickMultiImage(imageQuality: 80);
       if (picked.isEmpty) return;

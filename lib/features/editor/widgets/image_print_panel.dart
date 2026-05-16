@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:lolipants/core/permissions/device_permission_prompt.dart';
 import 'package:lolipants/features/editor/utils/picked_image_persist.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
@@ -210,6 +211,11 @@ class ImagePrintPanel extends StatelessWidget {
   }
 
   Future<void> _pickImage(BuildContext context) async {
+    final granted = await DevicePermissionPrompt.ensureForImageSource(
+      context,
+      ImageSource.gallery,
+    );
+    if (!granted) return;
     final picker = ImagePicker();
     final picked = await picker.pickImage(source: ImageSource.gallery);
     if (picked == null) return;
@@ -219,6 +225,11 @@ class ImagePrintPanel extends StatelessWidget {
 
   Future<void> _pickSketch(BuildContext context) async {
     if (onSketchSelected == null) return;
+    final granted = await DevicePermissionPrompt.ensureForImageSource(
+      context,
+      ImageSource.gallery,
+    );
+    if (!granted) return;
     final picker = ImagePicker();
     final picked = await picker.pickImage(source: ImageSource.gallery);
     if (picked == null) return;

@@ -5,6 +5,7 @@ import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/core/location/delivery_location_service.dart';
+import 'package:lolipants/core/permissions/device_permission_prompt.dart';
 import 'package:lolipants/core/errors/app_exception.dart';
 import 'package:lolipants/core/errors/app_exception_message_mapper.dart';
 import 'package:lolipants/features/tailor/models/tailor_pricing_catalog.dart';
@@ -129,6 +130,11 @@ class _TailorPricingScreenState extends ConsumerState<TailorPricingScreen> {
 
   Future<void> _autoDetectWorkshopLocation() async {
     setState(() => _workshopLocating = true);
+    await DevicePermissionPrompt.ensure(
+      context,
+      AppDevicePermission.location,
+    );
+    if (!mounted) return;
     final resolved = await DeliveryLocationService.resolve();
     if (!mounted) return;
     setState(() {

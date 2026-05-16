@@ -33,48 +33,41 @@ class HeroBanner extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: AppColors.borderSubtle),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Text(
-            AppStrings.heroAiDesigner,
-            style: AppTextStyles.labelGold.copyWith(
-              fontSize: 10,
-              letterSpacing: 0.18,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  AppStrings.heroAiDesigner,
+                  style: AppTextStyles.labelGold.copyWith(
+                    fontSize: 10,
+                    letterSpacing: 0.2,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  AppStrings.heroDreamOutfit,
+                  style: AppTextStyles.titleMedium.copyWith(height: 1.2),
+                ),
+              ],
             ),
           ),
-          Directionality(
-            textDirection: TextDirection.rtl,
-            child: Text(
-              AppStrings.heroAiDesignerAr,
-              style: AppTextStyles.arabicBody.copyWith(
-                fontSize: 11,
-                color: AppColors.gold.withValues(alpha: 0.9),
+          const SizedBox(width: AppSpacing.md),
+          TextButton(
+            onPressed: onTryNow,
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.gold,
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.lg,
+                vertical: AppSpacing.sm,
               ),
             ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            AppStrings.heroDreamOutfit,
-            style: AppTextStyles.titleMedium,
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Directionality(
-            textDirection: TextDirection.rtl,
             child: Text(
-              AppStrings.heroDreamOutfitAr,
-              style: AppTextStyles.arabicBody.copyWith(fontSize: 13),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton(
-              onPressed: onTryNow,
-              child: Text(
-                AppStrings.heroTryNow,
-                style: AppTextStyles.labelGold.copyWith(fontSize: 12),
-              ),
+              AppStrings.heroTryNow,
+              style: AppTextStyles.labelGold.copyWith(fontSize: 12),
             ),
           ),
         ],

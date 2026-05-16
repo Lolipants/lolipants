@@ -62,17 +62,10 @@ class HomeHeader extends ConsumerWidget {
                     ),
                   ),
                 ),
-                const SizedBox(height: AppSpacing.sm),
+                const SizedBox(height: AppSpacing.xs),
                 Text(
                   AppStrings.tagline,
-                  style: AppTextStyles.bodySmall,
-                ),
-                Directionality(
-                  textDirection: TextDirection.rtl,
-                  child: Text(
-                    AppStrings.taglineAr,
-                    style: AppTextStyles.arabicBody.copyWith(fontSize: 11),
-                  ),
+                  style: AppTextStyles.bodySmall.copyWith(color: AppColors.fog),
                 ),
               ],
             ),
