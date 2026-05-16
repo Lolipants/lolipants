@@ -44,6 +44,17 @@ List<String> _statusesFor(TailorQueueBucket bucket) {
   }
 }
 
+/// Single order for tailor production view (includes print/sketch URLs).
+final tailorOrderDetailProvider =
+    FutureProvider.family<Order, String>((ref, orderId) async {
+  final repo = ref.read(tailorRepositoryProvider);
+  final result = await repo.getOrderDetail(orderId);
+  return result.fold<Order>(
+    (e) => throw TailorProviderException(e),
+    (order) => order,
+  );
+});
+
 /// Returns the queue for the given [bucket].
 final tailorQueueProvider = AsyncNotifierProviderFamily<
     TailorQueueNotifier, List<Order>, TailorQueueBucket>(TailorQueueNotifier.new);

@@ -6,7 +6,7 @@ import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/features/orders/models/order.dart';
 import 'package:lolipants/features/orders/models/order_status.dart';
-import 'package:lolipants/features/orders/providers/orders_providers.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:lolipants/features/orders/widgets/order_status_timeline.dart';
 import 'package:lolipants/features/tailor/providers/tailor_providers.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
@@ -42,7 +42,7 @@ class _TailorOrderDetailScreenState
 
   @override
   Widget build(BuildContext context) {
-    final async = ref.watch(orderByIdProvider(widget.orderId));
+    final async = ref.watch(tailorOrderDetailProvider(widget.orderId));
     return Scaffold(
       appBar: AppBar(
         title: Text('Order ${widget.orderId}',
@@ -79,6 +79,24 @@ class _TailorOrderDetailScreenState
       padding: const EdgeInsets.all(AppSpacing.xl),
       children: [
         _SummaryCard(order: order),
+        if (order.printImageUrl != null &&
+            order.printImageUrl!.trim().isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.md),
+          LolipantsButton(
+            label: 'Download print file / تحميل ملف الطباعة',
+            variant: LolipantsButtonVariant.secondary,
+            onPressed: () => _openUrl(order.printImageUrl!),
+          ),
+        ],
+        if (order.sketchImageUrl != null &&
+            order.sketchImageUrl!.trim().isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.sm),
+          LolipantsButton(
+            label: 'Download sketch / تحميل السكتش',
+            variant: LolipantsButtonVariant.secondary,
+            onPressed: () => _openUrl(order.sketchImageUrl!),
+          ),
+        ],
         const SizedBox(height: AppSpacing.lg),
         OrderStatusTimeline(order: order),
         const SizedBox(height: AppSpacing.lg),
@@ -162,7 +180,7 @@ class _TailorOrderDetailScreenState
     final claim = await tailorRepo.claim(order.id);
     final claimErr = claim.fold<String?>((e) => '$e', (_) => null);
     if (claimErr != null) {
-      _snack('Could not claim order: $claimErr');
+      _snack('Could not accept order: $claimErr');
       if (mounted) setState(() => _busy = false);
       return;
     }
@@ -230,7 +248,7 @@ class _TailorOrderDetailScreenState
   }
 
   void _refreshAndUnbusy() {
-    ref.invalidate(orderByIdProvider(widget.orderId));
+    ref.invalidate(tailorOrderDetailProvider(widget.orderId));
     ref.invalidate(tailorQueueProvider);
     if (mounted) setState(() => _busy = false);
   }
@@ -238,6 +256,13 @@ class _TailorOrderDetailScreenState
   void _snack(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _openUrl(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null || !await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      _snack('Could not open file link.');
+    }
   }
 }
 

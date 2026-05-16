@@ -41,6 +41,25 @@ class TailorRepository {
     }
   }
 
+  /// Loads one order with linked design print/sketch URLs for production.
+  Future<Either<AppException, Order>> getOrderDetail(String orderId) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        '${ApiEndpoints.orders}/tailor/$orderId',
+        options: await _authOptions(),
+      );
+      final data = response.data;
+      if (data == null) {
+        return left(const ServerException(500, 'Missing order payload'));
+      }
+      return right(Order.fromApi(data));
+    } on DioException catch (e) {
+      return left(_mapDio(e));
+    } on Exception {
+      return left(const UnknownException());
+    }
+  }
+
   /// Claims an unassigned order for the current tailor.
   Future<Either<AppException, void>> claim(String orderId) async {
     try {
