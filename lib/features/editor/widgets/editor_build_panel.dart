@@ -353,8 +353,7 @@ class _OptionStrip extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final innerWidth =
-            constraints.maxWidth - AppSpacing.md * 2 - _spacing;
+        final innerWidth = constraints.maxWidth - AppSpacing.md * 2 - _spacing;
         final columns = (innerWidth / (thumbW + _spacing)).floor().clamp(2, 6);
 
         return GridView.builder(

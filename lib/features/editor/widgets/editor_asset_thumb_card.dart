@@ -21,6 +21,7 @@ class EditorCompactThumbCard extends StatelessWidget {
   final String label;
   final bool selected;
   final VoidCallback onTap;
+
   /// Zoom asset inside the square without changing [thumbSize].
   final double imageScale;
 
