@@ -165,19 +165,75 @@ function _buildRenderMetadata(
       existing = {};
     }
   }
-  const printPlacement = body.printPlacement?.toString() ?? existing.printPlacement?.toString() ?? "chest";
-  const printOffsetX = Number(body.printOffsetX ?? existing.printOffsetX ?? 0);
-  const printOffsetY = Number(body.printOffsetY ?? existing.printOffsetY ?? 0);
-  const printScale = Number(body.printScale ?? existing.printScale ?? 40);
-  const textLayers = textLayersOverride ?? body.textLayers ?? existing.textLayers ?? [];
-  const printImageUrl = body.printImageUrl?.toString() ?? existing.printImageUrl?.toString() ?? null;
-  const primaryColour = body.primaryColour?.toString() ?? existing.primaryColour?.toString() ?? "#162F28";
-  const accentColour = body.accentColour?.toString() ?? existing.accentColour?.toString() ?? "#C9A84C";
-  const garmentType = body.garmentType?.toString() ?? existing.garmentType?.toString() ?? "thobe";
-  const fabricProfile = body.fabricQuality?.toString() ?? existing.fabricProfile?.toString() ?? "standard";
+
+  const clientMeta =
+    body.renderMetadata != null &&
+    typeof body.renderMetadata === "object" &&
+    !Array.isArray(body.renderMetadata)
+      ? (body.renderMetadata as Record<string, unknown>)
+      : {};
+
+  const existingPrint =
+    (existing.printTransform as Record<string, unknown> | undefined) ?? {};
+  const clientPrint =
+    (clientMeta.printTransform as Record<string, unknown> | undefined) ?? {};
+
+  const printPlacement =
+    body.printPlacement?.toString() ??
+    clientPrint.placement?.toString() ??
+    existingPrint.placement?.toString() ??
+    existing.printPlacement?.toString() ??
+    "chest";
+  const printOffsetX = Number(
+    body.printOffsetX ?? clientPrint.x ?? existingPrint.x ?? existing.printOffsetX ?? 0,
+  );
+  const printOffsetY = Number(
+    body.printOffsetY ?? clientPrint.y ?? existingPrint.y ?? existing.printOffsetY ?? 0,
+  );
+  const printScale = Number(
+    body.printScale ?? clientPrint.scale ?? existingPrint.scale ?? existing.printScale ?? 40,
+  );
+  const textLayers =
+    textLayersOverride ?? body.textLayers ?? clientMeta.textLayers ?? existing.textLayers ?? [];
+  const printImageUrl =
+    body.printImageUrl?.toString() ??
+    clientMeta.printImageUrl?.toString() ??
+    existing.printImageUrl?.toString() ??
+    null;
+  const primaryColour =
+    body.primaryColour?.toString() ??
+    clientMeta.primaryColour?.toString() ??
+    existing.primaryColour?.toString() ??
+    "#162F28";
+  const accentColour =
+    body.accentColour?.toString() ??
+    clientMeta.accentColour?.toString() ??
+    existing.accentColour?.toString() ??
+    "#C9A84C";
+  const garmentType =
+    body.garmentType?.toString() ??
+    clientMeta.garmentType?.toString() ??
+    existing.garmentType?.toString() ??
+    "thobe";
+  const fabricProfile =
+    body.fabricQuality?.toString() ??
+    clientMeta.fabricProfile?.toString() ??
+    existing.fabricProfile?.toString() ??
+    "standard";
+
+  const catalogDesignPath =
+    clientMeta.catalogDesignPath?.toString() ??
+    clientMeta.selectedCatalogDesignPath?.toString() ??
+    existing.catalogDesignPath?.toString() ??
+    existing.selectedCatalogDesignPath?.toString() ??
+    null;
 
   return {
-    mannequinTemplateId: body.mannequinTemplateId?.toString() ??
+    ...existing,
+    ...clientMeta,
+    mannequinTemplateId:
+      body.mannequinTemplateId?.toString() ??
+      clientMeta.mannequinTemplateId?.toString() ??
       existing.mannequinTemplateId?.toString() ??
       (mannequinId ?? "default_thobe_v1"),
     garmentType,
@@ -185,14 +241,26 @@ function _buildRenderMetadata(
     accentColour,
     fabricProfile,
     printImageUrl,
+    catalogDesignPath,
+    selectedCatalogDesignPath:
+      clientMeta.selectedCatalogDesignPath?.toString() ??
+      catalogDesignPath ??
+      existing.selectedCatalogDesignPath?.toString() ??
+      null,
     printTransform: {
+      ...existingPrint,
+      ...clientPrint,
       placement: printPlacement,
       x: printOffsetX,
       y: printOffsetY,
       scale: printScale,
     },
     textLayers,
-    exportTier: body.exportTier?.toString() ?? existing.exportTier?.toString() ?? "editor",
+    exportTier:
+      body.exportTier?.toString() ??
+      clientMeta.exportTier?.toString() ??
+      existing.exportTier?.toString() ??
+      "editor",
   };
 }
 
@@ -206,8 +274,35 @@ designRoutes.delete("/:id", async (c) => {
     .first<{ id: string }>();
   if (!existing) return apiError(c, 404, "DESIGN_NOT_FOUND", "Design not found");
 
-  await c.env.DB.prepare("DELETE FROM designs WHERE id = ? AND user_id = ?")
-    .bind(id, userId)
-    .run();
+  const linkedOrder = await c.env.DB.prepare(
+    "SELECT id FROM orders WHERE design_id = ? LIMIT 1",
+  )
+    .bind(id)
+    .first<{ id: string }>();
+  if (linkedOrder) {
+    return apiError(
+      c,
+      409,
+      "DESIGN_HAS_ORDERS",
+      "This design has orders and cannot be deleted.",
+    );
+  }
+
+  try {
+    await c.env.DB.prepare("DELETE FROM designs WHERE id = ? AND user_id = ?")
+      .bind(id, userId)
+      .run();
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    if (/FOREIGN KEY constraint failed/i.test(message)) {
+      return apiError(
+        c,
+        409,
+        "DESIGN_IN_USE",
+        "This design is linked to other records and cannot be deleted.",
+      );
+    }
+    throw e;
+  }
   return c.json({ success: true });
 });
