@@ -3,128 +3,85 @@ import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/features/editor/data/bundled_design_assets.dart';
+import 'package:lolipants/features/editor/widgets/editor_asset_thumb_card.dart';
 
-/// Sectioned horizontal rows of bundled catalogue design thumbnails.
+/// Sectioned horizontal rows of catalogue flats (Build-style white cards).
 class CatalogDesignPicker extends StatelessWidget {
   const CatalogDesignPicker({
-    super.key,
     required this.sections,
     required this.selectedPath,
     required this.onSelected,
-    this.compact = false,
+    super.key,
   });
 
-  /// Usually from [catalogSectionsFor]; may be a filtered view.
   final List<(String sectionTitle, List<String> paths)> sections;
-
   final String selectedPath;
   final ValueChanged<String> onSelected;
 
-  /// Tighter rows and copy for the editor bottom sheet.
-  final bool compact;
+  static const double _cardWidth = 92;
+  static const double _cardHeight = 136;
+  static const double _rowHeight = 136;
 
   @override
   Widget build(BuildContext context) {
-    final rowH = compact ? 88.0 : 108.0;
-    final thumbW = compact ? 72.0 : 84.0;
-    final labelSize = compact ? 9.0 : 10.0;
-    final sectionStyle = AppTextStyles.titleSmall.copyWith(
-      color: AppColors.gold,
-      fontSize: compact ? 12 : null,
-    );
-
-    return ListView(
-      padding: EdgeInsets.fromLTRB(
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(
         AppSpacing.md,
-        compact ? 6 : AppSpacing.sm,
+        AppSpacing.xs,
         AppSpacing.md,
-        compact ? AppSpacing.sm : AppSpacing.md,
+        AppSpacing.sm,
       ),
-      children: [
-        Text(
-          compact
-              ? 'Catalogue flats'
-              : 'Pick a catalogue flat — used with AI and your mannequin.',
-          maxLines: compact ? 1 : 3,
-          overflow: TextOverflow.ellipsis,
-          style: AppTextStyles.bodySmall.copyWith(
-            color: AppColors.fog,
-            fontSize: compact ? 11 : null,
+      itemCount: sections.length,
+      itemBuilder: (context, sectionIndex) {
+        final section = sections[sectionIndex];
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: sectionIndex < sections.length - 1 ? AppSpacing.sm : 0,
           ),
-        ),
-        SizedBox(height: compact ? 4 : AppSpacing.sm),
-        for (final section in sections) ...[
-          Text(
-            section.$1,
-            style: sectionStyle,
-          ),
-          SizedBox(height: compact ? 2 : AppSpacing.xs),
-          SizedBox(
-            height: rowH,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: section.$2.length,
-              separatorBuilder: (_, __) =>
-                  SizedBox(width: compact ? AppSpacing.xs : AppSpacing.sm),
-              itemBuilder: (context, i) {
-                final path = section.$2[i];
-                final sel = path == selectedPath;
-                return InkWell(
-                  onTap: () => onSelected(path),
-                  borderRadius: BorderRadius.circular(AppRadius.md),
-                  child: Container(
-                    width: thumbW,
-                    padding: EdgeInsets.all(compact ? 3 : 4),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(AppRadius.md),
-                      border: Border.all(
-                        color: sel ? AppColors.gold : AppColors.borderSubtle,
-                        width: sel ? 2 : 1,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                section.$1,
+                style: AppTextStyles.labelGold.copyWith(fontSize: 11),
+              ),
+              const SizedBox(height: 4),
+              SizedBox(
+                height: _rowHeight,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: section.$2.length,
+                  separatorBuilder: (_, __) =>
+                      const SizedBox(width: AppSpacing.sm),
+                  itemBuilder: (context, i) {
+                    final path = section.$2[i];
+                    final selected = path == selectedPath;
+                    return EditorAssetThumbCard(
+                      width: _cardWidth,
+                      height: _cardHeight,
+                      imageScale: 1.35,
+                      imageAlignment: Alignment.bottomCenter,
+                      label: catalogDesignLabel(path),
+                      selected: selected,
+                      onTap: () => onSelected(path),
+                      image: Image.asset(
+                        path,
+                        fit: BoxFit.fitHeight,
+                        alignment: Alignment.bottomCenter,
+                        errorBuilder: (_, __, ___) => const Icon(
+                          Icons.image_not_supported_outlined,
+                          size: 20,
+                          color: AppColors.fog,
+                        ),
                       ),
-                      color: AppColors.smoke.withValues(alpha: 0.35),
-                    ),
-                    child: Column(
-                      children: [
-                        Expanded(
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(AppRadius.sm),
-                            child: ColoredBox(
-                              color: Colors.white,
-                              child: Image.asset(
-                                path,
-                                fit: BoxFit.contain,
-                                errorBuilder: (_, __, ___) => Center(
-                                  child: Icon(
-                                    Icons.image_not_supported_outlined,
-                                    size: compact ? 16 : 20,
-                                    color: AppColors.fog,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        SizedBox(height: compact ? 2 : 4),
-                        Text(
-                          catalogDesignLabel(path),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.center,
-                          style: AppTextStyles.bodySmall.copyWith(
-                            fontSize: labelSize,
-                            color: sel ? AppColors.gold : AppColors.dust,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
-          SizedBox(height: compact ? AppSpacing.sm : AppSpacing.md),
-        ],
-      ],
+        );
+      },
     );
   }
 }

@@ -6,7 +6,7 @@ import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/features/editor/providers/editor_provider.dart';
 
-/// Preset swatches for build-mode garment tinting.
+/// Preset swatches for AI refined look (not applied to build layer PNGs).
 const List<Color> kEditorBuildColorPresets = [
   Color(0xFF141414),
   Color(0xFF162F40),
@@ -39,6 +39,11 @@ class EditorBuildColorPanel extends ConsumerWidget {
         AppSpacing.md,
       ),
       children: [
+        Text(
+          AppStrings.editorBuildColorAiHint,
+          style: AppTextStyles.bodySmall.copyWith(color: AppColors.fog),
+        ),
+        const SizedBox(height: AppSpacing.md),
         _ColorSection(
           title: AppStrings.editorBuildColorPrimary,
           selected: editor.primaryColour,

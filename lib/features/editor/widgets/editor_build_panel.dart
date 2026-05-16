@@ -4,13 +4,14 @@ import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/features/editor/data/configurator_defaults.dart';
 import 'package:lolipants/features/editor/models/configurator_catalog.dart';
 import 'package:lolipants/features/editor/providers/configurator_providers.dart';
 import 'package:lolipants/features/editor/providers/editor_provider.dart';
 import 'package:lolipants/features/editor/widgets/configurator_option_image.dart';
-import 'package:lolipants/features/editor/widgets/editor_build_color_panel.dart';
+import 'package:lolipants/features/editor/widgets/editor_asset_thumb_card.dart';
 
-/// Modular “Design yourself” bottom panel: template → slot tabs → options.
+/// Build tab: slot chips + large horizontal part picker (modest abaya default).
 class EditorBuildPanel extends ConsumerStatefulWidget {
   const EditorBuildPanel({super.key});
 
@@ -18,34 +19,24 @@ class EditorBuildPanel extends ConsumerStatefulWidget {
   ConsumerState<EditorBuildPanel> createState() => _EditorBuildPanelState();
 }
 
-class _EditorBuildPanelState extends ConsumerState<EditorBuildPanel>
-    with TickerProviderStateMixin {
-  TabController? _tabController;
-  String? _tabTemplateId;
-
-  @override
-  void dispose() {
-    _tabController?.dispose();
-    super.dispose();
-  }
-
-  void _ensureTabController(int length, String templateId) {
-    if (_tabController != null &&
-        _tabController!.length == length &&
-        _tabTemplateId == templateId) {
-      return;
-    }
-    _tabController?.dispose();
-    _tabTemplateId = templateId;
-    _tabController = TabController(length: length, vsync: this);
-  }
+class _EditorBuildPanelState extends ConsumerState<EditorBuildPanel> {
+  int _slotIndex = 0;
 
   @override
   Widget build(BuildContext context) {
     final editor = ref.watch(editorProvider);
     final catalogAsync = ref.watch(configuratorCatalogProvider);
-    final panelHeight = (MediaQuery.sizeOf(context).height * 0.34)
-        .clamp(260.0, 340.0);
+    final panelHeight =
+        (MediaQuery.sizeOf(context).height * 0.40).clamp(280.0, 380.0);
+
+    ref.listen<AsyncValue<ConfiguratorCatalog>>(configuratorCatalogProvider,
+        (previous, next) {
+      next.whenData((catalog) {
+        ref
+            .read(editorProvider.notifier)
+            .ensureDefaultConfiguratorTemplate(catalog.templates);
+      });
+    });
 
     return SizedBox(
       height: panelHeight,
@@ -74,158 +65,149 @@ class _EditorBuildPanelState extends ConsumerState<EditorBuildPanel>
                 ),
               );
             }
+
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) return;
+              ref
+                  .read(editorProvider.notifier)
+                  .ensureDefaultConfiguratorTemplate(templates);
+            });
+
             final selectedId = editor.configuratorTemplateId.trim();
             ConfiguratorTemplate? template;
-            if (selectedId.isNotEmpty) {
-              for (final t in templates) {
-                if (t.id == selectedId) {
-                  template = t;
-                  break;
-                }
+            for (final t in templates) {
+              if (t.id == selectedId) {
+                template = t;
+                break;
               }
             }
-            final slots = template?.slots ?? const <ConfiguratorSlot>[];
-            final tabCount = slots.length + 1;
-            _ensureTabController(
-              tabCount,
-              selectedId.isEmpty ? '__none__' : selectedId,
+            template ??= templates.firstWhere(
+              (t) => t.id == kDefaultConfiguratorTemplateId,
+              orElse: () => templates.first,
             );
-            final tabs = _tabController!;
+
+            final slots = template.slots;
+            if (slots.isEmpty) {
+              return const SizedBox.shrink();
+            }
+            final safeIndex = _slotIndex.clamp(0, slots.length - 1);
+            if (safeIndex != _slotIndex) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) setState(() => _slotIndex = safeIndex);
+              });
+            }
+            final slot = slots[safeIndex];
+            final selectedOptionId = editor.configuratorSelections[slot.id];
+            ConfiguratorOption? selectedOption;
+            for (final o in slot.options) {
+              if (o.id == selectedOptionId) {
+                selectedOption = o;
+                break;
+              }
+            }
 
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Padding(
                   padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.md,
                     AppSpacing.sm,
-                    AppSpacing.md,
-                    0,
+                    AppSpacing.sm,
+                    AppSpacing.sm,
+                    AppSpacing.xs,
                   ),
                   child: Row(
                     children: [
                       Expanded(
-                        child: Text(
-                          AppStrings.editorTabBuild,
-                          style: AppTextStyles.titleSmall
-                              .copyWith(color: AppColors.sand),
+                        child: SizedBox(
+                          height: 36,
+                          child: ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: slots.length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(width: 6),
+                            itemBuilder: (context, index) {
+                              final s = slots[index];
+                              final picked =
+                                  editor.configuratorSelections[s.id];
+                              final label = picked == null
+                                  ? s.titleEn
+                                  : _labelForSlot(s, picked);
+                              return _SlotChip(
+                                label: label,
+                                title: s.titleEn,
+                                selected: index == safeIndex,
+                                onTap: () => setState(() => _slotIndex = index),
+                              );
+                            },
+                          ),
                         ),
                       ),
-                      DropdownButton<String?>(
-                        value: template?.id,
-                        hint: Text(
-                          AppStrings.editorBuildPickTemplate,
-                          style: AppTextStyles.bodySmall,
+                      const SizedBox(width: 4),
+                      _TemplateMenu(
+                        templates: templates,
+                        selectedId: template.id,
+                      ),
+                      IconButton(
+                        tooltip: AppStrings.editorBuildReset,
+                        visualDensity: VisualDensity.compact,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(
+                          minWidth: 36,
+                          minHeight: 36,
                         ),
-                        underline: const SizedBox.shrink(),
-                        dropdownColor: AppColors.stone,
-                        items: [
-                          for (final t in templates)
-                            DropdownMenuItem(
-                              value: t.id,
-                              child: Text(
-                                '${t.nameEn} · ${t.nameAr}',
-                                style: AppTextStyles.bodySmall,
-                              ),
-                            ),
-                        ],
-                        onChanged: (id) {
-                          if (id == null) return;
+                        onPressed: () {
+                          setState(() => _slotIndex = 0);
                           ref
                               .read(editorProvider.notifier)
-                              .setConfiguratorTemplate(id, templates);
+                              .resetConfiguratorBuild(templates);
                         },
+                        icon: const Icon(Icons.restart_alt, size: 20),
+                        color: AppColors.fog,
                       ),
                     ],
                   ),
                 ),
-                if (template == null)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.md,
-                      AppSpacing.xs,
-                      AppSpacing.md,
-                      0,
-                    ),
-                    child: Text(
-                      AppStrings.editorBuildResetHint,
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.fog,
-                      ),
-                    ),
-                  ),
-                TabBar(
-                  controller: tabs,
-                  isScrollable: true,
-                  labelColor: AppColors.gold,
-                  unselectedLabelColor: AppColors.fog,
-                  indicatorColor: AppColors.gold,
-                  labelStyle: AppTextStyles.bodySmall.copyWith(fontSize: 11),
-                  tabs: [
-                    for (final slot in slots)
-                      Tab(text: slot.titleEn),
-                    const Tab(text: AppStrings.editorBuildTabColor),
-                  ],
-                ),
-                Expanded(
-                  child: TabBarView(
-                    controller: tabs,
-                    children: [
-                      if (template != null)
-                        for (final slot in slots)
-                          _OptionGrid(
-                            slot: slot,
-                            selectedOptionId:
-                                editor.configuratorSelections[slot.id],
-                            onPick: (optionId) => ref
-                                .read(editorProvider.notifier)
-                                .setConfiguratorOption(
-                                  template: template!,
-                                  slotId: slot.id,
-                                  optionId: optionId,
-                                ),
-                          ),
-                      const EditorBuildColorPanel(),
-                    ],
-                  ),
-                ),
-                if (editor.configuratorSummary.trim().isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.md,
-                      AppSpacing.xs,
-                      AppSpacing.md,
-                      0,
-                    ),
-                    child: Text(
-                      editor.configuratorSummary,
-                      maxLines: 4,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.fog,
-                        height: 1.35,
-                      ),
-                    ),
-                  ),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.md,
-                    AppSpacing.sm,
-                    AppSpacing.md,
-                    AppSpacing.sm,
-                  ),
-                  child: OutlinedButton.icon(
-                    onPressed: () => ref
-                        .read(editorProvider.notifier)
-                        .resetConfiguratorBuild(),
-                    icon: const Icon(Icons.restart_alt, size: 18),
-                    label: const Text(AppStrings.editorBuildReset),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.sand,
-                      side: const BorderSide(color: AppColors.borderStrong),
-                    ),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                  child: Text(
+                    slot.titleEn,
+                    style: AppTextStyles.labelGold.copyWith(fontSize: 11),
                   ),
                 ),
+                const SizedBox(height: AppSpacing.xs),
+                Expanded(
+                  child: _OptionStrip(
+                    slot: slot,
+                    selectedOptionId: selectedOptionId,
+                    onPick: (optionId) =>
+                        ref.read(editorProvider.notifier).setConfiguratorOption(
+                              template: template!,
+                              slotId: slot.id,
+                              optionId: optionId,
+                            ),
+                  ),
+                ),
+                if (selectedOption != null)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.md,
+                      0,
+                      AppSpacing.md,
+                      AppSpacing.sm,
+                    ),
+                    child: Text(
+                      selectedOption.labelEn,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.sand,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ),
               ],
             );
           },
@@ -233,10 +215,126 @@ class _EditorBuildPanelState extends ConsumerState<EditorBuildPanel>
       ),
     );
   }
+
+  String _labelForSlot(ConfiguratorSlot slot, String optionId) {
+    for (final o in slot.options) {
+      if (o.id == optionId) {
+        final short = o.labelEn.split(' ').first;
+        return short.length > 10 ? '${short.substring(0, 9)}…' : short;
+      }
+    }
+    return slot.titleEn;
+  }
 }
 
-class _OptionGrid extends StatelessWidget {
-  const _OptionGrid({
+class _SlotChip extends StatelessWidget {
+  const _SlotChip({
+    required this.label,
+    required this.title,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final String title;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+        child: Ink(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: selected
+                ? AppColors.gold.withValues(alpha: 0.18)
+                : AppColors.smoke,
+            borderRadius: BorderRadius.circular(AppRadius.pill),
+            border: Border.all(
+              color: selected ? AppColors.gold : AppColors.borderSubtle,
+              width: selected ? 1.5 : 1,
+            ),
+          ),
+          child: Text(
+            selected ? title : label,
+            style: AppTextStyles.bodySmall.copyWith(
+              fontSize: 11,
+              color: selected ? AppColors.gold : AppColors.fog,
+              fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TemplateMenu extends ConsumerWidget {
+  const _TemplateMenu({
+    required this.templates,
+    required this.selectedId,
+  });
+
+  final List<ConfiguratorTemplate> templates;
+  final String selectedId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    ConfiguratorTemplate? current;
+    for (final t in templates) {
+      if (t.id == selectedId) {
+        current = t;
+        break;
+      }
+    }
+    return PopupMenuButton<String>(
+      tooltip: AppStrings.editorBuildTemplate,
+      color: AppColors.stone,
+      initialValue: selectedId,
+      onSelected: (id) {
+        ref
+            .read(editorProvider.notifier)
+            .setConfiguratorTemplate(id, templates);
+      },
+      itemBuilder: (context) => [
+        for (final t in templates)
+          PopupMenuItem(
+            value: t.id,
+            child: Text(
+              t.nameEn,
+              style: AppTextStyles.bodySmall.copyWith(
+                color: t.id == selectedId ? AppColors.gold : AppColors.sand,
+              ),
+            ),
+          ),
+      ],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              current?.nameEn ?? 'Template',
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.fog,
+                fontSize: 10,
+              ),
+            ),
+            const Icon(Icons.expand_more, size: 18, color: AppColors.fog),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Vertically scrollable grid of compact square configurator thumbs.
+class _OptionStrip extends StatelessWidget {
+  const _OptionStrip({
     required this.slot,
     required this.selectedOptionId,
     required this.onPick,
@@ -246,59 +344,47 @@ class _OptionGrid extends StatelessWidget {
   final String? selectedOptionId;
   final ValueChanged<String> onPick;
 
+  static const double _spacing = 8;
+
   @override
   Widget build(BuildContext context) {
-    return GridView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 4,
-        mainAxisSpacing: AppSpacing.sm,
-        crossAxisSpacing: AppSpacing.sm,
-        childAspectRatio: 0.85,
-      ),
-      itemCount: slot.options.length,
-      itemBuilder: (context, index) {
-        final opt = slot.options[index];
-        final selected = selectedOptionId == opt.id;
-        return Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: () => onPick(opt.id),
-            borderRadius: BorderRadius.circular(AppRadius.sm),
-            child: Ink(
-              decoration: BoxDecoration(
-                color: AppColors.smoke,
-                borderRadius: BorderRadius.circular(AppRadius.sm),
-                border: Border.all(
-                  color: selected ? AppColors.gold : AppColors.borderSubtle,
-                  width: selected ? 2 : 1,
-                ),
-              ),
-              child: Column(
-                children: [
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(4),
-                      child: ConfiguratorOptionImage(option: opt),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(4, 0, 4, 4),
-                    child: Text(
-                      opt.labelEn,
-                      maxLines: 2,
-                      textAlign: TextAlign.center,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.bodySmall.copyWith(
-                        fontSize: 10,
-                        color: selected ? AppColors.gold : AppColors.fog,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+    const thumbW = EditorCompactThumbCard.thumbSize;
+    const thumbH = EditorCompactThumbCard.stripHeight;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final innerWidth =
+            constraints.maxWidth - AppSpacing.md * 2 - _spacing;
+        final columns = (innerWidth / (thumbW + _spacing)).floor().clamp(2, 6);
+
+        return GridView.builder(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.md,
+            0,
+            AppSpacing.md,
+            AppSpacing.sm,
           ),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: columns,
+            mainAxisSpacing: _spacing,
+            crossAxisSpacing: _spacing,
+            childAspectRatio: thumbW / thumbH,
+          ),
+          itemCount: slot.options.length,
+          itemBuilder: (context, index) {
+            final opt = slot.options[index];
+            final selected = selectedOptionId == opt.id;
+            return EditorCompactThumbCard(
+              label: opt.labelEn,
+              selected: selected,
+              onTap: () => onPick(opt.id),
+              image: ConfiguratorOptionImage(
+                option: opt,
+                fit: BoxFit.contain,
+                alignment: Alignment.center,
+              ),
+            );
+          },
         );
       },
     );

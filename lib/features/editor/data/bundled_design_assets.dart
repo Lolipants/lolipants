@@ -5,7 +5,14 @@ const String kDefaultCatalogDesignPath =
     'assets/images/designs/design_gulf_abaya_black_closed.png';
 
 /// Garment types that use the Casual catalogue lane and casual-first QA flows.
-const Set<String> kCasualGarmentTypes = {'tshirt', 'polo', 'jumpsuit'};
+const Set<String> kCasualGarmentTypes = {
+  'tshirt',
+  'polo',
+  'jumpsuit',
+  'hoodie',
+  'longsleeve',
+  'trousers',
+};
 
 /// Catalogue subsection for the editor Designs strip.
 enum DesignCatalogFilter {
@@ -172,6 +179,54 @@ String catalogDesignLabel(String assetPath) {
       .split('_')
       .map((w) => w.isEmpty ? w : '${w[0].toUpperCase()}${w.substring(1)}')
       .join(' ');
+}
+
+/// Whether [path] is a casual flat-lay (`design_casual_*` or listed in [kCasualFlatlayPaths]).
+bool isCasualCatalogDesignPath(String path) {
+  final p = path.trim();
+  if (p.isEmpty) return false;
+  return kCasualFlatlayPaths.contains(p) || p.contains('design_casual_');
+}
+
+/// Casual Designs context: casual asset selected or Casual filter active.
+bool isCasualEditorContext({
+  required String selectedCatalogDesignPath,
+  required DesignCatalogFilter catalogFilter,
+}) {
+  if (isCasualCatalogDesignPath(selectedCatalogDesignPath)) return true;
+  return catalogFilter == DesignCatalogFilter.casual;
+}
+
+/// Default garment type when editing casual catalogue flats.
+const String kDefaultCasualGarmentType = 'tshirt';
+
+/// Maps a casual flat-lay asset path to the garment type stored on save.
+String garmentTypeFromCatalogDesignPath(String assetPath) {
+  final p = assetPath.trim().toLowerCase();
+  if (p.isEmpty) return kDefaultCasualGarmentType;
+  if (p.contains('design_casual_tee_') || p.contains('_tee_')) {
+    return 'tshirt';
+  }
+  if (p.contains('design_casual_hoodie_') || p.contains('_hoodie_')) {
+    return 'hoodie';
+  }
+  if (p.contains('design_casual_longsleeve_') ||
+      p.contains('_longsleeve_')) {
+    return 'longsleeve';
+  }
+  if (p.contains('design_casual_trousers_') || p.contains('_trousers_')) {
+    return 'trousers';
+  }
+  if (p.contains('design_casual_polo_') || p.contains('_polo_')) {
+    return 'polo';
+  }
+  if (p.contains('design_casual_jumpsuit_') || p.contains('_jumpsuit_')) {
+    return 'jumpsuit';
+  }
+  if (isCasualCatalogDesignPath(assetPath)) {
+    return kDefaultCasualGarmentType;
+  }
+  return kDefaultCasualGarmentType;
 }
 
 /// Returns bundled catalogue asset path from API `render_metadata`, or null.

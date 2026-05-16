@@ -5,40 +5,24 @@ import 'package:flutter/material.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/features/editor/models/configurator_catalog.dart';
 
-/// Renders a configurator option from CDN or bundled asset, optionally tinted.
+/// Renders a configurator option from CDN or bundled asset at native colours.
 class ConfiguratorOptionImage extends StatelessWidget {
   const ConfiguratorOptionImage({
     required this.option,
     this.fit = BoxFit.contain,
     this.alignment = Alignment.center,
-    this.primaryTint,
-    this.accentTint,
     super.key,
   });
 
   final ConfiguratorOption option;
   final BoxFit fit;
   final Alignment alignment;
-  final Color? primaryTint;
-  final Color? accentTint;
-
-  bool get _isTrimRole => option.metadata['role']?.toString() == 'trim';
 
   @override
   Widget build(BuildContext context) {
     final image = _buildImage();
     if (image == null) return const SizedBox.shrink();
-
-    final tint = _isTrimRole ? accentTint : primaryTint;
-    if (tint == null) return image;
-
-    return ColorFiltered(
-      colorFilter: ColorFilter.mode(
-        tint.withValues(alpha: 0.82),
-        BlendMode.srcATop,
-      ),
-      child: image,
-    );
+    return image;
   }
 
   Widget? _buildImage() {

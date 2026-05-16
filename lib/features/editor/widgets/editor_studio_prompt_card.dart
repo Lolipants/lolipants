@@ -19,6 +19,7 @@ class EditorStudioPromptCard extends ConsumerStatefulWidget {
   const EditorStudioPromptCard({
     required this.onGenerate,
     this.compact = false,
+    this.buildStrip = false,
     super.key,
   });
 
@@ -26,6 +27,9 @@ class EditorStudioPromptCard extends ConsumerStatefulWidget {
 
   /// Tighter layout so the hero preview can use more vertical space.
   final bool compact;
+
+  /// Single-line strip above the build panel (no chips or subtitle).
+  final bool buildStrip;
 
   @override
   ConsumerState<EditorStudioPromptCard> createState() =>
@@ -62,6 +66,83 @@ class _EditorStudioPromptCardState extends ConsumerState<EditorStudioPromptCard>
 
     final editor = ref.watch(editorProvider);
     final notifier = ref.read(editorProvider.notifier);
+
+    if (widget.buildStrip) {
+      return Material(
+        color: AppColors.stone,
+        elevation: 1,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.sm,
+            6,
+            AppSpacing.sm,
+            6,
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _controller,
+                  onChanged: notifier.setAiLookUserPrompt,
+                  style: AppTextStyles.bodySmall.copyWith(color: AppColors.sand),
+                  decoration: InputDecoration(
+                    isDense: true,
+                    hintText: AppStrings.aiPromptLabel,
+                    hintStyle: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.fog,
+                      fontSize: 12,
+                    ),
+                    filled: true,
+                    fillColor: AppColors.smoke,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                      borderSide: const BorderSide(color: AppColors.borderSubtle),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                      borderSide: const BorderSide(color: AppColors.borderSubtle),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              FilledButton(
+                onPressed:
+                    editor.lookGenerating ? null : () => widget.onGenerate(),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.gold,
+                  foregroundColor: AppColors.ink,
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  minimumSize: const Size(0, 40),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: editor.lookGenerating
+                    ? const SizedBox(
+                        height: 18,
+                        width: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppColors.ink,
+                        ),
+                      )
+                    : Text(
+                        AppStrings.editorGenerateLook,
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.ink,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     final dense = widget.compact;
     final chipLabelStyle = AppTextStyles.bodySmall.copyWith(

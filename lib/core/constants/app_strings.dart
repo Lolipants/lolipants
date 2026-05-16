@@ -338,8 +338,7 @@ class AppStrings {
   static const String dontHaveAccountAr = 'ليس لديك حساب؟ ';
 
   /// Create account primary button combined label.
-  static const String createAccountCta =
-      'Create account / إنشاء حساب';
+  static const String createAccountCta = 'Create account / إنشاء حساب';
 
   /// Log in primary button combined label.
   static const String logInCta = 'Log in / تسجيل الدخول';
@@ -357,8 +356,7 @@ class AppStrings {
   static const String checkYourInboxAr = 'تحقق من بريدك الإلكتروني';
 
   /// Reset email sent body prefix (English).
-  static const String resetEmailSentPrefix =
-      "We've sent a reset link to ";
+  static const String resetEmailSentPrefix = "We've sent a reset link to ";
 
   /// Back to log in secondary CTA (English).
   static const String backToLogIn = 'Back to log in';
@@ -381,7 +379,7 @@ class AppStrings {
       'Flat-lay designs from Gulf classics to modern and casual basics.';
 
   /// Featured row caption (English).
-  static const String featuredCollection = 'Gulf collection · 2025';
+  static const String featuredCollection = 'Gulf collection · 2026';
 
   /// Log out dialog title (English).
   static const String logOutConfirmTitle = 'Log out?';
@@ -433,8 +431,7 @@ class AppStrings {
       'Password must be at least 8 characters';
 
   /// Validation: password needs digit (English).
-  static const String errorPasswordDigit =
-      'Password must include a number';
+  static const String errorPasswordDigit = 'Password must include a number';
 
   /// Validation: passwords mismatch (English).
   static const String errorPasswordMismatch = 'Passwords do not match';
@@ -451,8 +448,7 @@ class AppStrings {
       'Email or password is incorrect.';
 
   /// Authenticated action not allowed (English).
-  static const String errorForbidden =
-      'You do not have permission to do that.';
+  static const String errorForbidden = 'You do not have permission to do that.';
 
   /// Network: no connection / host unreachable (English).
   static const String errorNetworkUnreachable =
@@ -758,17 +754,24 @@ class AppStrings {
   static const String editorTabBuildAr = 'صمّم';
   static const String editorBuildSummaryTitle = 'Your design';
   static const String editorBuildPickTemplate = 'Choose a template';
+  static const String editorBuildTemplate = 'Garment template';
   static const String editorBuildSelectSlot = 'Select options for each part';
   static const String editorBuildTabColor = 'Color';
   static const String editorBuildTabColorAr = 'اللون';
-  static const String editorBuildColorPrimary = 'Garment colour / لون القماش';
-  static const String editorBuildColorAccent = 'Trim & accent / الزخرفة';
+  static const String editorBuildColorAiHint =
+      'Colours apply to AI refined look only. Build layers keep their original fabric colours.';
+  static const String editorBuildColorPrimary =
+      'AI garment colour / لون القماش للذكاء الاصطناعي';
+  static const String editorBuildColorAccent =
+      'AI trim & accent / زخرفة الذكاء الاصطناعي';
   static const String editorBuildHeroEmpty =
       'Pick a template and options to preview on your mannequin.';
   static const String editorBuildReset = 'Reset build / إعادة ضبط';
   static const String editorBuildResetHint =
       'Choose a template above to add garment parts, or keep mannequin only.';
   static const String editorTabFabric = 'Fabric';
+  static const String editorAddText = 'Add text / أضف نصاً';
+  static const String editorAddImage = 'Add image / أضف صورة';
   static const String editorTabPattern = 'Pattern';
   static const String editorTabEmbroidery = 'Embroidery';
   static const String editorTabText = 'Text';
@@ -824,8 +827,7 @@ class AppStrings {
   static const String aiMeasurementVerifyHint =
       'These are estimates - please verify before ordering. '
       '/ هذه تقديرات - يرجى التحقق قبل الطلب.';
-  static const String aiMeasurementSave =
-      'Save measurements / حفظ المقاسات';
+  static const String aiMeasurementSave = 'Save measurements / حفظ المقاسات';
   static const String aiMeasurementManualFallback =
       'Enter manually instead / إدخال يدوي بدلاً من ذلك';
   static const String aiMeasurementCameraPermissionDenied =
@@ -857,14 +859,11 @@ class AppStrings {
       'Measurements must be 300cm or less. / يجب أن تكون ٣٠٠ سم أو أقل.';
   static const String manualSaveFailed =
       'Could not save measurements. / تعذر حفظ المقاسات.';
-  static const String manualSaved =
-      'Measurements saved. / تم حفظ المقاسات.';
+  static const String manualSaved = 'Measurements saved. / تم حفظ المقاسات.';
 
   /// Phase 3C workshop booking strings.
-  static const String workshopTitle =
-      'Book a sizing visit / احجز موعد قياس';
-  static const String workshopVisitOption =
-      'Visit workshop / زيارة الورشة';
+  static const String workshopTitle = 'Book a sizing visit / احجز موعد قياس';
+  static const String workshopVisitOption = 'Visit workshop / زيارة الورشة';
   static const String workshopHomeOption = 'We come to you / نأتي إليك';
   static const String workshopAddressLabel = 'Address / العنوان';
   static const String workshopCityLabel = 'City / المدينة';
@@ -880,14 +879,11 @@ class AppStrings {
       'Address is required for home visit. / العنوان مطلوب للزيارة المنزلية.';
   static const String workshopConfirmFailed =
       'Could not confirm booking. / تعذر تأكيد الحجز.';
-  static const String workshopConfirmedPrefix =
-      'Booking confirmed:';
-  static const String workshopConfirmedArPrefix =
-      'تم تأكيد الحجز:';
+  static const String workshopConfirmedPrefix = 'Booking confirmed:';
+  static const String workshopConfirmedArPrefix = 'تم تأكيد الحجز:';
 
   /// Phase 3C my measurements strings.
-  static const String myMeasurementsSummaryTitle =
-      'My measurements / مقاساتي';
+  static const String myMeasurementsSummaryTitle = 'My measurements / مقاساتي';
   static const String measurementUnknown = 'Unknown';
   static const String measurementChest = 'Chest';
   static const String measurementWaist = 'Waist';
@@ -899,14 +895,12 @@ class AppStrings {
   static const String measurementUnitCm = 'cm';
   static const String myMeasurementsLastUpdatedPrefix = 'Last updated:';
   static const String myMeasurementsLastUpdatedAr = 'آخر تحديث';
-  static const String myMeasurementsEdit =
-      'Edit measurements / تعديل المقاسات';
+  static const String myMeasurementsEdit = 'Edit measurements / تعديل المقاسات';
   static const String myMeasurementsRescan =
       'Re-scan with AI / إعادة المسح بالذكاء الاصطناعي';
   static const String myMeasurementsEmpty =
       'No measurements saved yet / لا توجد مقاسات محفوظة بعد';
-  static const String myMeasurementsTakeNow =
-      'Take measurements / قياس الآن';
+  static const String myMeasurementsTakeNow = 'Take measurements / قياس الآن';
   static const String sizingOptionsTooltip = 'Sizing options';
 
   /// Phase 3C AI prompt bar strings.
@@ -1027,8 +1021,7 @@ class AppStrings {
       'Less animation in the interface.';
 
   /// Reduce motion subtitle (Arabic).
-  static const String settingsReduceMotionSubtitleAr =
-      'حركة أقل في الواجهة.';
+  static const String settingsReduceMotionSubtitleAr = 'حركة أقل في الواجهة.';
 
   /// Push master toggle title (English).
   static const String settingsPushTitle = 'Push notifications';
@@ -1173,12 +1166,10 @@ class AppStrings {
   static const String settingsDeletingAccountAr = 'جاري الحذف…';
 
   /// Delete account failed snack (English).
-  static const String settingsDeleteAccountFailed =
-      'Could not delete account.';
+  static const String settingsDeleteAccountFailed = 'Could not delete account.';
 
   /// Delete account failed snack (Arabic).
-  static const String settingsDeleteAccountFailedAr =
-      'تعذر حذف الحساب.';
+  static const String settingsDeleteAccountFailedAr = 'تعذر حذف الحساب.';
 
   /// Delete account dialog title (English).
   static const String settingsDeleteDialogTitle = 'Delete account?';

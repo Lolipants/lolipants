@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:lolipants/features/editor/data/editor_design_restore.dart';
+
 /// Saved user design coming from `/designs`.
 class GarmentDesign {
   /// Creates a design snapshot.
@@ -22,19 +24,6 @@ class GarmentDesign {
 
   /// Parses API payload.
   factory GarmentDesign.fromApi(Map<String, dynamic> json) {
-    Map<String, dynamic>? parseRenderMetadata(dynamic value) {
-      if (value is Map<String, dynamic>) return value;
-      if (value is String && value.trim().isNotEmpty) {
-        try {
-          final decoded = jsonDecode(value);
-          if (decoded is Map<String, dynamic>) return decoded;
-        } on FormatException {
-          return null;
-        }
-      }
-      return null;
-    }
-
     return GarmentDesign(
       id: json['id']?.toString() ?? '',
       name: json['name']?.toString() ?? 'Untitled',
@@ -59,7 +48,7 @@ class GarmentDesign {
           json['presetStyleId']?.toString(),
       mannequinId:
           json['mannequin_id']?.toString() ?? json['mannequinId']?.toString(),
-      renderMetadata: parseRenderMetadata(json['render_metadata'] ?? json['renderMetadata']),
+      renderMetadata: mergeDesignRenderMetadata(json),
       isPublic: (json['is_public'] == 1) || json['isPublic'] == true,
     );
   }

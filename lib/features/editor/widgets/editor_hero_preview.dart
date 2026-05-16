@@ -1,18 +1,19 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lolipants/core/config/app_features.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/features/editor/data/built_in_mannequin_assets.dart';
-import 'package:lolipants/features/editor/data/bundled_design_assets.dart';
 import 'package:lolipants/features/editor/models/configurator_catalog.dart';
 import 'package:lolipants/features/editor/providers/configurator_providers.dart';
 import 'package:lolipants/features/editor/providers/editor_provider.dart';
 import 'package:lolipants/features/editor/widgets/configurator_option_image.dart';
+import 'package:lolipants/features/editor/widgets/design_flatlay_compose.dart';
 
-/// Shared hero: flat-lay (Designs), mannequin + layers (Build), or AI look.
+/// Hero: Designs = catalogue flat-lay; Build = mannequin + layers; AI look when set.
 class EditorHeroPreview extends ConsumerWidget {
   const EditorHeroPreview({
     required this.state,
@@ -23,17 +24,39 @@ class EditorHeroPreview extends ConsumerWidget {
   final EditorState state;
   final EditorTab activeTab;
 
+  bool get _usesConfiguratorCompose =>
+      kFeatureConfiguratorBuild &&
+      activeTab == EditorTab.build &&
+      state.heroMode == EditorHeroMode.compose;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (state.heroMode == EditorHeroMode.look) {
       return _AiLookBody(state: state);
     }
-    if (activeTab == EditorTab.build) {
+
+    if (_usesConfiguratorCompose) {
       final catalog = ref.watch(configuratorCatalogProvider);
+
+      ref.listen<AsyncValue<ConfiguratorCatalog>>(configuratorCatalogProvider,
+          (previous, next) {
+        next.whenData((cat) {
+          ref
+              .read(editorProvider.notifier)
+              .ensureDefaultConfiguratorTemplate(cat.templates);
+        });
+      });
+
       return catalog.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, __) => _BuildComposeBody(state: state, template: null),
         data: (cat) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            ref
+                .read(editorProvider.notifier)
+                .ensureDefaultConfiguratorTemplate(cat.templates);
+          });
+
           ConfiguratorTemplate? template;
           final selectedId = state.configuratorTemplateId.trim();
           if (selectedId.isNotEmpty) {
@@ -48,35 +71,22 @@ class EditorHeroPreview extends ConsumerWidget {
         },
       );
     }
+
     return _DesignsFlatLay(state: state);
   }
 }
 
-class _DesignsFlatLay extends StatelessWidget {
+/// Catalogue flat-lay for the Designs tab (updates when a thumbnail is picked).
+class _DesignsFlatLay extends ConsumerWidget {
   const _DesignsFlatLay({required this.state});
 
   final EditorState state;
 
   @override
-  Widget build(BuildContext context) {
-    final path = state.selectedCatalogDesignPath.trim().isEmpty
-        ? kDefaultCatalogDesignPath
-        : state.selectedCatalogDesignPath;
-    return InteractiveViewer(
-      minScale: 0.85,
-      maxScale: 3,
-      child: Center(
-        child: Image.asset(
-          path,
-          fit: BoxFit.contain,
-          errorBuilder: (_, __, ___) => Center(
-            child: Text(
-              'Design asset missing',
-              style: AppTextStyles.bodySmall,
-            ),
-          ),
-        ),
-      ),
+  Widget build(BuildContext context, WidgetRef ref) {
+    return DesignFlatlayCompose(
+      designAssetPath: state.selectedCatalogDesignPath,
+      state: state,
     );
   }
 }
@@ -142,8 +152,6 @@ class _BuildComposeBody extends StatelessWidget {
                   option: opt,
                   fit: layerFit,
                   alignment: layerAlign,
-                  primaryTint: state.primaryColour,
-                  accentTint: state.accentColour,
                 ),
               ),
           ],

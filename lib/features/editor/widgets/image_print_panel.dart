@@ -2,11 +2,12 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:lolipants/features/editor/utils/picked_image_persist.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
-import 'package:lolipants/features/editor/providers/editor_provider.dart';
+import 'package:lolipants/features/editor/models/print_placement.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
 
 /// Image print controls shown when image tool is selected.
@@ -128,7 +129,7 @@ class ImagePrintPanel extends StatelessWidget {
                       children: [
                         Icon(Icons.draw_outlined, color: AppColors.gold),
                         SizedBox(height: 6),
-                        Text('Sketch'),
+                        Text('Upload sketch / ارفع السكتش'),
                       ],
                     )
                   : ClipRRect(
@@ -212,14 +213,17 @@ class ImagePrintPanel extends StatelessWidget {
     final picker = ImagePicker();
     final picked = await picker.pickImage(source: ImageSource.gallery);
     if (picked == null) return;
-    onImageSelected(picked.path);
+    final path = await persistPickedImage(picked) ?? picked.path;
+    onImageSelected(path);
   }
 
   Future<void> _pickSketch(BuildContext context) async {
+    if (onSketchSelected == null) return;
     final picker = ImagePicker();
     final picked = await picker.pickImage(source: ImageSource.gallery);
     if (picked == null) return;
-    onSketchSelected?.call(picked.path);
+    final path = await persistPickedImage(picked) ?? picked.path;
+    onSketchSelected!(path);
   }
 }
 

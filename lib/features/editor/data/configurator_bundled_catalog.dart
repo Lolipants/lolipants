@@ -1,11 +1,69 @@
 import 'package:lolipants/features/editor/models/configurator_catalog.dart';
 
-/// Offline fallback when `GET /configurator/templates` is unavailable.
+/// Offline fallback when `GET /configurator/templates` is unavailable or MVP-sized.
 ConfiguratorCatalog bundledConfiguratorCatalog() {
   return ConfiguratorCatalog.fromApi(_bundledJson);
 }
 
-const List<Map<String, dynamic>> _bundledJson = [
+/// Prefer bundled catalogue when the API returns fewer options (MVP seed).
+ConfiguratorCatalog mergeConfiguratorCatalog(ConfiguratorCatalog api) {
+  final bundled = bundledConfiguratorCatalog();
+  return _optionCount(api) >= _optionCount(bundled) ? api : bundled;
+}
+
+int _optionCount(ConfiguratorCatalog catalog) {
+  var n = 0;
+  for (final t in catalog.templates) {
+    for (final s in t.slots) {
+      n += s.options.length;
+    }
+  }
+  return n;
+}
+
+const _cfgBase = 'assets/images/configurator';
+
+Map<String, dynamic> _cfgOption({
+  required String id,
+  required String optionKey,
+  required String labelEn,
+  required String labelAr,
+  required String stem,
+  required int layerZ,
+  required int sortOrder,
+}) {
+  return {
+    'id': id,
+    'optionKey': optionKey,
+    'labelEn': labelEn,
+    'labelAr': labelAr,
+    'metadata': {
+      'assetPath': '$_cfgBase/$stem.png',
+      'layerZ': layerZ,
+    },
+    'sortOrder': sortOrder,
+  };
+}
+
+Map<String, dynamic> _slot({
+  required String id,
+  required String slotKey,
+  required String titleEn,
+  required String titleAr,
+  required int sortOrder,
+  required List<Map<String, dynamic>> options,
+}) {
+  return {
+    'id': id,
+    'slotKey': slotKey,
+    'titleEn': titleEn,
+    'titleAr': titleAr,
+    'sortOrder': sortOrder,
+    'options': options,
+  };
+}
+
+final List<Map<String, dynamic>> _bundledJson = [
   {
     'id': 'modest_abaya_v1',
     'nameEn': 'Modest abaya',
@@ -13,74 +71,257 @@ const List<Map<String, dynamic>> _bundledJson = [
     'garmentType': 'abaya',
     'regionTag': 'modest',
     'sortOrder': 0,
-    'requiredSlotKeys': ['sleeve_length', 'collar_style'],
+    'requiredSlotKeys': [
+      'sleeve_length',
+      'collar_style',
+      'hem_length',
+      'closure',
+      'overlay_panel',
+    ],
     'slots': [
-      {
-        'id': 'slot_modest_sleeve',
-        'slotKey': 'sleeve_length',
-        'titleEn': 'Sleeve length',
-        'titleAr': 'طول الكم',
-        'sortOrder': 0,
-        'options': [
-          {
-            'id': 'opt_modest_sleeve_wide',
-            'optionKey': 'wide',
-            'labelEn': 'Wide sleeves',
-            'labelAr': 'أكمام واسعة',
-            'metadata': {
-              'assetPath':
-                  'assets/images/designs/design_gulf_abaya_black_closed.png',
-              'layerZ': 1,
-            },
-            'sortOrder': 0,
-          },
-          {
-            'id': 'opt_modest_sleeve_fitted',
-            'optionKey': 'fitted',
-            'labelEn': 'Fitted sleeves',
-            'labelAr': 'أكمام ضيقة',
-            'metadata': {
-              'assetPath':
-                  'assets/images/designs/design_mod_abaya_slate_tech.png',
-              'layerZ': 1,
-            },
-            'sortOrder': 1,
-          },
+      _slot(
+        id: 'slot_modest_sleeve',
+        slotKey: 'sleeve_length',
+        titleEn: 'Sleeves',
+        titleAr: 'الأكمام',
+        sortOrder: 0,
+        options: [
+          _cfgOption(
+            id: 'opt_mod_sleeve_bell',
+            optionKey: 'wide_bell',
+            labelEn: 'Wide bell',
+            labelAr: 'جرس واسع',
+            stem: 'cfg_mod_sleeve_bell_black',
+            layerZ: 2,
+            sortOrder: 0,
+          ),
+          _cfgOption(
+            id: 'opt_mod_sleeve_fitted',
+            optionKey: 'fitted',
+            labelEn: 'Fitted',
+            labelAr: 'ضيق',
+            stem: 'cfg_mod_sleeve_fitted_slate',
+            layerZ: 2,
+            sortOrder: 1,
+          ),
+          _cfgOption(
+            id: 'opt_mod_sleeve_kimono',
+            optionKey: 'kimono',
+            labelEn: 'Kimono',
+            labelAr: 'كيمونو',
+            stem: 'cfg_mod_sleeve_kimono_sand',
+            layerZ: 2,
+            sortOrder: 2,
+          ),
+          _cfgOption(
+            id: 'opt_mod_sleeve_batwing',
+            optionKey: 'batwing',
+            labelEn: 'Batwing',
+            labelAr: 'خفاشي',
+            stem: 'cfg_mod_sleeve_batwing_charcoal',
+            layerZ: 2,
+            sortOrder: 3,
+          ),
+          _cfgOption(
+            id: 'opt_mod_sleeve_pleated',
+            optionKey: 'pleated',
+            labelEn: 'Pleated volume',
+            labelAr: 'كسرات',
+            stem: 'cfg_mod_sleeve_pleated_navy',
+            layerZ: 2,
+            sortOrder: 4,
+          ),
+          _cfgOption(
+            id: 'opt_mod_sleeve_cuffed',
+            optionKey: 'cuffed',
+            labelEn: 'Cuffed tailored',
+            labelAr: 'مكبّل',
+            stem: 'cfg_mod_sleeve_cuffed_pearl',
+            layerZ: 2,
+            sortOrder: 5,
+          ),
+          _cfgOption(
+            id: 'opt_mod_sleeve_cape',
+            optionKey: 'cape',
+            labelEn: 'Cape overlay',
+            labelAr: 'كيب',
+            stem: 'cfg_mod_sleeve_cape_black',
+            layerZ: 2,
+            sortOrder: 6,
+          ),
+          _cfgOption(
+            id: 'opt_mod_sleeve_3q',
+            optionKey: 'three_quarter',
+            labelEn: 'Three-quarter',
+            labelAr: 'ثلاثة أرباع',
+            stem: 'cfg_mod_sleeve_3q_rose',
+            layerZ: 2,
+            sortOrder: 7,
+          ),
         ],
-      },
-      {
-        'id': 'slot_modest_collar',
-        'slotKey': 'collar_style',
-        'titleEn': 'Collar',
-        'titleAr': 'الياقة',
-        'sortOrder': 1,
-        'options': [
-          {
-            'id': 'opt_modest_collar_high',
-            'optionKey': 'high_neck',
-            'labelEn': 'High neck band',
-            'labelAr': 'ياقة عالية',
-            'metadata': {
-              'assetPath':
-                  'assets/images/designs/design_gulf_abaya_navy_champagne.png',
-              'layerZ': 2,
-            },
-            'sortOrder': 0,
-          },
-          {
-            'id': 'opt_modest_collar_open',
-            'optionKey': 'open_front',
-            'labelEn': 'Open front cardigan',
-            'labelAr': 'أمام مفتوح',
-            'metadata': {
-              'assetPath':
-                  'assets/images/designs/design_gulf_abaya_cardigan_charcoal.png',
-              'layerZ': 2,
-            },
-            'sortOrder': 1,
-          },
+      ),
+      _slot(
+        id: 'slot_modest_collar',
+        slotKey: 'collar_style',
+        titleEn: 'Collar',
+        titleAr: 'الياقة',
+        sortOrder: 1,
+        options: [
+          _cfgOption(
+            id: 'opt_mod_collar_high',
+            optionKey: 'high_neck',
+            labelEn: 'High neck band',
+            labelAr: 'ياقة عالية',
+            stem: 'cfg_mod_collar_high_black',
+            layerZ: 3,
+            sortOrder: 0,
+          ),
+          _cfgOption(
+            id: 'opt_mod_collar_open',
+            optionKey: 'open_front',
+            labelEn: 'Open cardigan',
+            labelAr: 'أمام مفتوح',
+            stem: 'cfg_mod_collar_open_charcoal',
+            layerZ: 3,
+            sortOrder: 1,
+          ),
+          _cfgOption(
+            id: 'opt_mod_collar_mandarin',
+            optionKey: 'mandarin',
+            labelEn: 'Mandarin band',
+            labelAr: 'ماندرين',
+            stem: 'cfg_mod_collar_mandarin_white',
+            layerZ: 3,
+            sortOrder: 2,
+          ),
+          _cfgOption(
+            id: 'opt_mod_collar_shawl',
+            optionKey: 'shawl',
+            labelEn: 'Shawl wrap',
+            labelAr: 'شال',
+            stem: 'cfg_mod_collar_shawl_champagne',
+            layerZ: 3,
+            sortOrder: 3,
+          ),
+          _cfgOption(
+            id: 'opt_mod_collar_placket',
+            optionKey: 'placket',
+            labelEn: 'Button placket',
+            labelAr: 'سحّاب',
+            stem: 'cfg_mod_collar_placket_sand',
+            layerZ: 3,
+            sortOrder: 4,
+          ),
+          _cfgOption(
+            id: 'opt_mod_collar_inner',
+            optionKey: 'inner_contrast',
+            labelEn: 'Contrast inner',
+            labelAr: 'داخلية متباينة',
+            stem: 'cfg_mod_collar_inner_pearl',
+            layerZ: 3,
+            sortOrder: 5,
+          ),
+          _cfgOption(
+            id: 'opt_mod_collar_square',
+            optionKey: 'square_navy',
+            labelEn: 'Square neck',
+            labelAr: 'ياقة مربعة',
+            stem: 'cfg_mod_collar_square_navy',
+            layerZ: 3,
+            sortOrder: 6,
+          ),
+          _cfgOption(
+            id: 'opt_mod_collar_gold',
+            optionKey: 'gold_trim',
+            labelEn: 'Gold trim',
+            labelAr: 'حافة ذهبية',
+            stem: 'cfg_mod_collar_gold_black',
+            layerZ: 3,
+            sortOrder: 7,
+          ),
         ],
-      },
+      ),
+      _slot(
+        id: 'slot_modest_hem',
+        slotKey: 'hem_length',
+        titleEn: 'Hem',
+        titleAr: 'الطول',
+        sortOrder: 2,
+        options: [
+          _cfgOption(
+            id: 'opt_mod_hem_floor',
+            optionKey: 'floor',
+            labelEn: 'Floor length',
+            labelAr: 'طول أرضي',
+            stem: 'cfg_mod_hem_floor_black',
+            layerZ: 1,
+            sortOrder: 0,
+          ),
+          _cfgOption(
+            id: 'opt_mod_hem_ankle',
+            optionKey: 'ankle',
+            labelEn: 'Ankle length',
+            labelAr: 'طول كاحل',
+            stem: 'cfg_mod_hem_ankle_slate',
+            layerZ: 1,
+            sortOrder: 1,
+          ),
+          _cfgOption(
+            id: 'opt_mod_hem_slit',
+            optionKey: 'slit_guard',
+            labelEn: 'Slit guard',
+            labelAr: 'فتحة جانبية',
+            stem: 'cfg_mod_hem_slit_panel_black',
+            layerZ: 1,
+            sortOrder: 2,
+          ),
+        ],
+      ),
+      _slot(
+        id: 'slot_modest_closure',
+        slotKey: 'closure',
+        titleEn: 'Closure',
+        titleAr: 'الإغلاق',
+        sortOrder: 3,
+        options: [
+          _cfgOption(
+            id: 'opt_mod_closure_snap',
+            optionKey: 'snap',
+            labelEn: 'Snap strip',
+            labelAr: 'أزرار كبس',
+            stem: 'cfg_mod_closure_snap_sand',
+            layerZ: 4,
+            sortOrder: 0,
+          ),
+          _cfgOption(
+            id: 'opt_mod_waist_tie',
+            optionKey: 'tie_belt',
+            labelEn: 'Tie belt',
+            labelAr: 'حزام رباط',
+            stem: 'cfg_mod_waist_tie_charcoal',
+            layerZ: 4,
+            sortOrder: 1,
+          ),
+        ],
+      ),
+      _slot(
+        id: 'slot_modest_overlay',
+        slotKey: 'overlay_panel',
+        titleEn: 'Overlay',
+        titleAr: 'طبقة صدر',
+        sortOrder: 4,
+        options: [
+          _cfgOption(
+            id: 'opt_mod_overlay_chest',
+            optionKey: 'chest_maroon',
+            labelEn: 'Chest panel',
+            labelAr: 'لوحة صدر',
+            stem: 'cfg_mod_overlay_chest_maroon',
+            layerZ: 0,
+            sortOrder: 0,
+          ),
+        ],
+      ),
     ],
   },
   {
@@ -90,74 +331,260 @@ const List<Map<String, dynamic>> _bundledJson = [
     'garmentType': 'dress',
     'regionTag': 'western',
     'sortOrder': 1,
-    'requiredSlotKeys': ['bodice', 'sleeve'],
+    'requiredSlotKeys': ['bodice', 'sleeve', 'skirt', 'waistline'],
     'slots': [
-      {
-        'id': 'slot_west_bodice',
-        'slotKey': 'bodice',
-        'titleEn': 'Bodice',
-        'titleAr': 'الصدر',
-        'sortOrder': 0,
-        'options': [
-          {
-            'id': 'opt_west_bodice_classic',
-            'optionKey': 'classic_tiffany',
-            'labelEn': 'Classic Tiffany',
-            'labelAr': 'تيفاني كلاسيك',
-            'metadata': {
-              'assetPath':
-                  'assets/images/designs/design_mod_abaya_butterfly_white.png',
-              'layerZ': 1,
-            },
-            'sortOrder': 0,
-          },
-          {
-            'id': 'opt_west_bodice_sweetheart',
-            'optionKey': 'sweetheart',
-            'labelEn': 'Sweetheart',
-            'labelAr': 'ياقة قلب',
-            'metadata': {
-              'assetPath':
-                  'assets/images/designs/design_mod_abaya_plum_satin.png',
-              'layerZ': 1,
-            },
-            'sortOrder': 1,
-          },
+      _slot(
+        id: 'slot_west_bodice',
+        slotKey: 'bodice',
+        titleEn: 'Bodice',
+        titleAr: 'الصدر',
+        sortOrder: 0,
+        options: [
+          _cfgOption(
+            id: 'opt_west_bodice_tiffany',
+            optionKey: 'classic_tiffany',
+            labelEn: 'Classic Tiffany',
+            labelAr: 'تيفاني كلاسيك',
+            stem: 'cfg_west_bodice_tiffany_ivory',
+            layerZ: 1,
+            sortOrder: 0,
+          ),
+          _cfgOption(
+            id: 'opt_west_bodice_sweetheart',
+            optionKey: 'sweetheart',
+            labelEn: 'Sweetheart',
+            labelAr: 'ياقة قلب',
+            stem: 'cfg_west_bodice_sweetheart_plum',
+            layerZ: 1,
+            sortOrder: 1,
+          ),
+          _cfgOption(
+            id: 'opt_west_bodice_square',
+            optionKey: 'square',
+            labelEn: 'Square neck',
+            labelAr: 'ياقة مربعة',
+            stem: 'cfg_west_bodice_square_black',
+            layerZ: 1,
+            sortOrder: 2,
+          ),
+          _cfgOption(
+            id: 'opt_west_bodice_halter',
+            optionKey: 'halter',
+            labelEn: 'Halter',
+            labelAr: 'هالتر',
+            stem: 'cfg_west_bodice_halter_forest',
+            layerZ: 1,
+            sortOrder: 3,
+          ),
+          _cfgOption(
+            id: 'opt_west_bodice_corset',
+            optionKey: 'corset',
+            labelEn: 'Corset seamed',
+            labelAr: 'كورسيه',
+            stem: 'cfg_west_bodice_corset_champagne',
+            layerZ: 1,
+            sortOrder: 4,
+          ),
+          _cfgOption(
+            id: 'opt_west_bodice_surplice',
+            optionKey: 'surplice',
+            labelEn: 'Surplice wrap',
+            labelAr: 'متداخل',
+            stem: 'cfg_west_bodice_surplice_navy',
+            layerZ: 1,
+            sortOrder: 5,
+          ),
+          _cfgOption(
+            id: 'opt_west_bodice_bardot',
+            optionKey: 'bardot',
+            labelEn: 'Off-shoulder',
+            labelAr: 'كاشف الكتف',
+            stem: 'cfg_west_bodice_bardot_blush',
+            layerZ: 1,
+            sortOrder: 6,
+          ),
+          _cfgOption(
+            id: 'opt_west_bodice_plunge',
+            optionKey: 'plunge_panel',
+            labelEn: 'Plunge panel',
+            labelAr: 'لوحة عميقة',
+            stem: 'cfg_west_bodice_plunge_panel_black',
+            layerZ: 1,
+            sortOrder: 7,
+          ),
         ],
-      },
-      {
-        'id': 'slot_west_sleeve',
-        'slotKey': 'sleeve',
-        'titleEn': 'Sleeve',
-        'titleAr': 'الكم',
-        'sortOrder': 1,
-        'options': [
-          {
-            'id': 'opt_west_sleeve_none',
-            'optionKey': 'sleeveless',
-            'labelEn': 'Sleeveless',
-            'labelAr': 'بدون أكمام',
-            'metadata': {
-              'assetPath':
-                  'assets/images/designs/design_casual_tee_crew_white.png',
-              'layerZ': 2,
-            },
-            'sortOrder': 0,
-          },
-          {
-            'id': 'opt_west_sleeve_cap',
-            'optionKey': 'cap',
-            'labelEn': 'Cap sleeve',
-            'labelAr': 'كم قصير',
-            'metadata': {
-              'assetPath':
-                  'assets/images/designs/design_casual_longsleeve_crew_white.png',
-              'layerZ': 2,
-            },
-            'sortOrder': 1,
-          },
+      ),
+      _slot(
+        id: 'slot_west_sleeve',
+        slotKey: 'sleeve',
+        titleEn: 'Sleeve',
+        titleAr: 'الكم',
+        sortOrder: 1,
+        options: [
+          _cfgOption(
+            id: 'opt_west_sleeve_none',
+            optionKey: 'sleeveless',
+            labelEn: 'Sleeveless',
+            labelAr: 'بدون أكمام',
+            stem: 'cfg_west_sleeve_none_white',
+            layerZ: 2,
+            sortOrder: 0,
+          ),
+          _cfgOption(
+            id: 'opt_west_sleeve_cap',
+            optionKey: 'cap',
+            labelEn: 'Cap sleeve',
+            labelAr: 'كم قصير',
+            stem: 'cfg_west_sleeve_cap_white',
+            layerZ: 2,
+            sortOrder: 1,
+          ),
+          _cfgOption(
+            id: 'opt_west_sleeve_puff',
+            optionKey: 'puff',
+            labelEn: 'Short puff',
+            labelAr: 'منفوخ قصير',
+            stem: 'cfg_west_sleeve_puff_blush',
+            layerZ: 2,
+            sortOrder: 2,
+          ),
+          _cfgOption(
+            id: 'opt_west_sleeve_3q',
+            optionKey: 'three_quarter',
+            labelEn: 'Three-quarter',
+            labelAr: 'ثلاثة أرباع',
+            stem: 'cfg_west_sleeve_3q_black',
+            layerZ: 2,
+            sortOrder: 3,
+          ),
+          _cfgOption(
+            id: 'opt_west_sleeve_bishop',
+            optionKey: 'bishop',
+            labelEn: 'Bishop',
+            labelAr: 'أسقف',
+            stem: 'cfg_west_sleeve_bishop_ivory',
+            layerZ: 2,
+            sortOrder: 4,
+          ),
+          _cfgOption(
+            id: 'opt_west_sleeve_flutter',
+            optionKey: 'flutter',
+            labelEn: 'Flutter',
+            labelAr: 'رفرف',
+            stem: 'cfg_west_sleeve_flutter_blue',
+            layerZ: 2,
+            sortOrder: 5,
+          ),
+          _cfgOption(
+            id: 'opt_west_sleeve_long',
+            optionKey: 'long_wine',
+            labelEn: 'Long sleeve',
+            labelAr: 'كم طويل',
+            stem: 'cfg_west_sleeve_long_wine',
+            layerZ: 2,
+            sortOrder: 6,
+          ),
+          _cfgOption(
+            id: 'opt_west_sleeve_cold',
+            optionKey: 'cold_shoulder',
+            labelEn: 'Cold-shoulder',
+            labelAr: 'كتف مكشوف',
+            stem: 'cfg_west_sleeve_cold_charcoal',
+            layerZ: 2,
+            sortOrder: 7,
+          ),
         ],
-      },
+      ),
+      _slot(
+        id: 'slot_west_skirt',
+        slotKey: 'skirt',
+        titleEn: 'Skirt',
+        titleAr: 'التنورة',
+        sortOrder: 2,
+        options: [
+          _cfgOption(
+            id: 'opt_west_skirt_aline',
+            optionKey: 'aline',
+            labelEn: 'A-line midi',
+            labelAr: 'A-line',
+            stem: 'cfg_west_skirt_aline_black',
+            layerZ: 0,
+            sortOrder: 0,
+          ),
+          _cfgOption(
+            id: 'opt_west_skirt_circle',
+            optionKey: 'circle',
+            labelEn: 'Full circle',
+            labelAr: 'دائري',
+            stem: 'cfg_west_skirt_circle_navy',
+            layerZ: 0,
+            sortOrder: 1,
+          ),
+          _cfgOption(
+            id: 'opt_west_skirt_pencil',
+            optionKey: 'pencil',
+            labelEn: 'Pencil',
+            labelAr: 'قلم',
+            stem: 'cfg_west_skirt_pencil_charcoal',
+            layerZ: 0,
+            sortOrder: 2,
+          ),
+          _cfgOption(
+            id: 'opt_west_skirt_tiered',
+            optionKey: 'tiered',
+            labelEn: 'Tiered ruffle',
+            labelAr: 'طبقات',
+            stem: 'cfg_west_skirt_tiered_blush',
+            layerZ: 0,
+            sortOrder: 3,
+          ),
+          _cfgOption(
+            id: 'opt_west_skirt_highlow',
+            optionKey: 'highlow',
+            labelEn: 'High-low',
+            labelAr: 'عالي-منخفض',
+            stem: 'cfg_west_skirt_highlow_emerald',
+            layerZ: 0,
+            sortOrder: 4,
+          ),
+          _cfgOption(
+            id: 'opt_west_skirt_pleated',
+            optionKey: 'pleated_maxi',
+            labelEn: 'Pleated maxi',
+            labelAr: 'كسرات ماكسي',
+            stem: 'cfg_west_skirt_pleated_sand',
+            layerZ: 0,
+            sortOrder: 5,
+          ),
+        ],
+      ),
+      _slot(
+        id: 'slot_west_waistline',
+        slotKey: 'waistline',
+        titleEn: 'Waistline',
+        titleAr: 'خط الخصر',
+        sortOrder: 3,
+        options: [
+          _cfgOption(
+            id: 'opt_west_waist_empire',
+            optionKey: 'empire',
+            labelEn: 'Empire waist',
+            labelAr: 'خصر إمبراطوري',
+            stem: 'cfg_west_waist_empire_champagne',
+            layerZ: 3,
+            sortOrder: 0,
+          ),
+          _cfgOption(
+            id: 'opt_west_waist_natural',
+            optionKey: 'natural',
+            labelEn: 'Natural waist',
+            labelAr: 'خصر طبيعي',
+            stem: 'cfg_west_waist_natural_ivory',
+            layerZ: 3,
+            sortOrder: 1,
+          ),
+        ],
+      ),
     ],
   },
 ];

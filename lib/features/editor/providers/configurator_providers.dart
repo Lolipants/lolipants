@@ -13,7 +13,8 @@ final configuratorCatalogProvider = FutureProvider<ConfiguratorCatalog>((ref) as
   final result = await repo.fetchCatalog();
   return result.fold(
     (_) => bundledConfiguratorCatalog(),
-    (catalog) =>
-        catalog.templates.isEmpty ? bundledConfiguratorCatalog() : catalog,
+    (catalog) => catalog.templates.isEmpty
+        ? bundledConfiguratorCatalog()
+        : mergeConfiguratorCatalog(catalog),
   );
 });
