@@ -46,6 +46,7 @@ import 'package:lolipants/features/home/screens/home_screen.dart';
 import 'package:lolipants/features/onboarding/screens/onboarding_screen.dart';
 import 'package:lolipants/features/orders/screens/delivery_details_screen.dart';
 import 'package:lolipants/features/orders/screens/order_confirmation_screen.dart';
+import 'package:lolipants/features/orders/screens/order_quote_review_screen.dart';
 import 'package:lolipants/features/orders/screens/order_detail_screen.dart';
 import 'package:lolipants/features/orders/models/order_design_draft.dart';
 import 'package:lolipants/features/orders/screens/order_summary_screen.dart';
@@ -55,6 +56,7 @@ import 'package:lolipants/features/orders/screens/size_confirmation_screen.dart'
 import 'package:lolipants/features/tailor/screens/tailor_order_detail_screen.dart';
 import 'package:lolipants/features/tailor/shell/tailor_shell.dart';
 import 'package:lolipants/features/tailor/screens/tailor_incoming_orders_screen.dart';
+import 'package:lolipants/features/tailor/screens/tailor_pricing_screen.dart';
 import 'package:lolipants/features/tailor/screens/tailor_active_orders_screen.dart';
 import 'package:lolipants/features/tailor/screens/tailor_completed_orders_screen.dart';
 import 'package:lolipants/features/profile/screens/edit_profile_screen.dart';
@@ -329,6 +331,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const DeliveryDetailsScreen(),
       ),
       GoRoute(
+        path: '/order/quote-review',
+        name: 'orderQuoteReview',
+        builder: (context, state) => const OrderQuoteReviewScreen(),
+      ),
+      GoRoute(
         path: '/order/payment',
         name: 'orderPayment',
         builder: (context, state) => const PaymentScreen(),
@@ -401,6 +408,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                     },
                   ),
                 ],
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/tailor/pricing',
+                name: 'tailorPricing',
+                builder: (context, state) => const TailorPricingScreen(),
               ),
             ],
           ),

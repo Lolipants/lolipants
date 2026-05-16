@@ -134,11 +134,28 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
       return;
     }
 
+    final quote = draft.quote;
+    if (quote == null ||
+        quote.tailorId == null ||
+        quote.tailorId!.isEmpty ||
+        draft.deliveryLat == null ||
+        draft.deliveryLng == null) {
+      _fail('Pricing expired. Go back and refresh your quote.');
+      return;
+    }
+
     final orderResult = await ordersRepo.createOrder(
       designId: designId,
       deliveryAddress: draft.address,
       deliveryCity: draft.city,
       deliveryPhone: draft.phone,
+      deliveryLat: draft.deliveryLat!,
+      deliveryLng: draft.deliveryLng!,
+      tailorId: quote.tailorId!,
+      basePrice: quote.basePrice,
+      fabricFee: quote.fabricFee,
+      deliveryFee: quote.deliveryFee,
+      totalPrice: quote.total,
       deliveryNotes: draft.notes,
       idempotencyKey: draft.idempotencyKey,
       designerId: draft.design.designerId,
@@ -329,6 +346,13 @@ class _PriceCard extends StatelessWidget {
               ),
             ],
           ),
+          if (quote?.tailorName != null && quote!.tailorName!.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              'Tailor: ${quote.tailorName}',
+              style: AppTextStyles.bodySmall,
+            ),
+          ],
           if (expanded && quote != null) ...[
             const Divider(),
             _Line(label: 'Base garment', amount: '${quote.basePrice}'),

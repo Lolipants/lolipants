@@ -5,9 +5,7 @@ import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/features/orders/models/order_design_draft.dart';
-import 'package:lolipants/features/orders/models/order_quote.dart';
 import 'package:lolipants/features/orders/providers/checkout_providers.dart';
-import 'package:lolipants/features/orders/providers/orders_providers.dart';
 import 'package:lolipants/features/sizing/models/body_measurements.dart';
 import 'package:lolipants/features/sizing/providers/sizing_providers.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
@@ -27,50 +25,19 @@ class OrderSummaryScreen extends ConsumerStatefulWidget {
 }
 
 class _OrderSummaryScreenState extends ConsumerState<OrderSummaryScreen> {
-  bool _loadingQuote = false;
-  String? _quoteError;
-
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _bootstrapDraft());
   }
 
-  Future<void> _bootstrapDraft() async {
+  void _bootstrapDraft() {
     final existing = ref.read(checkoutDraftProvider);
     final draft = widget.designDraft;
     if (draft == null) return;
     if (existing == null || existing.design.designId != draft.designId) {
       startCheckoutDraft(ref, draft);
     }
-    await _refreshQuote();
-  }
-
-  Future<void> _refreshQuote() async {
-    final draft = ref.read(checkoutDraftProvider);
-    final designId = draft?.design.designId?.trim();
-    if (designId == null || designId.isEmpty) return;
-    setState(() {
-      _loadingQuote = true;
-      _quoteError = null;
-    });
-    final repo = ref.read(ordersRepositoryProvider);
-    final result = await repo.getQuote(designId: designId, city: draft!.city);
-    if (!mounted) return;
-    result.fold(
-      (e) => setState(() {
-        _loadingQuote = false;
-        _quoteError = orderErrorMessage(
-          e,
-          fallback: 'Could not fetch price for this design.',
-        );
-      }),
-      (quote) {
-        ref.read(checkoutDraftProvider.notifier).state =
-            draft.copyWith(quote: quote);
-        setState(() => _loadingQuote = false);
-      },
-    );
   }
 
   @override
@@ -81,8 +48,6 @@ class _OrderSummaryScreenState extends ConsumerState<OrderSummaryScreen> {
     final sizingReady = measurements != null && _hasUsableSizing(measurements);
     final design =
         draft?.design ?? widget.designDraft ?? _fallbackDraft();
-    final quote = draft?.quote;
-
     final fabric = _fabricSummary(design);
     final pattern = (design.patternId?.trim().isNotEmpty ?? false)
         ? design.patternId!.trim()
@@ -136,11 +101,18 @@ class _OrderSummaryScreenState extends ConsumerState<OrderSummaryScreen> {
                 ),
               ),
               const SizedBox(height: AppSpacing.lg),
-              _PriceBreakdown(
-                quote: quote,
-                loading: _loadingQuote,
-                error: _quoteError,
-                onRetry: _refreshQuote,
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: AppColors.smoke,
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  border: Border.all(color: AppColors.borderSubtle),
+                ),
+                child: Text(
+                  'Your price is calculated after you enter a delivery '
+                  'location. We assign the nearest tailor and use their rates.',
+                  style: AppTextStyles.bodySmall,
+                ),
               ),
               const SizedBox(height: AppSpacing.lg),
               _SizingStatusCard(
@@ -206,71 +178,6 @@ String _fabricSummary(OrderDesignDraft design) {
   final q = design.fabricQuality?.trim();
   if (q == null || q.isEmpty) return rawId;
   return '$rawId · ${q.replaceAll('_', ' ')}';
-}
-
-class _PriceBreakdown extends StatelessWidget {
-  const _PriceBreakdown({
-    required this.quote,
-    required this.loading,
-    required this.error,
-    required this.onRetry,
-  });
-
-  final OrderQuote? quote;
-  final bool loading;
-  final String? error;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: AppColors.smoke,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(color: AppColors.borderSubtle),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Price breakdown', style: AppTextStyles.titleSmall),
-          const SizedBox(height: AppSpacing.xs),
-          if (loading) ...[
-            const LinearProgressIndicator(),
-            const SizedBox(height: AppSpacing.xs),
-            Text('Fetching live price...', style: AppTextStyles.bodySmall),
-          ] else if (error != null) ...[
-            Text(error!, style: AppTextStyles.bodyMedium),
-            const SizedBox(height: AppSpacing.xs),
-            TextButton(onPressed: onRetry, child: const Text('Retry')),
-          ] else if (quote != null) ...[
-            _Row(
-              label: 'Base garment',
-              value: '${quote!.basePrice} ${quote!.currency}',
-            ),
-            _Row(
-              label: 'Fabric',
-              value: '${quote!.fabricFee} ${quote!.currency}',
-            ),
-            _Row(
-              label: 'Delivery (${quote!.city})',
-              value: '${quote!.deliveryFee} ${quote!.currency}',
-            ),
-            const Divider(),
-            _Row(
-              label: 'Total',
-              value: '${quote!.total} ${quote!.currency}',
-              emphasize: true,
-            ),
-          ] else
-            Text(
-              'Save the design to see live pricing.',
-              style: AppTextStyles.bodyMedium,
-            ),
-        ],
-      ),
-    );
-  }
 }
 
 class _SizingStatusCard extends StatelessWidget {

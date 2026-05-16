@@ -4,14 +4,13 @@ import 'package:go_router/go_router.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/location/delivery_location_service.dart';
 import 'package:lolipants/features/orders/providers/checkout_providers.dart';
-import 'package:lolipants/features/orders/providers/orders_providers.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
 
-/// Collects the delivery address for the active checkout draft.
+/// Collects delivery address and map coordinates for tailor assignment.
 class DeliveryDetailsScreen extends ConsumerStatefulWidget {
-  /// Default constructor.
   const DeliveryDetailsScreen({super.key});
 
   @override
@@ -25,7 +24,11 @@ class _DeliveryDetailsScreenState extends ConsumerState<DeliveryDetailsScreen> {
   late final TextEditingController _cityController;
   late final TextEditingController _phoneController;
   late final TextEditingController _notesController;
-  bool _refetchingQuote = false;
+
+  double? _deliveryLat;
+  double? _deliveryLng;
+  bool _locating = true;
+  ResolvedDeliveryLocation? _resolvedLocation;
 
   @override
   void initState() {
@@ -35,6 +38,9 @@ class _DeliveryDetailsScreenState extends ConsumerState<DeliveryDetailsScreen> {
     _cityController = TextEditingController(text: draft?.city ?? 'Doha');
     _phoneController = TextEditingController(text: draft?.phone ?? '');
     _notesController = TextEditingController(text: draft?.notes ?? '');
+    _deliveryLat = draft?.deliveryLat;
+    _deliveryLng = draft?.deliveryLng;
+    WidgetsBinding.instance.addPostFrameCallback((_) => _collectLocation());
   }
 
   @override
@@ -46,7 +52,25 @@ class _DeliveryDetailsScreenState extends ConsumerState<DeliveryDetailsScreen> {
     super.dispose();
   }
 
-  Future<void> _saveAndContinue() async {
+  Future<void> _collectLocation({bool preferCached = false}) async {
+    if (!mounted) return;
+    setState(() => _locating = true);
+    final draft = ref.read(checkoutDraftProvider);
+    final resolved = await DeliveryLocationService.resolve(
+      cachedLat: draft?.deliveryLat ?? _deliveryLat,
+      cachedLng: draft?.deliveryLng ?? _deliveryLng,
+      preferCached: preferCached,
+    );
+    if (!mounted) return;
+    setState(() {
+      _locating = false;
+      _resolvedLocation = resolved;
+      _deliveryLat = resolved.lat;
+      _deliveryLng = resolved.lng;
+    });
+  }
+
+  void _saveAndContinue() {
     if (!_formKey.currentState!.validate()) return;
     final draft = ref.read(checkoutDraftProvider);
     if (draft == null) {
@@ -55,49 +79,91 @@ class _DeliveryDetailsScreenState extends ConsumerState<DeliveryDetailsScreen> {
       );
       return;
     }
-    final city = _cityController.text.trim();
-    final needsQuoteRefresh =
-        draft.quote == null || draft.quote!.city.toLowerCase() != city.toLowerCase();
+    final lat = _deliveryLat;
+    final lng = _deliveryLng;
+    if (lat == null || lng == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Still detecting your location. Wait a moment.')),
+      );
+      return;
+    }
     ref.read(checkoutDraftProvider.notifier).state = draft.copyWith(
       address: _addressController.text.trim(),
-      city: city,
+      city: _cityController.text.trim(),
       phone: _phoneController.text.trim(),
       notes: _notesController.text.trim().isEmpty
           ? null
           : _notesController.text.trim(),
+      deliveryLat: lat,
+      deliveryLng: lng,
+      quote: null,
     );
+    context.push('/order/quote-review');
+  }
 
-    if (needsQuoteRefresh) {
-      setState(() => _refetchingQuote = true);
-      final designId = draft.design.designId;
-      if (designId != null && designId.isNotEmpty) {
-        final repo = ref.read(ordersRepositoryProvider);
-        final result = await repo.getQuote(designId: designId, city: city);
-        if (!mounted) return;
-        result.fold(
-          (e) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  orderErrorMessage(e, fallback: 'Could not refresh price.'),
-                ),
+  Widget _locationStatusCard() {
+    final resolved = _resolvedLocation;
+    final label = _locating
+        ? 'Detecting your location…'
+        : resolved?.statusLabel ?? 'Preparing location…';
+    final icon = _locating
+        ? null
+        : switch (resolved?.source) {
+            ResolvedLocationSource.gps => Icons.gps_fixed,
+            ResolvedLocationSource.cached => Icons.place_outlined,
+            _ => Icons.location_off_outlined,
+          };
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.smoke,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: AppColors.borderSubtle),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (_locating)
+            const Padding(
+              padding: EdgeInsets.only(top: 2),
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
               ),
-            );
-          },
-          (quote) {
-            final current = ref.read(checkoutDraftProvider);
-            if (current != null) {
-              ref.read(checkoutDraftProvider.notifier).state =
-                  current.copyWith(quote: quote);
-            }
-          },
-        );
-      }
-      if (!mounted) return;
-      setState(() => _refetchingQuote = false);
-    }
-    if (!mounted) return;
-    context.push('/order/payment');
+            )
+          else if (icon != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 2, right: AppSpacing.sm),
+              child: Icon(icon, size: 20, color: AppColors.ink),
+            ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: AppTextStyles.bodySmall),
+                if (!_locating && resolved != null) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    '${resolved.lat.toStringAsFixed(4)}, '
+                    '${resolved.lng.toStringAsFixed(4)}',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.fog,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          if (!_locating)
+            TextButton(
+              onPressed: () => _collectLocation(),
+              child: const Text('Refresh'),
+            ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -116,6 +182,15 @@ class _DeliveryDetailsScreenState extends ConsumerState<DeliveryDetailsScreen> {
                   'Where should we deliver your order?',
                   style: AppTextStyles.bodyMedium,
                 ),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  'We use your location automatically to assign the nearest tailor.',
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.fog,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                _locationStatusCard(),
                 const SizedBox(height: AppSpacing.lg),
                 TextFormField(
                   controller: _addressController,
@@ -154,24 +229,9 @@ class _DeliveryDetailsScreenState extends ConsumerState<DeliveryDetailsScreen> {
                   ),
                 ),
                 const SizedBox(height: AppSpacing.lg),
-                Container(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  decoration: BoxDecoration(
-                    color: AppColors.smoke,
-                    borderRadius: BorderRadius.circular(AppRadius.md),
-                    border: Border.all(color: AppColors.borderSubtle),
-                  ),
-                  child: Text(
-                    'Delivery fee is calculated from the city at the next step.',
-                    style: AppTextStyles.bodySmall,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.lg),
                 LolipantsButton(
-                  label: _refetchingQuote
-                      ? 'Refreshing price...'
-                      : 'Continue to payment',
-                  onPressed: _refetchingQuote ? null : _saveAndContinue,
+                  label: _locating ? 'Detecting location…' : 'Get price & tailor',
+                  onPressed: _locating ? null : _saveAndContinue,
                 ),
               ],
             ),

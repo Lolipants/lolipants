@@ -16,6 +16,8 @@ class CheckoutDraft {
     this.city = 'Doha',
     this.phone = '',
     this.notes,
+    this.deliveryLat,
+    this.deliveryLng,
     this.orderId,
     this.paymentReference,
   });
@@ -26,7 +28,7 @@ class CheckoutDraft {
   /// Stable key reused across order + payment creation.
   final String idempotencyKey;
 
-  /// Latest server-provided quote.
+  /// Latest server-provided quote (after delivery location is set).
   final OrderQuote? quote;
 
   /// Collected delivery street address.
@@ -41,6 +43,12 @@ class CheckoutDraft {
   /// Optional delivery notes.
   final String? notes;
 
+  /// Delivery latitude for tailor proximity assignment.
+  final double? deliveryLat;
+
+  /// Delivery longitude for tailor proximity assignment.
+  final double? deliveryLng;
+
   /// Order id once `POST /orders` has returned.
   final String? orderId;
 
@@ -51,7 +59,9 @@ class CheckoutDraft {
   bool get deliveryReady =>
       address.trim().isNotEmpty &&
       city.trim().isNotEmpty &&
-      phone.trim().isNotEmpty;
+      phone.trim().isNotEmpty &&
+      deliveryLat != null &&
+      deliveryLng != null;
 
   /// Copy helper with optional field overrides.
   CheckoutDraft copyWith({
@@ -62,6 +72,8 @@ class CheckoutDraft {
     String? city,
     String? phone,
     Object? notes = _sentinel,
+    Object? deliveryLat = _sentinel,
+    Object? deliveryLng = _sentinel,
     Object? orderId = _sentinel,
     Object? paymentReference = _sentinel,
   }) {
@@ -73,6 +85,12 @@ class CheckoutDraft {
       city: city ?? this.city,
       phone: phone ?? this.phone,
       notes: identical(notes, _sentinel) ? this.notes : notes as String?,
+      deliveryLat: identical(deliveryLat, _sentinel)
+          ? this.deliveryLat
+          : deliveryLat as double?,
+      deliveryLng: identical(deliveryLng, _sentinel)
+          ? this.deliveryLng
+          : deliveryLng as double?,
       orderId:
           identical(orderId, _sentinel) ? this.orderId : orderId as String?,
       paymentReference: identical(paymentReference, _sentinel)

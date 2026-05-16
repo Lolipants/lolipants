@@ -72,15 +72,22 @@ class OrdersRepository {
     }
   }
 
-  /// Fetches a server-authoritative price quote for [designId] in [city].
+  /// Fetches a server-authoritative price quote for [designId] at delivery coords.
   Future<Either<AppException, OrderQuote>> getQuote({
     required String designId,
     required String city,
+    required double deliveryLat,
+    required double deliveryLng,
   }) async {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
         '${ApiEndpoints.orders}/quote',
-        queryParameters: {'designId': designId, 'city': city},
+        queryParameters: {
+          'designId': designId,
+          'city': city,
+          'deliveryLat': deliveryLat,
+          'deliveryLng': deliveryLng,
+        },
         options: await _authOptions(),
       );
       final data = response.data;
@@ -104,6 +111,13 @@ class OrdersRepository {
     required String deliveryAddress,
     required String deliveryCity,
     required String deliveryPhone,
+    required double deliveryLat,
+    required double deliveryLng,
+    required String tailorId,
+    required int basePrice,
+    required int fabricFee,
+    required int deliveryFee,
+    required int totalPrice,
     String? deliveryNotes,
     String? idempotencyKey,
     String? designerId,
@@ -119,6 +133,13 @@ class OrdersRepository {
           'deliveryAddress': deliveryAddress,
           'deliveryCity': deliveryCity,
           'deliveryPhone': deliveryPhone,
+          'deliveryLat': deliveryLat,
+          'deliveryLng': deliveryLng,
+          'tailorId': tailorId,
+          'basePrice': basePrice,
+          'fabricFee': fabricFee,
+          'deliveryFee': deliveryFee,
+          'totalPrice': totalPrice,
           'deliveryNotes': deliveryNotes,
           if (designerId != null && designerId.isNotEmpty)
             'designerId': designerId,

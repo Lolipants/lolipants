@@ -39,6 +39,9 @@ class Order {
     this.deliveryCity,
     this.deliveryPhone,
     this.paymentStatus,
+    this.designId,
+    this.printImageUrl,
+    this.sketchImageUrl,
   });
 
   /// Public identifier fragment (e.g. `0042`).
@@ -88,6 +91,15 @@ class Order {
 
   /// Latest payment status (`requires_payment`, `paid`, `failed`).
   final String? paymentStatus;
+
+  /// Linked saved design id (for tailor production files).
+  final String? designId;
+
+  /// Uploaded print artwork URL from the design record.
+  final String? printImageUrl;
+
+  /// Optional sketch reference URL from the design record.
+  final String? sketchImageUrl;
 
   /// Builds an [Order] from API payload.
   factory Order.fromApi(Map<String, dynamic> json) {
@@ -156,6 +168,13 @@ class Order {
       deliveryPhone: json['delivery_phone']?.toString() ??
           json['deliveryPhone']?.toString(),
       paymentStatus: paymentStatus,
+      designId: json['design_id']?.toString() ?? json['designId']?.toString(),
+      printImageUrl: json['design_print_image_url']?.toString() ??
+          json['print_image_url']?.toString() ??
+          json['printImageUrl']?.toString(),
+      sketchImageUrl: json['design_sketch_image_url']?.toString() ??
+          json['sketch_image_url']?.toString() ??
+          json['sketchImageUrl']?.toString(),
     );
   }
 }
