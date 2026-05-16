@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import app from "../index";
+import { seedTailorPricingTables, withTailorOrderBody } from "./tailorOrderFixtures";
+import {
+  parseOrderInsertBinds,
+  tailorMockFirst,
+  tailorMockSelect,
+} from "./tailorMockSql";
 
 async function hmacSha256Hex(secret: string, payload: string): Promise<string> {
   const encoder = new TextEncoder();
@@ -44,6 +50,8 @@ class MockPreparedStatement {
   }
 
   async all() {
+    const tailorSelect = tailorMockSelect(this.db, this.sql, this.binds);
+    if (tailorSelect != null) return { results: tailorSelect };
     return { results: [] };
   }
 }
@@ -54,6 +62,11 @@ class MockDb {
   measurements: Row[] = [];
   paymentTransactions = new Map<string, Row>();
   orderKeys = new Map<string, Row>();
+  users = new Map<string, Row>();
+  tailorProfiles = new Map<string, Row>();
+  tailorPlans = new Map<string, Row>();
+  tailorGarmentPrices: Row[] = [];
+  tailorDeliveryFees: Row[] = [];
 
   prepare(sql: string) {
     return new MockPreparedStatement(this, sql);
@@ -73,6 +86,17 @@ class MockDb {
         id: design.id,
         user_id: design.user_id,
         fabric_quality: design.fabric_quality ?? "standard",
+      };
+    }
+    if (sql.includes("garment_type, fabric_quality, is_public FROM designs WHERE id = ?")) {
+      const design = this.designs.get(String(binds[0]));
+      if (!design) return null;
+      return {
+        id: design.id,
+        user_id: design.user_id,
+        garment_type: design.garment_type ?? "thobe",
+        fabric_quality: design.fabric_quality ?? "standard",
+        is_public: design.is_public ?? 0,
       };
     }
     if (sql.includes("SELECT id, user_id, fabric_quality, is_public FROM designs WHERE id = ?")) {
@@ -107,19 +131,14 @@ class MockDb {
       if (!payment) return null;
       return { order_id: payment.order_id };
     }
+    const tailorHit = tailorMockFirst(this, sql, binds);
+    if (tailorHit !== undefined) return tailorHit;
     return null;
   }
 
   run(sql: string, binds: unknown[]) {
     if (sql.includes("INSERT INTO orders")) {
-      this.orders.set(String(binds[0]), {
-        id: binds[0],
-        user_id: binds[1],
-        design_id: binds[2],
-        designer_id: binds[3] ?? null,
-        status: "placed",
-        total_price: binds[11],
-      });
+      this.orders.set(String(binds[0]), parseOrderInsertBinds(binds));
       return;
     }
     if (sql.includes("INSERT INTO order_idempotency_keys")) {
@@ -218,9 +237,11 @@ describe("API contract tests", () => {
     mockDb.paymentTransactions.clear();
     mockDb.orderKeys.clear();
 
+    seedTailorPricingTables(mockDb);
     mockDb.designs.set("design-1", {
       id: "design-1",
       user_id: "user-1",
+      garment_type: "thobe",
       fabric_quality: "premium",
     });
     mockDb.measurements.push({
@@ -236,12 +257,15 @@ describe("API contract tests", () => {
     const first = await apiRequest("POST", "/orders", {
       token: "valid-user",
       headers: { "X-Idempotency-Key": "repeat-order-1" },
-      body: {
-        designId: "design-1",
-        deliveryAddress: "West Bay",
-        deliveryCity: "Doha",
-        deliveryPhone: "55512345",
-      },
+      body: withTailorOrderBody(
+        {
+          designId: "design-1",
+          deliveryAddress: "West Bay",
+          deliveryCity: "Doha",
+          deliveryPhone: "55512345",
+        },
+        { fabric: "premium" },
+      ),
     });
     expect(first.status).toBe(201);
     const created = (await first.json()) as { id: string };
@@ -249,12 +273,15 @@ describe("API contract tests", () => {
     const second = await apiRequest("POST", "/orders", {
       token: "valid-user",
       headers: { "X-Idempotency-Key": "repeat-order-1" },
-      body: {
-        designId: "design-1",
-        deliveryAddress: "West Bay",
-        deliveryCity: "Doha",
-        deliveryPhone: "55512345",
-      },
+      body: withTailorOrderBody(
+        {
+          designId: "design-1",
+          deliveryAddress: "West Bay",
+          deliveryCity: "Doha",
+          deliveryPhone: "55512345",
+        },
+        { fabric: "premium" },
+      ),
     });
     expect(second.status).toBe(200);
     const repeated = (await second.json()) as { id: string };
@@ -265,12 +292,15 @@ describe("API contract tests", () => {
     const createOrder = await apiRequest("POST", "/orders", {
       token: "valid-user",
       headers: { "X-Idempotency-Key": "pay-order-1" },
-      body: {
-        designId: "design-1",
-        deliveryAddress: "West Bay",
-        deliveryCity: "Doha",
-        deliveryPhone: "55512345",
-      },
+      body: withTailorOrderBody(
+        {
+          designId: "design-1",
+          deliveryAddress: "West Bay",
+          deliveryCity: "Doha",
+          deliveryPhone: "55512345",
+        },
+        { fabric: "premium" },
+      ),
     });
     const order = (await createOrder.json()) as { id: string };
 
@@ -300,12 +330,15 @@ describe("API contract tests", () => {
     const createOrder = await apiRequest("POST", "/orders", {
       token: "valid-user",
       headers: { "X-Idempotency-Key": "pay-order-2" },
-      body: {
-        designId: "design-1",
-        deliveryAddress: "West Bay",
-        deliveryCity: "Doha",
-        deliveryPhone: "55512345",
-      },
+      body: withTailorOrderBody(
+        {
+          designId: "design-1",
+          deliveryAddress: "West Bay",
+          deliveryCity: "Doha",
+          deliveryPhone: "55512345",
+        },
+        { fabric: "premium" },
+      ),
     });
     const order = (await createOrder.json()) as { id: string };
 

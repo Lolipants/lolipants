@@ -34,6 +34,51 @@ class MockDb {
   orders = new Map<string, Row>();
   measurements: Row[] = [];
   posts = new Map<string, Row>();
+  users = new Map<string, Row>([
+    ["user-1", { id: "user-1", role: "user", name: "Test User" }],
+    ["tailor-1", { id: "tailor-1", role: "tailor", name: "Test Tailor" }],
+  ]);
+  tailorProfiles = new Map<string, Row>([
+    [
+      "tailor-1",
+      {
+        user_id: "tailor-1",
+        shop_name: "Smoke Tailor",
+        lat: 25.2854,
+        lng: 51.531,
+        service_radius_km: 50,
+        is_accepting_orders: 1,
+        created_at: "2026-01-01",
+      },
+    ],
+  ]);
+  tailorPlans = new Map<string, Row>([
+    ["plan-1", { id: "plan-1", tailor_id: "tailor-1", currency: "QAR", is_active: 1 }],
+  ]);
+  tailorGarmentPrices: Row[] = [
+    {
+      garment_type: "thobe",
+      fabric_quality: "standard",
+      base_price: 350,
+      fabric_fee: 60,
+      plan_id: "plan-1",
+    },
+  ];
+  tailorDeliveryFees: Row[] = [
+    { city_key: "doha", fee: 20, plan_id: "plan-1" },
+    { city_key: "default", fee: 25, plan_id: "plan-1" },
+  ];
+
+  seedDesign(designId: string, userId = "user-1") {
+    this.designs.set(designId, {
+      id: designId,
+      user_id: userId,
+      name: "Smoke",
+      garment_type: "thobe",
+      fabric_quality: "standard",
+      is_public: 0,
+    });
+  }
 
   prepare(sql: string) {
     return new MockPreparedStatement(this, sql);
@@ -70,6 +115,27 @@ class MockDb {
         },
       ];
     }
+    if (sql.includes("FROM tailor_profiles tp") && sql.includes("JOIN users u")) {
+      return [...this.tailorProfiles.values()]
+        .map((tp) => {
+          const user = this.users.get(String(tp.user_id));
+          if (!user || user.role !== "tailor") return null;
+          return { ...tp, name: user.name };
+        })
+        .filter((r): r is Row => r != null);
+    }
+    if (sql.includes("FROM tailor_garment_prices WHERE plan_id = ?")) {
+      const planId = String(binds[0] ?? "");
+      return this.tailorGarmentPrices.filter((r) => r.plan_id === planId);
+    }
+    if (sql.includes("FROM tailor_delivery_fees WHERE plan_id = ?")) {
+      const planId = String(binds[0] ?? "");
+      return this.tailorDeliveryFees.filter((r) => r.plan_id === planId);
+    }
+    if (sql.includes("FROM orders WHERE tailor_id = ?")) {
+      const tailorId = String(binds[0] ?? "");
+      return [...this.orders.values()].filter((o) => o.tailor_id === tailorId);
+    }
     return [];
   }
 
@@ -77,10 +143,30 @@ class MockDb {
     if (sql.includes("SELECT * FROM designs WHERE id = ?")) {
       return this.designs.get(String(binds[0] ?? "")) ?? null;
     }
+    if (sql.includes("SELECT id FROM designs WHERE id = ? AND user_id = ?")) {
+      const design = this.designs.get(String(binds[0] ?? ""));
+      if (!design || design.user_id !== binds[1]) return null;
+      return { id: design.id };
+    }
     if (sql.includes("SELECT * FROM designs WHERE id = ? AND user_id = ?")) {
       const design = this.designs.get(String(binds[0] ?? ""));
       if (!design || design.user_id !== binds[1]) return null;
       return design;
+    }
+    if (sql.includes("SELECT id FROM orders WHERE design_id = ?")) {
+      const designId = String(binds[0] ?? "");
+      const linked = [...this.orders.values()].find((o) => o.design_id === designId);
+      return linked ? { id: linked.id } : null;
+    }
+    if (sql.includes("SELECT id, user_id, garment_type, fabric_quality FROM designs WHERE id = ?")) {
+      const design = this.designs.get(String(binds[0] ?? ""));
+      if (!design) return null;
+      return {
+        id: design.id,
+        user_id: design.user_id,
+        garment_type: design.garment_type ?? "thobe",
+        fabric_quality: design.fabric_quality ?? "standard",
+      };
     }
     if (sql.includes("SELECT id, user_id, fabric_quality FROM designs WHERE id = ?")) {
       const design = this.designs.get(String(binds[0] ?? ""));
@@ -89,6 +175,17 @@ class MockDb {
         id: design.id,
         user_id: design.user_id,
         fabric_quality: design.fabric_quality ?? "standard",
+      };
+    }
+    if (sql.includes("SELECT id, user_id, garment_type, fabric_quality, is_public FROM designs WHERE id = ?")) {
+      const design = this.designs.get(String(binds[0] ?? ""));
+      if (!design) return null;
+      return {
+        id: design.id,
+        user_id: design.user_id,
+        garment_type: design.garment_type ?? "thobe",
+        fabric_quality: design.fabric_quality ?? "standard",
+        is_public: design.is_public ?? 0,
       };
     }
     if (sql.includes("SELECT id, user_id, fabric_quality, is_public FROM designs WHERE id = ?")) {
@@ -100,6 +197,23 @@ class MockDb {
         fabric_quality: design.fabric_quality ?? "standard",
         is_public: design.is_public ?? 0,
       };
+    }
+    if (sql.includes("SELECT id, tailor_id, currency FROM tailor_price_plans")) {
+      return { id: "plan-1", tailor_id: "tailor-1", currency: "QAR" };
+    }
+    if (sql.includes("SELECT id, tailor_id, status FROM orders WHERE id = ?")) {
+      const order = this.orders.get(String(binds[0] ?? ""));
+      if (!order) return null;
+      return {
+        id: order.id,
+        tailor_id: order.tailor_id,
+        status: order.status,
+      };
+    }
+    if (sql.includes("SELECT status, tailor_id FROM orders WHERE id = ?")) {
+      const order = this.orders.get(String(binds[0] ?? ""));
+      if (!order) return null;
+      return { status: order.status, tailor_id: order.tailor_id };
     }
     if (sql.includes("SELECT id FROM measurements WHERE user_id = ? ORDER BY saved_at DESC")) {
       const userId = String(binds[0] ?? "");
@@ -162,12 +276,29 @@ class MockDb {
       this.designs.set(id, { ...existing, name: binds[0], garment_type: binds[1] });
       return;
     }
+    if (sql.includes("DELETE FROM designs WHERE id = ? AND user_id = ?")) {
+      const id = String(binds[0] ?? "");
+      const userId = binds[1];
+      const existing = this.designs.get(id);
+      if (existing && existing.user_id === userId) {
+        this.designs.delete(id);
+      }
+      return;
+    }
     if (sql.includes("INSERT INTO orders")) {
       this.orders.set(String(binds[0]), {
         id: binds[0],
         user_id: binds[1],
         design_id: binds[2],
+        designer_id: binds[3],
+        tailor_id: binds[4],
         status: "placed",
+        delivery_address: binds[5],
+        delivery_city: binds[6],
+        base_price: binds[13],
+        fabric_fee: binds[14],
+        delivery_fee: binds[15],
+        total_price: binds[16],
       });
       return;
     }
@@ -216,12 +347,13 @@ const env = {
       const token = authHeader.replace("Bearer ", "");
       if (token === "valid-user" || token === "valid-tailor") {
         const role = token === "valid-tailor" ? "tailor" : "user";
+        const id = token === "valid-tailor" ? "tailor-1" : "user-1";
         return new Response(
           JSON.stringify({
             user: {
-              id: "user-1",
+              id,
               role,
-              name: "Test User",
+              name: role === "tailor" ? "Test Tailor" : "Test User",
               email: "test@example.com",
             },
           }),
@@ -280,7 +412,7 @@ describe("API auth + role guard", () => {
   });
 
   it("blocks non-tailor role and allows tailor role", async () => {
-    mockDb.designs.set("design-1", { id: "design-1", user_id: "user-1" });
+    mockDb.seedDesign("design-1");
     mockDb.measurements.push({ id: "m-1", user_id: "user-1", chest: 100, waist: 80 });
     const create = await apiRequest("POST", "/orders", {
       token: "valid-user",
@@ -290,6 +422,13 @@ describe("API auth + role guard", () => {
         deliveryAddress: "West Bay",
         deliveryCity: "Doha",
         deliveryPhone: "55512345",
+        deliveryLat: 25.29,
+        deliveryLng: 51.53,
+        tailorId: "tailor-1",
+        basePrice: 350,
+        fabricFee: 60,
+        deliveryFee: 20,
+        totalPrice: 430,
       },
     });
     expect(create.status).toBe(201);
@@ -325,6 +464,7 @@ describe("API smoke tests for CRUD flows", () => {
     });
     expect(designCreate.status).toBe(201);
     const design = (await designCreate.json()) as { id: string };
+    mockDb.seedDesign(design.id);
 
     const designList = await apiRequest("GET", "/designs", { token: "valid-user" });
     expect(designList.status).toBe(200);
@@ -334,6 +474,19 @@ describe("API smoke tests for CRUD flows", () => {
       body: { name: "Updated Smoke" },
     });
     expect(designPatch.status).toBe(200);
+
+    const quote = await apiRequest(
+      "GET",
+      `/orders/quote?designId=${design.id}&city=Doha&deliveryLat=25.29&deliveryLng=51.53`,
+      { token: "valid-user" },
+    );
+    expect(quote.status).toBe(200);
+    const quoteBody = (await quote.json()) as {
+      tailorId: string;
+      total: number;
+    };
+    expect(quoteBody.tailorId).toBe("tailor-1");
+    expect(quoteBody.total).toBe(430);
 
     expect((await apiRequest("POST", "/measurements", {
       token: "valid-user",
@@ -348,6 +501,13 @@ describe("API smoke tests for CRUD flows", () => {
         deliveryAddress: "West Bay",
         deliveryCity: "Doha",
         deliveryPhone: "55512345",
+        deliveryLat: 25.29,
+        deliveryLng: 51.53,
+        tailorId: quoteBody.tailorId,
+        basePrice: 350,
+        fabricFee: 60,
+        deliveryFee: 20,
+        totalPrice: 430,
       },
     });
     expect(orderCreate.status).toBe(201);
@@ -356,6 +516,22 @@ describe("API smoke tests for CRUD flows", () => {
     expect((await apiRequest("GET", "/orders", { token: "valid-user" })).status).toBe(200);
     expect((await apiRequest("GET", `/orders/${order.id}`, { token: "valid-user" })).status).toBe(200);
     expect((await apiRequest("DELETE", `/orders/${order.id}`, { token: "valid-user" })).status).toBe(200);
+
+    const designDelete = await apiRequest("DELETE", `/designs/${design.id}`, {
+      token: "valid-user",
+    });
+    expect(designDelete.status).toBe(409);
+
+    const designOnly = await apiRequest("POST", "/designs", {
+      token: "valid-user",
+      body: { name: "Delete me", garmentType: "thobe" },
+    });
+    const solo = (await designOnly.json()) as { id: string };
+    mockDb.seedDesign(solo.id);
+    expect(
+      (await apiRequest("DELETE", `/designs/${solo.id}`, { token: "valid-user" }))
+        .status,
+    ).toBe(200);
 
     expect((await apiRequest("GET", "/measurements/me", { token: "valid-user" })).status).toBe(200);
 

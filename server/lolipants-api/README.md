@@ -3,7 +3,8 @@
 Cloudflare Worker API for app domain endpoints:
 
 - `/designs`
-- `/orders`
+- `/orders` (proximity tailor assignment + per-tailor pricing at quote/checkout)
+- `/tailor/pricing` (tailor workshop location and price plan CRUD)
 - `/fabrics`
 - `/presets`
 - `/measurements`
@@ -37,6 +38,7 @@ Cloudflare Worker API for app domain endpoints:
    - `wrangler d1 execute lolipants-db --remote --file=./migrations/0006_role_requests.sql`
    - `wrangler d1 execute lolipants-db --remote --file=./migrations/0007_design_render_jobs.sql`
    - `wrangler d1 execute lolipants-db --remote --file=./migrations/0008_sketch_image_url.sql`
+   - `wrangler d1 migrations apply lolipants-db --remote` (includes `0010_tailor_pricing.sql` for tailor price plans)
 4. Add secrets:
    - `OPENAI_API_KEY`
    - `GEMINI_API_KEY` (optional; enables Gemini image refinement for `POST /ai/design-render`; key from Google AI Studio)

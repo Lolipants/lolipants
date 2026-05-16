@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import app from "../index";
+import { seedTailorPricingTables, TEST_TAILOR_ID } from "./tailorOrderFixtures";
+import {
+  parseOrderInsertBinds,
+  tailorMockFirst,
+  tailorMockSelect,
+} from "./tailorMockSql";
 
 type Row = Record<string, unknown>;
 
@@ -37,6 +43,10 @@ class MockDb {
   follows: Row[] = [];
   commissions = new Map<string, Row>();
   consultations = new Map<string, Row>();
+  tailorProfiles = new Map<string, Row>();
+  tailorPlans = new Map<string, Row>();
+  tailorGarmentPrices: Row[] = [];
+  tailorDeliveryFees: Row[] = [];
 
   prepare(sql: string) {
     return new Stmt(this, sql);
@@ -156,6 +166,18 @@ class Stmt {
       if (!row) return null;
       return (this.db.orders.get(String(row.order_id)) ?? null) as T | null;
     }
+    if (s.includes("garment_type, fabric_quality, is_public FROM designs")) {
+      const d = this.db.designs.get(String(b[0]));
+      return (d
+        ? {
+            id: d.id,
+            user_id: d.user_id,
+            garment_type: d.garment_type ?? "thobe",
+            fabric_quality: d.fabric_quality ?? null,
+            is_public: d.is_public ?? 0,
+          }
+        : null) as T | null;
+    }
     if (s.includes("fabric_quality, is_public FROM designs")) {
       const d = this.db.designs.get(String(b[0]));
       return (d
@@ -183,6 +205,18 @@ class Stmt {
       const o = this.db.orders.get(String(b[0]));
       return (o ? { status: o.status } : null) as T | null;
     }
+    if (s.includes("SELECT status, tailor_id FROM orders WHERE id = ?")) {
+      const o = this.db.orders.get(String(b[0]));
+      return (o
+        ? { status: o.status, tailor_id: o.tailor_id ?? null }
+        : null) as T | null;
+    }
+    if (s.includes("SELECT user_id FROM orders WHERE id = ?")) {
+      const o = this.db.orders.get(String(b[0]));
+      return (o ? { user_id: o.user_id } : null) as T | null;
+    }
+    const tailorHit = tailorMockFirst(this.db, s, b);
+    if (tailorHit !== undefined) return tailorHit as T | null;
 
     // Consultations
     if (s.includes("FROM consultations WHERE id = ?") && s.includes("SELECT id, user_id, designer_id")) {
@@ -200,6 +234,9 @@ class Stmt {
   async all() {
     const s = this.sql;
     const b = this.binds;
+
+    const tailorSelect = tailorMockSelect(this.db, s, b);
+    if (tailorSelect != null) return { results: tailorSelect };
 
     // Feed listing
     if (s.includes("FROM posts p") && s.includes("LIMIT ?")) {
@@ -437,22 +474,7 @@ class Stmt {
 
     // Orders write path
     if (s.includes("INSERT INTO orders")) {
-      this.db.orders.set(String(b[0]), {
-        id: b[0],
-        user_id: b[1],
-        design_id: b[2],
-        designer_id: b[3] ?? null,
-        status: "placed",
-        delivery_address: b[4],
-        delivery_city: b[5],
-        delivery_phone: b[6],
-        delivery_notes: b[7] ?? null,
-        base_price: b[8],
-        fabric_fee: b[9],
-        delivery_fee: b[10],
-        total_price: b[11],
-        payment_token: b[12] ?? null,
-      });
+      this.db.orders.set(String(b[0]), parseOrderInsertBinds(b));
       return { success: true, meta: { changes: 1 } };
     }
     if (s.includes("INSERT INTO order_idempotency_keys")) {
@@ -700,6 +722,16 @@ function seed() {
     speciality: "thobe",
     follower_count: 2,
     is_pro_designer: 1,
+    role: "user",
+  });
+  seedTailorPricingTables(mockDb);
+  mockDb.users.set(TEST_TAILOR_ID, {
+    id: TEST_TAILOR_ID,
+    name: "Test Tailor",
+    email: "tailor@example.com",
+    role: "tailor",
+    follower_count: 0,
+    is_pro_designer: 0,
   });
   mockDb.measurements.push({
     id: "m-buyer",
@@ -933,16 +965,20 @@ describe("Phase 6 contract tests", () => {
 
   describe("COMMISSIONS hook into orders + admin payout", () => {
     async function placePublicOrder(key: string, designerId = "designer-1") {
+      const { withTailorOrderBody } = await import("./tailorOrderFixtures");
       return req("POST", "/orders", {
         token: "buyer-token",
         headers: { "X-Idempotency-Key": key },
-        body: {
-          designId: "design-pub",
-          designerId,
-          deliveryAddress: "West Bay",
-          deliveryCity: "Doha",
-          deliveryPhone: "55512345",
-        },
+        body: withTailorOrderBody(
+          {
+            designId: "design-pub",
+            designerId,
+            deliveryAddress: "West Bay",
+            deliveryCity: "Doha",
+            deliveryPhone: "55512345",
+          },
+          { fabric: "premium" },
+        ),
       });
     }
 

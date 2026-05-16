@@ -1,5 +1,13 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import app from "../index";
+import {
+  seedTailorPricingTables,
+  tailorQuoteQuery,
+  TEST_ORDER_PRICES,
+  TEST_TAILOR_ID,
+  withTailorOrderBody,
+} from "./tailorOrderFixtures";
+import { parseOrderInsertBinds, tailorMockFirst, tailorMockSelect } from "./tailorMockSql";
 
 type Row = Record<string, unknown>;
 
@@ -14,6 +22,11 @@ class MockDb {
   payments = new Map<string, Row>();
   orderKeys = new Map<string, Row>(); // `${userId}:${key}` -> { order_id }
   statusHistory: Row[] = [];
+  users = new Map<string, Row>();
+  tailorProfiles = new Map<string, Row>();
+  tailorPlans = new Map<string, Row>();
+  tailorGarmentPrices: Row[] = [];
+  tailorDeliveryFees: Row[] = [];
 
   prepare(sql: string) {
     return new Stmt(this, sql);
@@ -39,6 +52,29 @@ class Stmt {
       const row = this.db.orderKeys.get(`${b[0]}:${b[1]}`);
       if (!row) return null;
       return this.db.orders.get(String(row.order_id)) as T | null;
+    }
+    if (s.includes("garment_type, fabric_quality, is_public FROM designs")) {
+      const d = this.db.designs.get(String(b[0]));
+      return (d
+        ? {
+            id: d.id,
+            user_id: d.user_id,
+            garment_type: d.garment_type ?? "thobe",
+            fabric_quality: d.fabric_quality ?? null,
+            is_public: d.is_public ?? 0,
+          }
+        : null) as T | null;
+    }
+    if (s.includes("garment_type, fabric_quality FROM designs")) {
+      const d = this.db.designs.get(String(b[0]));
+      return (d
+        ? {
+            id: d.id,
+            user_id: d.user_id,
+            garment_type: d.garment_type ?? "thobe",
+            fabric_quality: d.fabric_quality ?? null,
+          }
+        : null) as T | null;
     }
     if (s.includes("fabric_quality, is_public FROM designs")) {
       const d = this.db.designs.get(String(b[0]));
@@ -74,6 +110,12 @@ class Stmt {
       const o = this.db.orders.get(String(b[0]));
       return (o ? { id: o.id, status: o.status } : null) as T | null;
     }
+    if (s.includes("SELECT status, tailor_id FROM orders WHERE id = ?")) {
+      const o = this.db.orders.get(String(b[0]));
+      return (o
+        ? { status: o.status, tailor_id: o.tailor_id ?? null }
+        : null) as T | null;
+    }
     if (s.includes("SELECT status FROM orders")) {
       const o = this.db.orders.get(String(b[0]));
       return (o ? { status: o.status } : null) as T | null;
@@ -85,18 +127,21 @@ class Stmt {
       const p = this.db.payments.get(String(b[0]));
       return (p ?? null) as T | null;
     }
+    const tailorHit = tailorMockFirst(this.db, s, b);
+    if (tailorHit !== undefined) return tailorHit as T | null;
     return null;
   }
 
   async all() {
     const s = this.sql;
     const b = this.binds;
-    if (s.includes("FROM orders WHERE (tailor_id IS NULL OR tailor_id = ?)")) {
+    const tailorSelect = tailorMockSelect(this.db, s, b);
+    if (tailorSelect != null) return { results: tailorSelect };
+    if (s.includes("FROM orders WHERE tailor_id = ?")) {
       const tailor = String(b[0]);
-      // remaining binds are the status IN list (when present)
       const statuses = b.slice(1).map(String);
       const filtered = Array.from(this.db.orders.values()).filter((o) => {
-        const tailorOk = o.tailor_id == null || o.tailor_id === tailor;
+        const tailorOk = o.tailor_id === tailor;
         const statusOk = statuses.length === 0 || statuses.includes(String(o.status));
         return tailorOk && statusOk;
       });
@@ -120,23 +165,7 @@ class Stmt {
     const s = this.sql;
     const b = this.binds;
     if (s.includes("INSERT INTO orders")) {
-      this.db.orders.set(String(b[0]), {
-        id: b[0],
-        user_id: b[1],
-        design_id: b[2],
-        designer_id: b[3] ?? null,
-        status: "placed",
-        delivery_address: b[4],
-        delivery_city: b[5],
-        delivery_phone: b[6],
-        delivery_notes: b[7] ?? null,
-        base_price: b[8],
-        fabric_fee: b[9],
-        delivery_fee: b[10],
-        total_price: b[11],
-        payment_token: b[12] ?? null,
-        tailor_id: null,
-      });
+      this.db.orders.set(String(b[0]), parseOrderInsertBinds(b));
       return { success: true };
     }
     if (s.includes("INSERT INTO order_idempotency_keys")) {
@@ -266,12 +295,15 @@ async function placeOrder(
     headers: {
       "X-Idempotency-Key": opts.idempotencyKey ?? `k_${crypto.randomUUID()}`,
     },
-    body: {
-      designId: "design-1",
-      deliveryAddress: "West Bay",
-      deliveryCity: opts.city ?? "Doha",
-      deliveryPhone: "55512345",
-    },
+    body: withTailorOrderBody(
+      {
+        designId: "design-1",
+        deliveryAddress: "West Bay",
+        deliveryCity: opts.city ?? "Doha",
+        deliveryPhone: "55512345",
+      },
+      { fabric: "premium" },
+    ),
   });
 }
 
@@ -284,9 +316,11 @@ describe("Phase 5 contract tests", () => {
     mockDb.orderKeys.clear();
     mockDb.statusHistory.length = 0;
 
+    seedTailorPricingTables(mockDb);
     mockDb.designs.set("design-1", {
       id: "design-1",
       user_id: "user-1",
+      garment_type: "thobe",
       fabric_quality: "premium",
     });
     mockDb.measurements.push({
@@ -300,21 +334,26 @@ describe("Phase 5 contract tests", () => {
 
   describe("GET /orders/quote", () => {
     it("returns the server-authoritative breakdown for Doha premium", async () => {
-      const res = await req("GET", "/orders/quote?designId=design-1&city=Doha", {
-        token: "customer-token",
-      });
+      const res = await req(
+        "GET",
+        `/orders/quote?${tailorQuoteQuery("design-1", "Doha")}`,
+        { token: "customer-token" },
+      );
       expect(res.status).toBe(200);
       const body = (await res.json()) as Record<string, number>;
       expect(body.basePrice).toBe(350);
       expect(body.fabricFee).toBe(120);
       expect(body.deliveryFee).toBe(20);
       expect(body.total).toBe(490);
+      expect(body.tailorId).toBe(TEST_TAILOR_ID);
     });
 
     it("uses the non-Doha fee for other cities", async () => {
-      const res = await req("GET", "/orders/quote?designId=design-1&city=Al-Wakrah", {
-        token: "customer-token",
-      });
+      const res = await req(
+        "GET",
+        `/orders/quote?${tailorQuoteQuery("design-1", "Al-Wakrah")}`,
+        { token: "customer-token" },
+      );
       const body = (await res.json()) as Record<string, number>;
       expect(body.deliveryFee).toBe(25);
     });
@@ -323,11 +362,14 @@ describe("Phase 5 contract tests", () => {
       mockDb.designs.set("foreign-design", {
         id: "foreign-design",
         user_id: "someone-else",
+        garment_type: "thobe",
         fabric_quality: null,
       });
-      const res = await req("GET", "/orders/quote?designId=foreign-design&city=Doha", {
-        token: "customer-token",
-      });
+      const res = await req(
+        "GET",
+        `/orders/quote?${tailorQuoteQuery("foreign-design", "Doha")}`,
+        { token: "customer-token" },
+      );
       expect(res.status).toBe(403);
     });
   });
