@@ -99,7 +99,10 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
 
   @override
   void dispose() {
-    _editorNotifier.resetConfigurator();
+    // Riverpod forbids mutating providers during dispose; defer until after
+    // this frame's build/unmount cycle completes.
+    final notifier = _editorNotifier;
+    Future.microtask(notifier.resetConfigurator);
     super.dispose();
   }
 
@@ -107,36 +110,46 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
   Widget build(BuildContext context) {
     final editor = ref.watch(editorProvider);
     final notifier = ref.read(editorProvider.notifier);
+    final useBuildStrip = kFeatureConfiguratorBuild &&
+        kFeatureAiEditorTab &&
+        (editor.activeTab == EditorTab.build ||
+            editor.activeTab == EditorTab.designs);
 
     return Scaffold(
       body: Stack(
         children: [
           const ArabesqueBackground(),
           SafeArea(
-            child: Column(
-              children: [
-                _EditorTopBar(
-                  onBack: () => _confirmExit(context),
-                  onSave: () => _saveDesign(context),
-                  onOrder: () => _orderNow(context),
-                  onShare: () => _shareToCommunity(context),
-                  onSizing: () => context.push('/sizing'),
-                  saving: editor.isSaving,
-                  heroMode: editor.heroMode,
-                  onHeroModeChanged: notifier.setHeroMode,
-                ),
-                Expanded(
-                  child: Column(
-                    children: [
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(
-                            AppSpacing.sm,
-                            4,
-                            AppSpacing.sm,
-                            4,
-                          ),
-                          child: DecoratedBox(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final shellHeight = constraints.maxHeight;
+                final bottomPanelHeight =
+                    (shellHeight * 0.36).clamp(180.0, 280.0);
+
+                return Column(
+                  children: [
+                    _EditorTopBar(
+                      onBack: () => _confirmExit(context),
+                      onSave: () => _saveDesign(context),
+                      onOrder: () => _orderNow(context),
+                      onShare: () => _shareToCommunity(context),
+                      onSizing: () => context.push('/sizing'),
+                      saving: editor.isSaving,
+                      heroMode: editor.heroMode,
+                      onHeroModeChanged: notifier.setHeroMode,
+                    ),
+                    Expanded(
+                      child: Column(
+                        children: [
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.fromLTRB(
+                                AppSpacing.sm,
+                                4,
+                                AppSpacing.sm,
+                                4,
+                              ),
+                              child: DecoratedBox(
                             decoration: BoxDecoration(
                               color: AppColors.smoke.withValues(alpha: 0.45),
                               borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -252,35 +265,46 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                               ),
                             ),
                           ),
-                        ),
+                            ),
+                          ),
+                          if (useBuildStrip)
+                            EditorStudioPromptCard(
+                              key: ValueKey<Object>(
+                                '${editor.remoteDesignId ?? 'new'}|${editor.configuratorTemplateId}|strip',
+                              ),
+                              buildStrip: true,
+                              onGenerate: () => _generateLook(context),
+                            )
+                          else if (kFeatureAiEditorTab)
+                            EditorStudioPromptCard(
+                              key: ValueKey<Object>(
+                                '${editor.remoteDesignId ?? 'new'}|${editor.configuratorTemplateId}|${editor.activeTab.name}',
+                              ),
+                              compact: true,
+                              onGenerate: () => _generateLook(context),
+                            ),
+                        ],
                       ),
-                      EditorStudioPromptCard(
-                        key: ValueKey<Object>(
-                          '${editor.remoteDesignId ?? 'new'}|${editor.configuratorTemplateId}|${editor.activeTab.name}',
-                        ),
-                        buildStrip: kFeatureConfiguratorBuild &&
-                            (editor.activeTab == EditorTab.build ||
-                                editor.activeTab == EditorTab.designs),
-                        onGenerate: () => _generateLook(context),
+                    ),
+                    if (kFeatureConfiguratorBuild)
+                      EditorPanelTabs(
+                        activeTab: editor.activeTab,
+                        onTabChanged: notifier.setTab,
                       ),
-                    ],
-                  ),
-                ),
-                if (kFeatureConfiguratorBuild)
-                  EditorPanelTabs(
-                    activeTab: editor.activeTab,
-                    onTabChanged: notifier.setTab,
-                  ),
-                if (editor.activeTab == EditorTab.build &&
-                    kFeatureConfiguratorBuild)
-                  const EditorBuildPanel()
-                else
-                  EditorBottomPanel(
-                    state: editor,
-                    onCatalogDesignSelected: notifier.setCatalogDesignPath,
-                    onCatalogFilterChanged: notifier.setCatalogFilter,
-                  ),
-              ],
+                    if (editor.activeTab == EditorTab.build &&
+                        kFeatureConfiguratorBuild)
+                      EditorBuildPanel(height: bottomPanelHeight)
+                    else
+                      EditorBottomPanel(
+                        height: bottomPanelHeight,
+                        state: editor,
+                        onCatalogDesignSelected:
+                            notifier.setCatalogDesignPath,
+                        onCatalogFilterChanged: notifier.setCatalogFilter,
+                      ),
+                  ],
+                );
+              },
             ),
           ),
         ],

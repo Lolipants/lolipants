@@ -13,7 +13,10 @@ import 'package:lolipants/features/editor/widgets/editor_asset_thumb_card.dart';
 
 /// Build tab: slot chips + large horizontal part picker (modest abaya default).
 class EditorBuildPanel extends ConsumerStatefulWidget {
-  const EditorBuildPanel({super.key});
+  const EditorBuildPanel({super.key, this.height});
+
+  /// When set, caps panel height to fit the editor shell (avoids overflow).
+  final double? height;
 
   @override
   ConsumerState<EditorBuildPanel> createState() => _EditorBuildPanelState();
@@ -26,7 +29,7 @@ class _EditorBuildPanelState extends ConsumerState<EditorBuildPanel> {
   Widget build(BuildContext context) {
     final editor = ref.watch(editorProvider);
     final catalogAsync = ref.watch(configuratorCatalogProvider);
-    final panelHeight =
+    final panelHeight = widget.height ??
         (MediaQuery.sizeOf(context).height * 0.40).clamp(280.0, 380.0);
 
     ref.listen<AsyncValue<ConfiguratorCatalog>>(configuratorCatalogProvider,

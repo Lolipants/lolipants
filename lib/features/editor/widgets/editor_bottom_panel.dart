@@ -12,6 +12,7 @@ class EditorBottomPanel extends StatelessWidget {
     required this.state,
     required this.onCatalogDesignSelected,
     required this.onCatalogFilterChanged,
+    this.height,
     super.key,
   });
 
@@ -19,10 +20,13 @@ class EditorBottomPanel extends StatelessWidget {
   final ValueChanged<String> onCatalogDesignSelected;
   final ValueChanged<DesignCatalogFilter> onCatalogFilterChanged;
 
+  /// When set, caps panel height to fit the editor shell (avoids overflow).
+  final double? height;
+
   @override
   Widget build(BuildContext context) {
     final sections = catalogSectionsFor(state.catalogFilter);
-    final panelHeight =
+    final panelHeight = height ??
         (MediaQuery.sizeOf(context).height * 0.40).clamp(280.0, 380.0);
 
     return SizedBox(
