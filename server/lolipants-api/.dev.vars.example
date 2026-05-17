@@ -3,3 +3,7 @@ TAP_SECRET_KEY=your_tap_secret_key
 ONESIGNAL_API_KEY=your_onesignal_api_key
 ONESIGNAL_APP_ID=your_onesignal_app_id
 CLOUDFLARE_R2_BASE_URL=https://pub-xxxxxxxxxxxxxxxx.r2.dev
+
+# Dev account seeder (scripts/seed-dev-accounts.ts) — copy to .dev.vars (gitignored)
+DEV_SEED_PASSWORD=your-shared-dev-password
+INTERNAL_SYNC_SECRET=same-value-as-wrangler-secret-on-api-and-better-auth

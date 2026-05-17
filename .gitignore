@@ -71,3 +71,4 @@ app.*.map.json
 /server/better-auth-worker/node_modules/
 /server/lolipants-api/node_modules/
 /server/better-auth-worker/.dev.vars
+/server/lolipants-api/.dev.vars

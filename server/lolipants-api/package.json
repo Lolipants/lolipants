@@ -8,7 +8,8 @@
     "deploy": "wrangler deploy",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "seed:dev-accounts": "tsx scripts/seed-dev-accounts.ts"
+    "seed:dev-accounts": "tsx scripts/seed-dev-accounts.ts",
+    "secrets:push-internal-sync": "tsx scripts/push-internal-sync-secret.ts"
   },
   "dependencies": {
     "hono": "^4.12.12",
