@@ -50,6 +50,38 @@ Cloudflare Worker API for app domain endpoints:
 6. Run locally:
    - `npm run dev`
 
+## Dev accounts (admin / tailor / delivery)
+
+Creates or updates three default accounts and promotes roles in **remote** D1 + Better Auth:
+
+| Role     | Email                         | Password              |
+|----------|-------------------------------|------------------------|
+| Admin    | `lolipants26@gmail.com`       | `DEV_SEED_PASSWORD`    |
+| Tailor   | `lolipants26+tailor@gmail.com`| same                   |
+| Delivery | `lolipants26+driver@gmail.com`| same                   |
+
+1. Copy `.dev.vars.example` → `.dev.vars` and set `DEV_SEED_PASSWORD`.
+2. Optional but recommended — generate and deploy a shared sync secret (admin role changes in the dashboard use this):
+
+   ```bash
+   openssl rand -hex 32   # paste into .dev.vars as INTERNAL_SYNC_SECRET=
+   pnpm secrets:push-internal-sync
+   ```
+
+   If `INTERNAL_SYNC_SECRET` is not on the workers yet, `pnpm seed:dev-accounts` still sets roles in **lolipants-api D1** (what the app reads); run `secrets:push-internal-sync` later, then seed again to mirror Better Auth.
+
+3. Seed accounts:
+
+   ```bash
+   pnpm seed:dev-accounts
+   ```
+
+   Use `--local` for local D1 only. The tailor account also gets a Doha workshop + default price plan.
+
+4. Sign out and sign in again in the app so the session picks up the new role.
+
+This does **not** wipe the database; it upserts these users and roles only.
+
 ## Important note
 
 Mannequin options are designed to be managed by the admin dashboard. Do not hardcode mannequin catalogs in API responses for production.

@@ -21,10 +21,44 @@
  */
 import { createHmac } from "node:crypto";
 import { execSync } from "node:child_process";
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
+/** Loads `KEY=value` lines from `.dev.vars` (wrangler-style, not committed). */
+function loadDevVarsFile(): void {
+  const path = join(__dirname, "..", ".dev.vars");
+  if (!existsSync(path)) return;
+  const text = readFileSync(path, "utf8");
+  for (const line of text.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const eq = trimmed.indexOf("=");
+    if (eq <= 0) continue;
+    const key = trimmed.slice(0, eq).trim();
+    let value = trimmed.slice(eq + 1).trim();
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+    if (process.env[key] === undefined || process.env[key] === "") {
+      process.env[key] = value;
+    }
+  }
+}
+
+loadDevVarsFile();
 
 type DevAccount = {
   email: string;
@@ -89,13 +123,20 @@ function parseCli(argv: string[]): Cli {
       "Set DEV_SEED_PASSWORD (e.g. export DEV_SEED_PASSWORD='...')",
     );
   }
-  const syncSecret = process.env.INTERNAL_SYNC_SECRET?.trim();
-  if (!syncSecret) {
-    throw new Error(
-      "Set INTERNAL_SYNC_SECRET (same value on lolipants-api + better-auth-worker)",
+  const syncSecret = process.env.INTERNAL_SYNC_SECRET?.trim() ?? "";
+  const placeholder =
+    !syncSecret ||
+    syncSecret.includes("same-value-as-wrangler") ||
+    syncSecret.includes("your-");
+  if (placeholder) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      "\nWarning: INTERNAL_SYNC_SECRET missing or still a placeholder in .dev.vars.\n" +
+        "D1 roles will be set (app uses lolipants-api users table). Better Auth session\n" +
+        "mirror will be skipped until you run: pnpm exec tsx scripts/push-internal-sync-secret.ts\n",
     );
   }
-  return { authBase, authOrigin, password, syncSecret, d1Remote };
+  return { authBase, authOrigin, password, syncSecret: placeholder ? "" : syncSecret, d1Remote };
 }
 
 async function authEmail(
@@ -156,13 +197,26 @@ async function ensureUser(
   }
 }
 
+/** Escape a value for a SQLite single-quoted string literal. */
+function sqlLiteral(value: string): string {
+  return `'${value.replace(/'/g, "''")}'`;
+}
+
+/** Run SQL via a temp file so JSON in admin_scopes is not mangled by the shell. */
 function d1Execute(remote: boolean, sql: string): void {
   const apiDir = join(__dirname, "..");
   const flag = remote ? "--remote" : "--local";
-  execSync(
-    `wrangler d1 execute lolipants-db ${flag} --command ${JSON.stringify(sql)}`,
-    { cwd: apiDir, stdio: "inherit" },
-  );
+  const dir = mkdtempSync(join(tmpdir(), "lolipants-seed-"));
+  const file = join(dir, "stmt.sql");
+  writeFileSync(file, sql, "utf8");
+  try {
+    execSync(`wrangler d1 execute lolipants-db ${flag} --file=${JSON.stringify(file)}`, {
+      cwd: apiDir,
+      stdio: "inherit",
+    });
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 }
 
 /** Doha workshop + default price plan so proximity checkout works locally. */
@@ -232,11 +286,12 @@ function promoteInD1(
   account: DevAccount,
 ): void {
   const scopesJson = JSON.stringify(account.adminScopes);
+  const scopes = sqlLiteral(scopesJson);
   const sql = `INSERT INTO users (id, name, email, role, admin_scopes)
-VALUES ('${userId}', '${account.name.replace(/'/g, "''")}', '${account.email}', '${account.role}', '${scopesJson}')
+VALUES (${sqlLiteral(userId)}, ${sqlLiteral(account.name)}, ${sqlLiteral(account.email)}, ${sqlLiteral(account.role)}, ${scopes})
 ON CONFLICT(id) DO UPDATE SET
-  role = '${account.role}',
-  admin_scopes = '${scopesJson}',
+  role = ${sqlLiteral(account.role)},
+  admin_scopes = ${scopes},
   name = excluded.name,
   email = excluded.email,
   updated_at = datetime('now');`;
@@ -290,9 +345,24 @@ async function main() {
     // eslint-disable-next-line no-console
     console.log(`user id: ${id}`);
     promoteInD1(cli.d1Remote, id, account);
-    await syncAuthRole(cli.authBase, cli.syncSecret, id, account);
+    if (cli.syncSecret) {
+      await syncAuthRole(cli.authBase, cli.syncSecret, id, account);
+    }
     if (account.role === "tailor") {
-      seedTailorInD1(cli.d1Remote, id, account.name);
+      try {
+        seedTailorInD1(cli.d1Remote, id, account.name);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (/no such table:\s*tailor_/i.test(msg)) {
+          // eslint-disable-next-line no-console
+          console.error(
+            "\nTailor workshop seed failed: tailor pricing tables are missing.\n" +
+              "Apply migrations, then re-run seed:\n" +
+              "  wrangler d1 migrations apply lolipants-db --remote\n",
+          );
+        }
+        throw err;
+      }
     }
     // eslint-disable-next-line no-console
     console.log("promoted + synced");
