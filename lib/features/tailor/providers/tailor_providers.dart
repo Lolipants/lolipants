@@ -89,6 +89,13 @@ class TailorQueueNotifier
   }
 }
 
+/// Refreshes all tailor queue tabs after an order status change.
+void invalidateAllTailorQueues(WidgetRef ref) {
+  for (final bucket in TailorQueueBucket.values) {
+    ref.invalidate(tailorQueueProvider(bucket));
+  }
+}
+
 /// Wrapper so async errors surface as typed exceptions.
 class TailorProviderException implements Exception {
   /// Creates a wrapper around [cause].

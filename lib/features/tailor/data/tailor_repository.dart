@@ -76,18 +76,27 @@ class TailorRepository {
   }
 
   /// Advances (or cancels) an order with the supplied [status].
-  Future<Either<AppException, void>> advanceStatus({
+  Future<Either<AppException, Order>> advanceStatus({
     required String orderId,
     required String status,
     String? note,
   }) async {
     try {
-      await _dio.patch<Map<String, dynamic>>(
+      final response = await _dio.patch<Map<String, dynamic>>(
         '${ApiEndpoints.orders}/$orderId/status',
         data: {'status': status, if (note != null) 'note': note},
         options: await _authOptions(),
       );
-      return right(null);
+      final data = response.data;
+      if (data != null && data['id'] != null) {
+        return right(Order.fromApi(data));
+      }
+      return right(
+        Order.fromApi({
+          'id': orderId,
+          'status': status,
+        }),
+      );
     } on DioException catch (e) {
       return left(_mapDio(e));
     } on Exception {
@@ -108,10 +117,16 @@ class TailorRepository {
     final status = e.response?.statusCode ?? 0;
     final body = e.response?.data;
     var message = e.message ?? 'network';
+    String? code;
     if (body is Map) {
       final nested = body['error'];
-      if (nested is Map && nested['message'] != null) {
-        message = nested['message'].toString();
+      if (nested is Map) {
+        if (nested['message'] != null) {
+          message = nested['message'].toString();
+        }
+        if (nested['code'] != null) {
+          code = nested['code'].toString();
+        }
       } else if (body['error'] != null) {
         message = body['error'].toString();
       } else if (body['message'] != null) {
@@ -124,7 +139,7 @@ class TailorRepository {
       return NetworkException(message);
     }
     if (status == 401 || status == 403) return AuthException(message);
-    if (status >= 400) return ServerException(status, message);
+    if (status >= 400) return ServerException(status, message, code: code);
     return NetworkException(message);
   }
 }

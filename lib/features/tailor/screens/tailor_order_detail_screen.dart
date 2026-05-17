@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lolipants/core/errors/app_exception.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
@@ -19,8 +20,7 @@ const Map<String, List<String>> _tailorTransitions = {
   'stitching': ['embroidery', 'quality_check', 'cancelled'],
   'embroidery': ['quality_check', 'cancelled'],
   'quality_check': ['ready_to_ship', 'cancelled'],
-  'ready_to_ship': ['out_for_delivery', 'cancelled'],
-  'out_for_delivery': ['delivered'],
+  'ready_to_ship': ['cancelled'],
 };
 
 /// Detail view for a single order shown to the tailor role.
@@ -39,10 +39,13 @@ class TailorOrderDetailScreen extends ConsumerStatefulWidget {
 class _TailorOrderDetailScreenState
     extends ConsumerState<TailorOrderDetailScreen> {
   bool _busy = false;
+  Order? _orderOverride;
 
   @override
   Widget build(BuildContext context) {
     final async = ref.watch(tailorOrderDetailProvider(widget.orderId));
+    final displayOrder = _orderOverride ?? async.valueOrNull;
+
     return Scaffold(
       appBar: AppBar(
         title: Text('Order ${widget.orderId}',
@@ -51,20 +54,24 @@ class _TailorOrderDetailScreenState
       body: Stack(
         children: [
           const ArabesqueBackground(),
-          async.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.xl),
-                child: Text(
-                  'Could not load order. $e',
-                  textAlign: TextAlign.center,
-                  style: AppTextStyles.bodyMedium,
+          if (displayOrder != null)
+            _content(displayOrder)
+          else
+            async.when(
+              loading: () =>
+                  const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.xl),
+                  child: Text(
+                    'Could not load order. $e',
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.bodyMedium,
+                  ),
                 ),
               ),
+              data: (order) => _content(order),
             ),
-            data: (order) => _content(order),
-          ),
         ],
       ),
     );
@@ -78,7 +85,7 @@ class _TailorOrderDetailScreenState
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.xl),
       children: [
-        _SummaryCard(order: order),
+        _SummaryCard(order: order, showStatus: true),
         if (order.printImageUrl != null &&
             order.printImageUrl!.trim().isNotEmpty) ...[
           const SizedBox(height: AppSpacing.md),
@@ -102,7 +109,8 @@ class _TailorOrderDetailScreenState
         const SizedBox(height: AppSpacing.lg),
         if (current == OrderStatus.placed) ...[
           LolipantsButton(
-            label: _busy ? 'Working...' : 'Accept this order',
+            label: 'Accept this order',
+            loading: _busy,
             onPressed: _busy ? null : () => _accept(order),
           ),
           const SizedBox(height: AppSpacing.sm),
@@ -116,12 +124,11 @@ class _TailorOrderDetailScreenState
             Padding(
               padding: const EdgeInsets.only(bottom: AppSpacing.sm),
               child: LolipantsButton(
-                label: next == 'cancelled'
-                    ? 'Cancel order'
-                    : 'Advance to ${_prettyStatus(next)}',
+                label: _advanceButtonLabel(next),
                 variant: next == 'cancelled'
                     ? LolipantsButtonVariant.destructive
                     : LolipantsButtonVariant.primary,
+                loading: _busy,
                 onPressed: _busy ? null : () => _advance(order, next),
               ),
             ),
@@ -147,6 +154,12 @@ class _TailorOrderDetailScreenState
       default:
         return s.name;
     }
+  }
+
+  String _advanceButtonLabel(String next) {
+    if (next == 'cancelled') return 'Cancel order';
+    if (next == 'ready_to_ship') return 'Hand off to delivery';
+    return 'Advance to ${_prettyStatus(next)}';
   }
 
   String _prettyStatus(String key) {
@@ -177,11 +190,16 @@ class _TailorOrderDetailScreenState
   Future<void> _accept(Order order) async {
     setState(() => _busy = true);
     final tailorRepo = ref.read(tailorRepositoryProvider);
+    if (order.status != OrderStatus.placed) {
+      _snack('Order is already confirmed');
+      _unbusy();
+      return;
+    }
     final claim = await tailorRepo.claim(order.id);
-    final claimErr = claim.fold<String?>((e) => '$e', (_) => null);
+    final claimErr = claim.fold<String?>(_tailorErrorMessage, (_) => null);
     if (claimErr != null) {
       _snack('Could not accept order: $claimErr');
-      if (mounted) setState(() => _busy = false);
+      _unbusy();
       return;
     }
     final advance = await tailorRepo.advanceStatus(
@@ -189,10 +207,13 @@ class _TailorOrderDetailScreenState
       status: 'confirmed',
     );
     advance.fold(
-      (e) => _snack('Could not confirm: $e'),
-      (_) => _snack('Order accepted'),
+      (e) => _snack('Could not confirm: ${_tailorErrorMessage(e)}'),
+      (updated) {
+        _snack('Order accepted');
+        _finishMutation(updated);
+      },
     );
-    _refreshAndUnbusy();
+    if (!advance.isRight()) _unbusy();
   }
 
   Future<void> _declineWithReason(Order order) async {
@@ -227,10 +248,13 @@ class _TailorOrderDetailScreenState
       note: reason.isEmpty ? null : reason,
     );
     result.fold(
-      (e) => _snack('Could not decline: $e'),
-      (_) => _snack('Order declined'),
+      (e) => _snack('Could not decline: ${_tailorErrorMessage(e)}'),
+      (updated) {
+        _snack('Order declined');
+        _finishMutation(updated);
+      },
     );
-    _refreshAndUnbusy();
+    if (!result.isRight()) _unbusy();
   }
 
   Future<void> _advance(Order order, String next) async {
@@ -241,21 +265,65 @@ class _TailorOrderDetailScreenState
       status: next,
     );
     result.fold(
-      (e) => _snack('Could not advance: $e'),
-      (_) => _snack('Status updated to ${_prettyStatus(next)}'),
+      (e) => _snack('Could not advance: ${_tailorErrorMessage(e)}'),
+      (updated) {
+        if (next == 'ready_to_ship') {
+          final courier = updated.courierName;
+          _snack(
+            courier != null && courier.isNotEmpty
+                ? 'Handed off to $courier'
+                : 'Handed off to delivery',
+          );
+        } else {
+          _snack('Status updated to ${_prettyStatus(next)}');
+        }
+        _finishMutation(updated);
+      },
     );
-    _refreshAndUnbusy();
+    if (!result.isRight()) _unbusy();
   }
 
-  void _refreshAndUnbusy() {
-    ref.invalidate(tailorOrderDetailProvider(widget.orderId));
-    ref.invalidate(tailorQueueProvider);
-    if (mounted) setState(() => _busy = false);
+  void _finishMutation(Order updated) {
+    invalidateAllTailorQueues(ref);
+    if (!mounted) return;
+    setState(() {
+      _orderOverride = updated;
+      _busy = false;
+    });
+  }
+
+  void _unbusy() {
+    if (!mounted) return;
+    setState(() => _busy = false);
+  }
+
+  String _tailorErrorMessage(AppException error) {
+    if (error case ServerException(
+          code: 'NO_COURIER_AVAILABLE',
+          message: final msg,
+        )) {
+      return msg;
+    }
+    if (error case ServerException(statusCode: 403, message: final msg)) {
+      return msg;
+    }
+    if (error case ServerException(statusCode: 409, message: final msg)) {
+      return msg;
+    }
+    if (error case ServerException(message: final msg) when msg.isNotEmpty) {
+      return msg;
+    }
+    if (error case NetworkException(message: final msg)) {
+      return msg;
+    }
+    return error.toString();
   }
 
   void _snack(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    if (messenger == null) return;
+    messenger.showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _openUrl(String url) async {
@@ -267,9 +335,10 @@ class _TailorOrderDetailScreenState
 }
 
 class _SummaryCard extends StatelessWidget {
-  const _SummaryCard({required this.order});
+  const _SummaryCard({required this.order, this.showStatus = false});
 
   final Order order;
+  final bool showStatus;
 
   @override
   Widget build(BuildContext context) {
@@ -284,6 +353,13 @@ class _SummaryCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(order.designName, style: AppTextStyles.titleMedium),
+          if (showStatus) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              'Status: ${order.status.labelEn}',
+              style: AppTextStyles.labelGold.copyWith(fontSize: 12),
+            ),
+          ],
           const SizedBox(height: AppSpacing.xs),
           _LabelValue(
             label: 'Address',
@@ -297,6 +373,8 @@ class _SummaryCard extends StatelessWidget {
                 ? '—'
                 : '${order.totalPrice} ${order.currency}',
           ),
+          if (order.courierName != null && order.courierName!.isNotEmpty)
+            _LabelValue(label: 'Courier', value: order.courierName!),
           if (order.paymentStatus != null)
             _LabelValue(label: 'Payment', value: order.paymentStatus!),
         ],
