@@ -115,7 +115,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                 const SizedBox(height: AppSpacing.md),
                 const GoldDivider(width: 32)
                     .animate()
-                    .scaleX(begin: 0, duration: 300.ms, delay: 900.ms, alignment: Alignment.center),
+                    .scaleX(
+                      begin: 0,
+                      duration: 300.ms,
+                      delay: 900.ms,
+                      alignment: Alignment.center,
+                    ),
                 const SizedBox(height: AppSpacing.md),
                 Text(
                   AppStrings.tagline,
@@ -131,11 +136,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
               ],
             ),
           ),
-          Positioned(
+          const Positioned(
             left: 0,
             right: 0,
             bottom: 48,
-            child: const _DotLoader(),
+            child: _DotLoader(),
           ),
         ],
       ),

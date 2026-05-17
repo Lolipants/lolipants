@@ -9,6 +9,7 @@ import 'package:logging/logging.dart';
 import 'package:lolipants/app.dart';
 import 'package:lolipants/core/preferences/shared_preferences_provider.dart';
 import 'package:lolipants/core/push/onesignal_bootstrap.dart';
+import 'package:lolipants/features/splash/splash_assets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Application entrypoint: loads env, logging, and starts Flutter.
@@ -16,6 +17,9 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   _configureLogging();
+
+  final prefsFuture = SharedPreferences.getInstance();
+  final splashFuture = SplashAssets.warm();
 
   try {
     await dotenv.load();
@@ -48,7 +52,9 @@ CLOUDFLARE_R2_BASE_URL=
     }
   }
 
-  final prefs = await SharedPreferences.getInstance();
+  final prefs = await prefsFuture;
+  await splashFuture;
+
   runApp(
     ProviderScope(
       overrides: [

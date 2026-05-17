@@ -57,6 +57,7 @@ flutter:
 
   assets:
     - assets/animations/
+    - assets/animations/lolipants_splash.gif
     - assets/images/
     - assets/images/mannequins/
     - assets/images/designs/
