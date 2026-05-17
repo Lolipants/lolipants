@@ -18,12 +18,11 @@ import 'package:lolipants/features/editor/data/bundled_design_assets.dart';
 import 'package:lolipants/features/editor/providers/editor_provider.dart';
 import 'package:lolipants/core/config/app_features.dart';
 import 'package:lolipants/features/editor/widgets/editor_bottom_panel.dart';
-import 'package:lolipants/features/editor/widgets/editor_build_color_panel.dart';
 import 'package:lolipants/features/editor/widgets/editor_build_panel.dart';
+import 'package:lolipants/features/editor/widgets/editor_style_picker_sheet.dart';
 import 'package:lolipants/features/editor/widgets/editor_hero_preview.dart';
 import 'package:lolipants/features/editor/widgets/editor_panel_tabs.dart';
 import 'package:lolipants/features/editor/widgets/editor_studio_prompt_card.dart';
-import 'package:lolipants/features/editor/widgets/fabric_selector.dart';
 import 'package:lolipants/features/editor/widgets/image_print_panel.dart';
 import 'package:lolipants/features/editor/widgets/text_tool_panel.dart';
 import 'package:lolipants/features/orders/models/order_design_draft.dart';
@@ -312,81 +311,18 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
     );
   }
 
-  void _showBuildColorSheet(BuildContext context) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (sheetContext) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.42,
-        minChildSize: 0.28,
-        maxChildSize: 0.7,
-        builder: (_, scrollController) {
-          return DecoratedBox(
-            decoration: const BoxDecoration(
-              color: AppColors.stone,
-              borderRadius: BorderRadius.vertical(
-                top: Radius.circular(AppRadius.lg),
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.md,
-                    AppSpacing.sm,
-                    AppSpacing.md,
-                    AppSpacing.xs,
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          AppStrings.editorBuildTabColor,
-                          style: AppTextStyles.titleMedium,
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.of(sheetContext).pop(),
-                      ),
-                    ],
-                  ),
-                ),
-                const Divider(height: 1, color: AppColors.borderSubtle),
-                Expanded(
-                  child: SingleChildScrollView(
-                    controller: scrollController,
-                    child: const EditorBuildColorPanel(),
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-
   void _onHeroPalettePressed(BuildContext context) {
-    final editor = ref.read(editorProvider);
-    if (kFeatureConfiguratorBuild && editor.activeTab == EditorTab.build) {
-      _showBuildColorSheet(context);
-    } else {
-      _openFabricPicker(context);
-    }
+    _openStylePicker(context);
   }
 
-  Future<void> _openFabricPicker(BuildContext context) async {
+  Future<void> _openStylePicker(BuildContext context) async {
     final notifier = ref.read(editorProvider.notifier);
     final editor = ref.read(editorProvider);
     if (editor.availableFabrics.isEmpty) {
       await notifier.loadFabrics();
     }
     if (!context.mounted) return;
-    _showFabricPicker(context);
+    showEditorStylePickerSheet(context);
   }
 
   void _showTextToolSheet(BuildContext context) {
@@ -535,78 +471,6 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                           minScale: 20,
                           maxScale: 120,
                           onApply: () => Navigator.of(sheetContext).pop(),
-                        ),
-                      ),
-                    ),
-                  ],
-                );
-              },
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  void _showFabricPicker(BuildContext context) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (sheetContext) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.44,
-        minChildSize: 0.28,
-        maxChildSize: 0.75,
-        builder: (_, scrollController) {
-          return DecoratedBox(
-            decoration: const BoxDecoration(
-              color: AppColors.stone,
-              borderRadius: BorderRadius.vertical(
-                top: Radius.circular(AppRadius.lg),
-              ),
-            ),
-            child: Consumer(
-              builder: (context, ref, _) {
-                final ed = ref.watch(editorProvider);
-                final fabricNotifier = ref.read(editorProvider.notifier);
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(
-                        AppSpacing.md,
-                        AppSpacing.sm,
-                        AppSpacing.md,
-                        AppSpacing.xs,
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              AppStrings.editorTabFabric,
-                              style: AppTextStyles.titleMedium,
-                            ),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.close),
-                            onPressed: () => Navigator.of(sheetContext).pop(),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Divider(height: 1, color: AppColors.borderSubtle),
-                    Expanded(
-                      child: SingleChildScrollView(
-                        controller: scrollController,
-                        padding: const EdgeInsets.only(bottom: AppSpacing.lg),
-                        child: FabricSelector(
-                          selectedFabric: ed.selectedFabricId,
-                          availableFabrics: ed.availableFabrics,
-                          quality: ed.fabricQuality,
-                          onFabricSelected: fabricNotifier.setFabric,
-                          onQualitySelected:
-                              fabricNotifier.setFabricQuality,
                         ),
                       ),
                     ),
