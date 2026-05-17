@@ -25,13 +25,16 @@ class AuthException extends AppException {
 /// HTTP error responses from the API.
 class ServerException extends AppException {
   /// Creates a server exception with [statusCode] and [message].
-  const ServerException(this.statusCode, this.message);
+  const ServerException(this.statusCode, this.message, {this.code});
 
   /// HTTP status from the response.
   final int statusCode;
 
   /// Parsed or fallback error text.
   final String message;
+
+  /// API error code when present (e.g. `NO_TAILOR_AVAILABLE`).
+  final String? code;
 }
 
 /// Catch-all when the failure cannot be classified.
