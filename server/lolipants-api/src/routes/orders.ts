@@ -2,7 +2,8 @@ import { Hono } from "hono";
 import { v4 as uuidv4 } from "uuid";
 import { apiError } from "../lib/http";
 import { orderStatusTemplates, sendToUser } from "../lib/onesignal";
-import { pickNearestTailor } from "../lib/tailorAssignment";
+import { pickCourierForDelivery } from "../lib/courierAssignment";
+import { pickTailorForDelivery } from "../lib/tailorAssignment";
 import { requireAuth, requireRole } from "../middleware/auth";
 import type { AppVariables, Env } from "../types";
 
@@ -29,8 +30,8 @@ const statusTransitions: Record<string, ReadonlySet<string>> = {
   stitching: new Set(["embroidery", "quality_check", "cancelled"]),
   embroidery: new Set(["quality_check", "cancelled"]),
   quality_check: new Set(["ready_to_ship", "cancelled"]),
-  ready_to_ship: new Set(["out_for_delivery", "cancelled"]),
-  out_for_delivery: new Set(["delivered"]),
+  ready_to_ship: new Set(["cancelled"]),
+  out_for_delivery: new Set(),
   delivered: new Set(),
   cancelled: new Set(),
 };
@@ -62,6 +63,90 @@ function pricesMatch(
   );
 }
 
+async function loadTailorOrderPayload(
+  db: D1Database,
+  tailorId: string,
+  orderId: string,
+): Promise<Record<string, unknown> | null> {
+  const order = await db
+    .prepare(
+      `SELECT o.*, d.print_image_url AS design_print_image_url,
+              d.sketch_image_url AS design_sketch_image_url,
+              d.name AS design_name,
+              courier.name AS courier_name
+       FROM orders o
+       LEFT JOIN designs d ON d.id = o.design_id
+       LEFT JOIN users courier ON courier.id = o.courier_id
+       WHERE o.id = ? AND o.tailor_id = ?`,
+    )
+    .bind(orderId, tailorId)
+    .first<Record<string, unknown>>();
+  if (!order) return null;
+
+  const history = await db
+    .prepare(
+      "SELECT * FROM order_status_history WHERE order_id = ? ORDER BY timestamp ASC",
+    )
+    .bind(orderId)
+    .all();
+  const payment = await db
+    .prepare(
+      "SELECT id, status, amount, currency, updated_at FROM payment_transactions WHERE order_id = ? ORDER BY updated_at DESC LIMIT 1",
+    )
+    .bind(orderId)
+    .first<Record<string, unknown>>();
+  return { ...order, statusHistory: history.results, payment };
+}
+
+const CUSTOMER_ORDER_COLUMNS = `
+  o.*,
+  d.name AS design_name,
+  d.garment_type AS design_garment_type,
+  d.print_image_url AS design_print_image_url,
+  d.sketch_image_url AS design_sketch_image_url,
+  tailor.name AS tailor_name,
+  tp.shop_name AS tailor_shop_name,
+  courier.name AS courier_name
+`;
+
+const CUSTOMER_ORDER_JOINS = `
+  FROM orders o
+  LEFT JOIN designs d ON d.id = o.design_id
+  LEFT JOIN users tailor ON tailor.id = o.tailor_id
+  LEFT JOIN tailor_profiles tp ON tp.user_id = o.tailor_id
+  LEFT JOIN users courier ON courier.id = o.courier_id
+`;
+
+async function loadCustomerOrderPayload(
+  db: D1Database,
+  userId: string,
+  orderId: string,
+): Promise<Record<string, unknown> | null> {
+  const order = await db
+    .prepare(
+      `SELECT ${CUSTOMER_ORDER_COLUMNS}
+       ${CUSTOMER_ORDER_JOINS}
+       WHERE o.id = ? AND o.user_id = ?`,
+    )
+    .bind(orderId, userId)
+    .first<Record<string, unknown>>();
+  if (!order) return null;
+
+  const history = await db
+    .prepare(
+      "SELECT * FROM order_status_history WHERE order_id = ? ORDER BY timestamp ASC",
+    )
+    .bind(orderId)
+    .all();
+  const payment = await db
+    .prepare(
+      "SELECT id, status, amount, currency, updated_at FROM payment_transactions WHERE order_id = ? ORDER BY updated_at DESC LIMIT 1",
+    )
+    .bind(orderId)
+    .first<Record<string, unknown>>();
+  return { ...order, statusHistory: history.results, payment };
+}
+
 async function assignTailorAndQuote(
   db: D1Database,
   input: {
@@ -74,21 +159,22 @@ async function assignTailorAndQuote(
     deliveryLng: number;
   },
 ) {
-  const assigned = await pickNearestTailor({
+  const picked = await pickTailorForDelivery({
     db,
     deliveryLat: input.deliveryLat,
     deliveryLng: input.deliveryLng,
     city: input.city,
     design: input.design,
   });
-  if (!assigned) return null;
+  if (!picked) return null;
+  const assigned = picked.candidate;
   return {
     tailorId: assigned.tailorId,
     tailorName: assigned.tailorName,
     shopName: assigned.shopName,
     distanceKm: Math.round(assigned.distanceKm * 10) / 10,
     pricePlanId: assigned.quote.planId,
-    assignmentMethod: "proximity" as const,
+    assignmentMethod: picked.assignmentMethod,
     basePrice: assigned.quote.basePrice,
     fabricFee: assigned.quote.fabricFee,
     deliveryFee: assigned.quote.deliveryFee,
@@ -102,7 +188,11 @@ async function assignTailorAndQuote(
 orderRoutes.get("/", async (c) => {
   const userId = c.get("userId") as string;
   const { results } = await c.env.DB.prepare(
-    "SELECT * FROM orders WHERE user_id = ? ORDER BY placed_at DESC",
+    `SELECT ${CUSTOMER_ORDER_COLUMNS}
+     ${CUSTOMER_ORDER_JOINS}
+     WHERE o.user_id = ?
+     ORDER BY o.placed_at DESC
+     LIMIT 200`,
   )
     .bind(userId)
     .all();
@@ -164,7 +254,7 @@ orderRoutes.get("/quote", async (c) => {
       c,
       404,
       "NO_TAILOR_AVAILABLE",
-      "No tailor is available near this location for this garment",
+      "No tailor is available for this garment",
     );
   }
 
@@ -245,52 +335,17 @@ orderRoutes.post("/:id/claim", requireRole("tailor"), async (c) => {
 orderRoutes.get("/tailor/:id", requireRole("tailor"), async (c) => {
   const tailorId = c.get("userId") as string;
   const id = c.req.param("id");
-  const order = await c.env.DB.prepare(
-    `SELECT o.*, d.print_image_url AS design_print_image_url,
-            d.sketch_image_url AS design_sketch_image_url
-     FROM orders o
-     LEFT JOIN designs d ON d.id = o.design_id
-     WHERE o.id = ? AND o.tailor_id = ?`,
-  )
-    .bind(id, tailorId)
-    .first<Record<string, unknown>>();
+  const order = await loadTailorOrderPayload(c.env.DB, tailorId, id);
   if (!order) return apiError(c, 404, "ORDER_NOT_FOUND", "Order not found");
-
-  const history = await c.env.DB.prepare(
-    "SELECT * FROM order_status_history WHERE order_id = ? ORDER BY timestamp ASC",
-  )
-    .bind(id)
-    .all();
-  const payment = await c.env.DB.prepare(
-    "SELECT id, status, amount, currency, updated_at FROM payment_transactions WHERE order_id = ? ORDER BY updated_at DESC LIMIT 1",
-  )
-    .bind(id)
-    .first<Record<string, unknown>>();
-  return c.json({ ...order, statusHistory: history.results, payment });
+  return c.json(order);
 });
 
 orderRoutes.get("/:id", async (c) => {
   const userId = c.get("userId") as string;
   const id = c.req.param("id");
-
-  const order = await c.env.DB.prepare(
-    "SELECT * FROM orders WHERE id = ? AND user_id = ?",
-  )
-    .bind(id, userId)
-    .first<Record<string, unknown>>();
+  const order = await loadCustomerOrderPayload(c.env.DB, userId, id);
   if (!order) return apiError(c, 404, "ORDER_NOT_FOUND", "Order not found");
-
-  const history = await c.env.DB.prepare(
-    "SELECT * FROM order_status_history WHERE order_id = ? ORDER BY timestamp ASC",
-  )
-    .bind(id)
-    .all();
-  const payment = await c.env.DB.prepare(
-    "SELECT id, status, amount, currency, updated_at FROM payment_transactions WHERE order_id = ? ORDER BY updated_at DESC LIMIT 1",
-  )
-    .bind(id)
-    .first<Record<string, unknown>>();
-  return c.json({ ...order, statusHistory: history.results, payment });
+  return c.json(order);
 });
 
 orderRoutes.post("/", async (c) => {
@@ -412,7 +467,7 @@ orderRoutes.post("/", async (c) => {
       c,
       404,
       "NO_TAILOR_AVAILABLE",
-      "No tailor is available near this location for this garment",
+      "No tailor is available for this garment",
     );
   }
   if (quote.tailorId !== requestedTailorId) {
@@ -583,10 +638,10 @@ orderRoutes.patch("/:id/status", requireRole("tailor"), async (c) => {
     return apiError(c, 400, "INVALID_STATUS", "Invalid order status");
   }
   const current = await c.env.DB.prepare(
-    "SELECT status, tailor_id FROM orders WHERE id = ?",
+    "SELECT status, tailor_id, courier_id FROM orders WHERE id = ?",
   )
     .bind(id)
-    .first<{ status: string; tailor_id: string | null }>();
+    .first<{ status: string; tailor_id: string | null; courier_id: string | null }>();
   if (!current) {
     return apiError(c, 404, "ORDER_NOT_FOUND", "Order not found");
   }
@@ -604,15 +659,51 @@ orderRoutes.patch("/:id/status", requireRole("tailor"), async (c) => {
     );
   }
 
-  await c.env.DB.prepare(
-    "UPDATE orders SET status = ?, updated_at = datetime('now') WHERE id = ?",
-  )
-    .bind(status, id)
-    .run();
+  let handoffNote: string | null = body.note ? String(body.note) : null;
+  if (status === "ready_to_ship") {
+    let courierId = current.courier_id;
+    let courierName: string | null = null;
+    if (courierId) {
+      const existing = await c.env.DB.prepare(
+        "SELECT name FROM users WHERE id = ?",
+      )
+        .bind(courierId)
+        .first<{ name: string | null }>();
+      courierName = existing?.name?.trim() || "Delivery partner";
+    } else {
+      const picked = await pickCourierForDelivery(c.env.DB);
+      if (!picked) {
+        return apiError(
+          c,
+          503,
+          "NO_COURIER_AVAILABLE",
+          "No delivery partner is available to accept this handoff",
+        );
+      }
+      courierId = picked.courierId;
+      courierName = picked.courierName;
+    }
+    handoffNote =
+      handoffNote ?? `Handed off to ${courierName} for delivery`;
+    await c.env.DB.prepare(
+      `UPDATE orders
+       SET status = ?, courier_id = ?, updated_at = datetime('now')
+       WHERE id = ?`,
+    )
+      .bind(status, courierId, id)
+      .run();
+  } else {
+    await c.env.DB.prepare(
+      "UPDATE orders SET status = ?, updated_at = datetime('now') WHERE id = ?",
+    )
+      .bind(status, id)
+      .run();
+  }
+
   await c.env.DB.prepare(
     "INSERT INTO order_status_history (id, order_id, status, note, updated_by) VALUES (?, ?, ?, ?, ?)",
   )
-    .bind(uuidv4(), id, status, body.note ?? null, userId)
+    .bind(uuidv4(), id, status, handoffNote, userId)
     .run();
 
   if (status === "delivered") {
@@ -647,5 +738,9 @@ orderRoutes.patch("/:id/status", requireRole("tailor"), async (c) => {
     }
   }
 
-  return c.json({ updated: true, status });
+  const order = await loadTailorOrderPayload(c.env.DB, userId, id);
+  if (!order) {
+    return c.json({ updated: true, status });
+  }
+  return c.json({ ...order, updated: true });
 });

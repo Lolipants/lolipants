@@ -109,6 +109,30 @@ deliveryRoutes.get("/history", async (c) => {
   return c.json(results);
 });
 
+async function loadDeliveryOrderPayload(
+  db: D1Database,
+  courierId: string,
+  orderId: string,
+): Promise<Record<string, unknown> | null> {
+  const order = await db
+    .prepare(
+      `SELECT ${ORDER_COLUMNS}
+       FROM orders o
+       LEFT JOIN designs d ON d.id = o.design_id
+       WHERE o.id = ? AND o.courier_id = ?`,
+    )
+    .bind(orderId, courierId)
+    .first<Record<string, unknown>>();
+  if (!order) return null;
+  const history = await db
+    .prepare(
+      "SELECT * FROM order_status_history WHERE order_id = ? ORDER BY timestamp ASC",
+    )
+    .bind(orderId)
+    .all();
+  return { ...order, statusHistory: history.results };
+}
+
 /** One order, restricted to the courier who claimed it. */
 deliveryRoutes.get("/orders/:id", async (c) => {
   const courierId = c.get("userId") as string;
@@ -152,7 +176,20 @@ deliveryRoutes.patch("/orders/:id/status", async (c) => {
     .bind(id)
     .first<{ id: string; courier_id: string | null; status: string }>();
   if (!current) return apiError(c, 404, "ORDER_NOT_FOUND", "Order not found");
-  if (current.courier_id !== courierId) {
+
+  if (nextStatus === PICKED_UP_STATUS) {
+    if (
+      current.courier_id &&
+      current.courier_id !== courierId
+    ) {
+      return apiError(
+        c,
+        403,
+        "FORBIDDEN",
+        "This delivery is assigned to another courier",
+      );
+    }
+  } else if (current.courier_id !== courierId) {
     return apiError(c, 403, "FORBIDDEN", "You have not claimed this order");
   }
 
@@ -195,10 +232,12 @@ deliveryRoutes.patch("/orders/:id/status", async (c) => {
   } else {
     await c.env.DB.prepare(
       `UPDATE orders
-       SET status = ?, updated_at = datetime('now')
-       WHERE id = ?`,
+       SET status = ?, courier_id = ?, updated_at = datetime('now')
+       WHERE id = ?
+         AND (courier_id IS NULL OR courier_id = ?)
+         AND status = ?`,
     )
-      .bind(nextStatus, id)
+      .bind(nextStatus, courierId, id, courierId, COURIER_PICKUP_STATUS)
       .run();
   }
   await c.env.DB.prepare(
@@ -236,5 +275,9 @@ deliveryRoutes.patch("/orders/:id/status", async (c) => {
     }
   }
 
-  return c.json({ updated: true, status: nextStatus });
+  const order = await loadDeliveryOrderPayload(c.env.DB, courierId, id);
+  if (!order) {
+    return c.json({ updated: true, status: nextStatus });
+  }
+  return c.json({ ...order, updated: true, status: nextStatus });
 });

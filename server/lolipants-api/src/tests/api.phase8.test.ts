@@ -213,14 +213,38 @@ class MockDb {
       }
       return { changes: 1 };
     }
-    if (sql.startsWith("UPDATE orders") && sql.includes("courier_id = ?")) {
-      const id = String(binds[binds.length - 1]);
+    if (
+      sql.startsWith("UPDATE orders") &&
+      sql.includes("courier_id = ?") &&
+      sql.includes("AND status = ?")
+    ) {
+      const status = String(binds[0]);
+      const courierId = String(binds[1]);
+      const id = String(binds[2]);
+      const expectedStatus = String(binds[4]);
       const existing = this.orders.get(id);
       if (!existing) return { changes: 0 };
-      if (existing.courier_id && existing.courier_id !== String(binds[0])) {
+      if (existing.status !== expectedStatus) return { changes: 0 };
+      if (existing.courier_id && existing.courier_id !== courierId) {
         return { changes: 0 };
       }
-      existing.courier_id = String(binds[0]);
+      existing.status = status;
+      existing.courier_id = courierId;
+      return { changes: 1 };
+    }
+    if (
+      sql.startsWith("UPDATE orders") &&
+      sql.includes("courier_id = ?") &&
+      sql.includes("courier_id IS NULL")
+    ) {
+      const courierId = String(binds[0]);
+      const id = String(binds[1]);
+      const existing = this.orders.get(id);
+      if (!existing) return { changes: 0 };
+      if (existing.courier_id && existing.courier_id !== courierId) {
+        return { changes: 0 };
+      }
+      existing.courier_id = courierId;
       return { changes: 1 };
     }
     if (sql.startsWith("UPDATE orders SET status")) {
@@ -422,6 +446,54 @@ describe("phase 8 / delivery RBAC", () => {
     });
     expect(response.status).toBe(200);
     expect(mockDb.orders.get("order-1")?.courier_id).toBe("courier-1");
+  });
+
+  it("lets a courier mark picked up when tailor pre-assigned them", async () => {
+    mockDb.orders.set("order-2", {
+      id: "order-2",
+      user_id: "user-1",
+      design_id: null,
+      tailor_id: null,
+      courier_id: "courier-1",
+      status: "ready_to_ship",
+      delivery_proof_url: null,
+      delivered_at: null,
+    });
+    const response = await apiRequest(
+      "PATCH",
+      "/delivery/orders/order-2/status",
+      {
+        token: "courier-token",
+        body: { status: "out_for_delivery" },
+      },
+    );
+    expect(response.status).toBe(200);
+    expect(mockDb.orders.get("order-2")?.status).toBe("out_for_delivery");
+  });
+
+  it("claims on pickup when the order is still unassigned", async () => {
+    mockDb.orders.set("order-3", {
+      id: "order-3",
+      user_id: "user-1",
+      design_id: null,
+      tailor_id: null,
+      courier_id: null,
+      status: "ready_to_ship",
+      delivery_proof_url: null,
+      delivered_at: null,
+    });
+    const response = await apiRequest(
+      "PATCH",
+      "/delivery/orders/order-3/status",
+      {
+        token: "courier-token",
+        body: { status: "out_for_delivery" },
+      },
+    );
+    expect(response.status).toBe(200);
+    const row = mockDb.orders.get("order-3");
+    expect(row?.courier_id).toBe("courier-1");
+    expect(row?.status).toBe("out_for_delivery");
   });
 });
 
