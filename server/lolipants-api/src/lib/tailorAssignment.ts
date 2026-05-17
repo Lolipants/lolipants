@@ -50,13 +50,29 @@ type TailorProfileRow = {
   name: string | null;
 };
 
-export async function pickNearestTailor(input: {
-  db: D1Database;
-  deliveryLat: number;
-  deliveryLng: number;
-  city: string;
-  design: DesignForAssignment;
-}): Promise<TailorCandidate | null> {
+export type TailorAssignmentMethod = "proximity" | "fallback";
+
+export type TailorPickResult = {
+  candidate: TailorCandidate;
+  assignmentMethod: TailorAssignmentMethod;
+};
+
+function sortTailorCandidates(a: TailorCandidate, b: TailorCandidate): number {
+  if (a.distanceKm !== b.distanceKm) return a.distanceKm - b.distanceKm;
+  if (a.quote.total !== b.quote.total) return a.quote.total - b.quote.total;
+  return a.tailorId < b.tailorId ? -1 : 1;
+}
+
+async function collectTailorCandidates(
+  input: {
+    db: D1Database;
+    deliveryLat: number;
+    deliveryLng: number;
+    city: string;
+    design: DesignForAssignment;
+  },
+  options: { withinServiceRadius: boolean },
+): Promise<TailorCandidate[]> {
   const { results } = await input.db
     .prepare(
       `SELECT tp.user_id, tp.shop_name, tp.lat, tp.lng, tp.service_radius_km,
@@ -82,7 +98,7 @@ export async function pickNearestTailor(input: {
       row.lat,
       row.lng,
     );
-    if (distanceKm > radius) continue;
+    if (options.withinServiceRadius && distanceKm > radius) continue;
 
     const plan = await loadActiveTailorPlan(input.db, row.user_id);
     if (!plan || plan.garmentPrices.length === 0) continue;
@@ -110,13 +126,54 @@ export async function pickNearestTailor(input: {
     });
   }
 
-  if (candidates.length === 0) return null;
+  candidates.sort(sortTailorCandidates);
+  return candidates;
+}
 
-  candidates.sort((a, b) => {
-    if (a.distanceKm !== b.distanceKm) return a.distanceKm - b.distanceKm;
-    if (a.quote.total !== b.quote.total) return a.quote.total - b.quote.total;
-    return (a.tailorId < b.tailorId ? -1 : 1);
+/**
+ * Picks a tailor for checkout: nearest within service radius, else nearest
+ * accepting tailor who can price the design (ignores radius).
+ */
+export async function pickTailorForDelivery(input: {
+  db: D1Database;
+  deliveryLat: number;
+  deliveryLng: number;
+  city: string;
+  design: DesignForAssignment;
+}): Promise<TailorPickResult | null> {
+  const base = {
+    db: input.db,
+    deliveryLat: input.deliveryLat,
+    deliveryLng: input.deliveryLng,
+    city: input.city,
+    design: input.design,
+  };
+
+  const inRadius = await collectTailorCandidates(base, {
+    withinServiceRadius: true,
   });
+  if (inRadius.length > 0) {
+    return { candidate: inRadius[0]!, assignmentMethod: "proximity" };
+  }
 
-  return candidates[0] ?? null;
+  const fallback = await collectTailorCandidates(base, {
+    withinServiceRadius: false,
+  });
+  if (fallback.length > 0) {
+    return { candidate: fallback[0]!, assignmentMethod: "fallback" };
+  }
+
+  return null;
+}
+
+/** @deprecated Use [pickTailorForDelivery]; kept for tests. */
+export async function pickNearestTailor(input: {
+  db: D1Database;
+  deliveryLat: number;
+  deliveryLng: number;
+  city: string;
+  design: DesignForAssignment;
+}): Promise<TailorCandidate | null> {
+  const picked = await pickTailorForDelivery(input);
+  return picked?.candidate ?? null;
 }
