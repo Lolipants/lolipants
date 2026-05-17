@@ -26,7 +26,10 @@ class OrderCard extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () => context.push('/orders/detail/${order.id}'),
+        onTap: () => context.pushNamed(
+          'orderDetail',
+          pathParameters: {'orderId': order.id},
+        ),
         borderRadius: BorderRadius.circular(AppRadius.md),
         child: Container(
           margin: const EdgeInsets.only(bottom: AppSpacing.md),
@@ -56,6 +59,14 @@ class OrderCard extends StatelessWidget {
               const SizedBox(height: AppSpacing.xs),
               Text(AppStrings.tailorLabel, style: AppTextStyles.bodySmall),
               Text(order.tailorName, style: AppTextStyles.bodyMedium),
+              if (order.totalPrice != null) ...[
+                const SizedBox(height: AppSpacing.xs),
+                Text('Total', style: AppTextStyles.bodySmall),
+                Text(
+                  '${order.totalPrice} ${order.currency}',
+                  style: AppTextStyles.bodyMedium,
+                ),
+              ],
               const SizedBox(height: AppSpacing.sm),
               Text(
                 order.status.labelEn,

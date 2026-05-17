@@ -42,6 +42,9 @@ class Order {
     this.designId,
     this.printImageUrl,
     this.sketchImageUrl,
+    this.courierName,
+    this.tailorShopName,
+    this.garmentType,
   });
 
   /// Public identifier fragment (e.g. `0042`).
@@ -101,6 +104,15 @@ class Order {
   /// Optional sketch reference URL from the design record.
   final String? sketchImageUrl;
 
+  /// Assigned delivery partner (after tailor handoff).
+  final String? courierName;
+
+  /// Workshop / shop label for the assigned tailor.
+  final String? tailorShopName;
+
+  /// Garment type from the linked design.
+  final String? garmentType;
+
   /// Builds an [Order] from API payload.
   factory Order.fromApi(Map<String, dynamic> json) {
     final rawHistory = json['statusHistory'];
@@ -126,10 +138,15 @@ class Order {
     }
 
     final id = json['id']?.toString() ?? '';
-    final designName =
-        json['design_name']?.toString() ?? json['designName']?.toString() ?? 'Custom design';
-    final tailorName =
-        json['tailor_name']?.toString() ?? json['tailorName']?.toString() ?? 'Assigned tailor';
+    final garmentType = json['design_garment_type']?.toString() ??
+        json['garment_type']?.toString() ??
+        json['garmentType']?.toString();
+    final designName = _resolveDesignName(json, garmentType);
+    final tailorShopName = json['tailor_shop_name']?.toString() ??
+        json['tailorShopName']?.toString();
+    final tailorName = _resolveTailorName(json, tailorShopName);
+    final courierName =
+        json['courier_name']?.toString() ?? json['courierName']?.toString();
     final placedAt = DateTime.tryParse(json['placed_at']?.toString() ?? '') ??
         DateTime.tryParse(json['placedAt']?.toString() ?? '') ??
         DateTime.now();
@@ -175,8 +192,52 @@ class Order {
       sketchImageUrl: json['design_sketch_image_url']?.toString() ??
           json['sketch_image_url']?.toString() ??
           json['sketchImageUrl']?.toString(),
+      courierName: courierName,
+      tailorShopName: tailorShopName?.trim().isEmpty == true
+          ? null
+          : tailorShopName?.trim(),
+      garmentType:
+          garmentType?.trim().isEmpty == true ? null : garmentType?.trim(),
     );
   }
+}
+
+String _resolveDesignName(Map<String, dynamic> json, String? garmentType) {
+  final explicit =
+      json['design_name']?.toString() ?? json['designName']?.toString();
+  if (explicit != null && explicit.trim().isNotEmpty) {
+    return explicit.trim();
+  }
+  final type = garmentType?.trim();
+  if (type != null && type.isNotEmpty) {
+    return type
+        .replaceAll('_', ' ')
+        .split(RegExp(r'\s+'))
+        .where((w) => w.isNotEmpty)
+        .map((w) => w.length == 1 ? w.toUpperCase() : '${w[0].toUpperCase()}${w.substring(1)}')
+        .join(' ');
+  }
+  return 'Custom design';
+}
+
+String _resolveTailorName(Map<String, dynamic> json, String? shopName) {
+  final name =
+      json['tailor_name']?.toString() ?? json['tailorName']?.toString();
+  final shop = shopName?.trim();
+  final tailor = name?.trim();
+  if (shop != null && shop.isNotEmpty) {
+    if (tailor != null && tailor.isNotEmpty && tailor != shop) {
+      return '$tailor · $shop';
+    }
+    return shop;
+  }
+  if (tailor != null && tailor.isNotEmpty) return tailor;
+  final tailorId =
+      json['tailor_id']?.toString() ?? json['tailorId']?.toString();
+  if (tailorId != null && tailorId.isNotEmpty) {
+    return 'Assigned tailor';
+  }
+  return 'Tailor pending';
 }
 
 OrderStatus _parseStatus(Object? value) {

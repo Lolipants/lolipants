@@ -608,6 +608,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                   GoRoute(
                     path: 'detail/:orderId',
                     name: 'orderDetail',
+                    parentNavigatorKey: rootNavigatorKey,
                     builder: (context, state) {
                       final id = state.pathParameters['orderId']!;
                       return OrderDetailScreen(orderId: id);

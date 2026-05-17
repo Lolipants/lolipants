@@ -12,7 +12,7 @@ import 'package:lolipants/shared/widgets/error_banner.dart';
 import 'package:lolipants/shared/widgets/loading_overlay.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
 
-/// Orders tab: empty state or mock list.
+/// Orders tab: live list from the API with pull-to-refresh.
 class OrdersScreen extends ConsumerStatefulWidget {
   /// Creates the orders tab.
   const OrdersScreen({super.key});

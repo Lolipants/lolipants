@@ -176,10 +176,16 @@ class OrdersRepository {
     final status = e.response?.statusCode ?? 0;
     final body = e.response?.data;
     var message = e.message ?? 'network';
+    String? code;
     if (body is Map) {
       final nestedError = body['error'];
-      if (nestedError is Map && nestedError['message'] != null) {
-        message = nestedError['message'].toString();
+      if (nestedError is Map) {
+        if (nestedError['message'] != null) {
+          message = nestedError['message'].toString();
+        }
+        if (nestedError['code'] != null) {
+          code = nestedError['code'].toString();
+        }
       } else if (body['error'] != null) {
         message = body['error'].toString();
       } else if (body['message'] != null) {
@@ -195,10 +201,10 @@ class OrdersRepository {
       return AuthException(message);
     }
     if (status >= 500) {
-      return ServerException(status, message);
+      return ServerException(status, message, code: code);
     }
     if (status >= 400) {
-      return ServerException(status, message);
+      return ServerException(status, message, code: code);
     }
     return NetworkException(message);
   }

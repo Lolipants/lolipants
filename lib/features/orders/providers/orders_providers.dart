@@ -149,10 +149,22 @@ String orderErrorMessage(
     _ => null,
   };
   if (appError == null) return fallback;
+  if (appError case ServerException(
+        statusCode: 404,
+        code: 'NO_TAILOR_AVAILABLE',
+      )) {
+    return 'No tailor is available for this design and delivery area. '
+        'Try another address or ask support to enable tailor coverage.';
+  }
   if (appError case ServerException(statusCode: 404, message: final msg)
       when msg.toLowerCase().contains('design')) {
     return 'The selected design was not found. '
-        'Please create or choose another design.';
+        'Please save your design and try checkout again.';
+  }
+  if (appError case ServerException(statusCode: 404, message: final msg)
+      when msg.toLowerCase().contains('tailor') ||
+          msg.toLowerCase().contains('garment')) {
+    return msg;
   }
   if (appError case ServerException(statusCode: 400, message: final msg)
       when msg.toLowerCase().contains('cancel')) {
