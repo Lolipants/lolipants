@@ -57,12 +57,15 @@ class DeliveryRepository {
   }
 
   /// Marks the order as picked up / out for delivery.
-  Future<Either<AppException, void>> markPickedUp(String orderId, {String? note}) {
+  Future<Either<AppException, Order>> markPickedUp(
+    String orderId, {
+    String? note,
+  }) {
     return _patchStatus(orderId, status: 'out_for_delivery', note: note);
   }
 
   /// Marks the order as delivered. Requires a [proofUrl] for the photo receipt.
-  Future<Either<AppException, void>> markDelivered({
+  Future<Either<AppException, Order>> markDelivered({
     required String orderId,
     required String proofUrl,
     String? note,
@@ -94,14 +97,14 @@ class DeliveryRepository {
     }
   }
 
-  Future<Either<AppException, void>> _patchStatus(
+  Future<Either<AppException, Order>> _patchStatus(
     String orderId, {
     required String status,
     String? proofUrl,
     String? note,
   }) async {
     try {
-      await _dio.patch<Map<String, dynamic>>(
+      final response = await _dio.patch<Map<String, dynamic>>(
         '${ApiEndpoints.delivery}/orders/$orderId/status',
         data: {
           'status': status,
@@ -110,7 +113,16 @@ class DeliveryRepository {
         },
         options: await _authOptions(),
       );
-      return right(null);
+      final data = response.data;
+      if (data != null && data['id'] != null) {
+        return right(Order.fromApi(data));
+      }
+      return right(
+        Order.fromApi({
+          'id': orderId,
+          'status': status,
+        }),
+      );
     } on DioException catch (e) {
       return left(_mapDio(e));
     } on Exception {
@@ -131,10 +143,16 @@ class DeliveryRepository {
     final status = e.response?.statusCode ?? 0;
     final body = e.response?.data;
     var message = e.message ?? 'network';
+    String? code;
     if (body is Map) {
       final nested = body['error'];
-      if (nested is Map && nested['message'] != null) {
-        message = nested['message'].toString();
+      if (nested is Map) {
+        if (nested['message'] != null) {
+          message = nested['message'].toString();
+        }
+        if (nested['code'] != null) {
+          code = nested['code'].toString();
+        }
       } else if (body['message'] != null) {
         message = body['message'].toString();
       }
@@ -145,7 +163,7 @@ class DeliveryRepository {
       return NetworkException(message);
     }
     if (status == 401 || status == 403) return AuthException(message);
-    if (status >= 400) return ServerException(status, message);
+    if (status >= 400) return ServerException(status, message, code: code);
     return NetworkException(message);
   }
 }

@@ -16,7 +16,7 @@ class DeliveryActiveScreen extends ConsumerWidget {
     return DeliveryQueueScaffold(
       bucket: DeliveryQueueBucket.active,
       emptyMessage:
-          'No active deliveries. Claim one from the Queue tab to get started.',
+          'No active deliveries. New jobs appear here when a tailor hands off an order to you.',
       builder: (context, ref, order) {
         return Padding(
           padding: const EdgeInsets.only(bottom: AppSpacing.xs),

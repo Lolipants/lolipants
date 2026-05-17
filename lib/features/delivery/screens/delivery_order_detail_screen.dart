@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:lolipants/core/errors/app_exception.dart';
 import 'package:lolipants/core/permissions/device_permission_prompt.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
@@ -29,31 +30,42 @@ class DeliveryOrderDetailScreen extends ConsumerStatefulWidget {
 class _DeliveryOrderDetailScreenState
     extends ConsumerState<DeliveryOrderDetailScreen> {
   bool _busy = false;
+  Order? _orderOverride;
   final ImagePicker _picker = ImagePicker();
 
   @override
   Widget build(BuildContext context) {
     final async = ref.watch(deliveryOrderProvider(widget.orderId));
+    final displayOrder = _orderOverride ?? async.valueOrNull;
+
     return Scaffold(
       appBar: AppBar(
-        title: Text('Delivery #${widget.orderId}',
-            style: AppTextStyles.titleMedium),
+        title: Text(
+          'Delivery #${widget.orderId}',
+          style: AppTextStyles.titleMedium,
+        ),
       ),
       body: Stack(
         children: [
           const ArabesqueBackground(),
-          async.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, _) => Center(
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.xl),
-                child: Text('Could not load order. $error',
+          if (displayOrder != null)
+            _content(displayOrder)
+          else
+            async.when(
+              loading: () =>
+                  const Center(child: CircularProgressIndicator()),
+              error: (error, _) => Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.xl),
+                  child: Text(
+                    'Could not load order. $error',
                     textAlign: TextAlign.center,
-                    style: AppTextStyles.bodyMedium),
+                    style: AppTextStyles.bodyMedium,
+                  ),
+                ),
               ),
+              data: _content,
             ),
-            data: _content,
-          ),
         ],
       ),
     );
@@ -76,6 +88,11 @@ class _DeliveryOrderDetailScreenState
             children: [
               Text(order.designName, style: AppTextStyles.titleMedium),
               const SizedBox(height: AppSpacing.xs),
+              Text(
+                'Status: ${status.labelEn}',
+                style: AppTextStyles.labelGold.copyWith(fontSize: 12),
+              ),
+              const SizedBox(height: AppSpacing.xs),
               _row('Address', order.deliveryAddress ?? '—'),
               _row('City', order.deliveryCity ?? '—'),
               _row('Phone', order.deliveryPhone ?? '—'),
@@ -85,20 +102,24 @@ class _DeliveryOrderDetailScreenState
         const SizedBox(height: AppSpacing.lg),
         if (status == OrderStatus.readyToShip)
           LolipantsButton(
-            label: _busy ? 'Working...' : 'Mark picked up',
+            label: 'Mark picked up',
+            loading: _busy,
             onPressed: _busy ? null : _markPickedUp,
           ),
         if (status == OrderStatus.outForDelivery) ...[
           LolipantsButton(
-            label: _busy ? 'Working...' : 'Mark delivered (with photo)',
+            label: 'Mark delivered (with photo)',
+            loading: _busy,
             onPressed: _busy ? null : _markDelivered,
           ),
         ],
         if (status == OrderStatus.delivered)
           Padding(
             padding: const EdgeInsets.only(top: AppSpacing.md),
-            child: Text('Delivered on ${order.placedAt}',
-                style: AppTextStyles.bodySmall),
+            child: Text(
+              'Delivered on ${order.placedAt}',
+              style: AppTextStyles.bodySmall,
+            ),
           ),
         const SizedBox(height: AppSpacing.sm),
         LolipantsButton(
@@ -116,7 +137,10 @@ class _DeliveryOrderDetailScreenState
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(width: 90, child: Text(label, style: AppTextStyles.bodySmall)),
+          SizedBox(
+            width: 90,
+            child: Text(label, style: AppTextStyles.bodySmall),
+          ),
           Expanded(child: Text(value, style: AppTextStyles.bodyMedium)),
         ],
       ),
@@ -129,10 +153,15 @@ class _DeliveryOrderDetailScreenState
     final result = await repo.markPickedUp(widget.orderId);
     if (!mounted) return;
     result.fold(
-      (e) => _snack('Could not update: $e'),
-      (_) => _snack('Marked picked up'),
+      (e) {
+        _snack('Could not update: ${_deliveryErrorMessage(e)}');
+        _unbusy();
+      },
+      (updated) {
+        _snack('Marked picked up');
+        _finishMutation(updated);
+      },
     );
-    _refresh();
   }
 
   Future<void> _markDelivered() async {
@@ -149,14 +178,13 @@ class _DeliveryOrderDetailScreenState
     if (image == null) return;
     if (!mounted) return;
     setState(() => _busy = true);
-    // Reuse the designs image upload endpoint (/upload) via its repository.
     final designsRepo = ref.read(designsRepositoryProvider);
     final upload = await designsRepo.uploadPrintImage(filePath: image.path);
     final uploaded = upload.fold<String?>((_) => null, (url) => url);
     if (uploaded == null) {
       if (!mounted) return;
       _snack('Photo upload failed, try again.');
-      setState(() => _busy = false);
+      _unbusy();
       return;
     }
     final repo = ref.read(deliveryRepositoryProvider);
@@ -166,21 +194,50 @@ class _DeliveryOrderDetailScreenState
     );
     if (!mounted) return;
     result.fold(
-      (e) => _snack('Could not mark delivered: $e'),
-      (_) => _snack('Delivery recorded'),
+      (e) {
+        _snack('Could not mark delivered: ${_deliveryErrorMessage(e)}');
+        _unbusy();
+      },
+      (updated) {
+        _snack('Delivery recorded');
+        _finishMutation(updated);
+      },
     );
-    _refresh();
   }
 
-  void _refresh() {
-    ref.invalidate(deliveryOrderProvider(widget.orderId));
-    ref.invalidate(deliveryQueueProvider);
-    if (mounted) setState(() => _busy = false);
+  void _finishMutation(Order updated) {
+    _invalidateDeliveryQueues();
+    if (!mounted) return;
+    setState(() {
+      _orderOverride = updated;
+      _busy = false;
+    });
+  }
+
+  void _unbusy() {
+    if (!mounted) return;
+    setState(() => _busy = false);
+  }
+
+  void _invalidateDeliveryQueues() {
+    for (final bucket in DeliveryQueueBucket.values) {
+      ref.invalidate(deliveryQueueProvider(bucket));
+    }
+  }
+
+  String _deliveryErrorMessage(AppException error) {
+    if (error case ServerException(message: final msg) when msg.isNotEmpty) {
+      return msg;
+    }
+    if (error case NetworkException(message: final msg)) {
+      return msg;
+    }
+    return error.toString();
   }
 
   void _snack(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    messenger?.showSnackBar(SnackBar(content: Text(message)));
   }
 }

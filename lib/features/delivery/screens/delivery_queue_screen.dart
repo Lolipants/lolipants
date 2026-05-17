@@ -16,7 +16,7 @@ class DeliveryQueueScreen extends ConsumerWidget {
     return DeliveryQueueScaffold(
       bucket: DeliveryQueueBucket.queue,
       emptyMessage:
-          'No deliveries waiting right now. Pull down to refresh the queue.',
+          'No unassigned pickups. Tailors assign deliveries automatically; this tab is for unclaimed overflow only.',
       builder: (context, ref, order) {
         return Padding(
           padding: const EdgeInsets.only(bottom: AppSpacing.xs),
