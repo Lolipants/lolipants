@@ -49,7 +49,10 @@ import 'package:lolipants/features/orders/screens/order_confirmation_screen.dart
 import 'package:lolipants/features/orders/screens/order_quote_review_screen.dart';
 import 'package:lolipants/features/orders/screens/order_detail_screen.dart';
 import 'package:lolipants/features/orders/models/order_design_draft.dart';
+import 'package:lolipants/features/orders/models/wedding_order_draft.dart';
 import 'package:lolipants/features/orders/screens/order_summary_screen.dart';
+import 'package:lolipants/features/orders/screens/order_wedding_quote_review_screen.dart';
+import 'package:lolipants/features/orders/screens/order_wedding_summary_screen.dart';
 import 'package:lolipants/features/orders/screens/orders_screen.dart';
 import 'package:lolipants/features/orders/screens/payment_screen.dart';
 import 'package:lolipants/features/orders/screens/size_confirmation_screen.dart';
@@ -319,6 +322,21 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               : null;
           return OrderSummaryScreen(designDraft: draft);
         },
+      ),
+      GoRoute(
+        path: '/order/wedding-summary',
+        name: 'orderWeddingSummary',
+        builder: (context, state) {
+          final draft = state.extra is WeddingOrderDraft
+              ? state.extra! as WeddingOrderDraft
+              : null;
+          return OrderWeddingSummaryScreen(weddingDraft: draft);
+        },
+      ),
+      GoRoute(
+        path: '/order/wedding-quote-review',
+        name: 'orderWeddingQuoteReview',
+        builder: (context, state) => const OrderWeddingQuoteReviewScreen(),
       ),
       GoRoute(
         path: '/order/size-confirm',

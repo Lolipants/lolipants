@@ -10,6 +10,7 @@ import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/features/orders/models/checkout_draft.dart';
 import 'package:lolipants/features/orders/models/order_design_draft.dart';
+import 'package:lolipants/features/orders/models/wedding_checkout_draft.dart';
 import 'package:lolipants/features/orders/providers/checkout_providers.dart';
 import 'package:lolipants/features/orders/providers/orders_providers.dart';
 import 'package:lolipants/core/permissions/device_permission_prompt.dart';
@@ -39,6 +40,10 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final weddingDraft = ref.watch(weddingCheckoutDraftProvider);
+    if (weddingDraft != null) {
+      return _buildWeddingPayment(context, weddingDraft);
+    }
     final draft = ref.watch(checkoutDraftProvider);
     if (draft == null) {
       return Scaffold(
@@ -117,6 +122,158 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildWeddingPayment(BuildContext context, WeddingCheckoutDraft draft) {
+    final quote = draft.quote;
+    return Scaffold(
+      appBar: AppBar(title: const Text('Payment')),
+      body: Stack(
+        children: [
+          const ArabesqueBackground(),
+          ListView(
+            padding: const EdgeInsets.all(AppSpacing.xl),
+            children: [
+              Text(draft.wedding.dressLabel, style: AppTextStyles.titleMedium),
+              const SizedBox(height: AppSpacing.md),
+              if (quote != null) ...[
+                Text(
+                  'Total: ${quote.total} ${quote.currency}',
+                  style: AppTextStyles.titleSmall,
+                ),
+                if (quote.isRent && quote.insuranceDeposit != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: AppSpacing.sm),
+                    child: Text(
+                      'Includes ${quote.insuranceDeposit} ${quote.currency} refundable deposit',
+                      style: AppTextStyles.bodySmall,
+                    ),
+                  ),
+              ],
+              const SizedBox(height: AppSpacing.lg),
+              if (_errorMessage != null) ...[
+                ErrorBanner(
+                  message: _errorMessage!,
+                  onDismiss: () => setState(() => _errorMessage = null),
+                ),
+                const SizedBox(height: AppSpacing.md),
+              ],
+              LolipantsButton(
+                label: _processing
+                    ? 'Processing...'
+                    : quote == null
+                        ? 'Pricing unavailable'
+                        : 'Pay ${quote.total} ${quote.currency}',
+                onPressed:
+                    _processing || quote == null ? null : () => _payWedding(draft),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _payWedding(WeddingCheckoutDraft draft) async {
+    setState(() {
+      _processing = true;
+      _errorMessage = null;
+    });
+    await _ensurePushRegistered();
+    final ordersRepo = ref.read(ordersRepositoryProvider);
+    final paymentsRepo = ref.read(paymentsRepositoryProvider);
+    final quote = draft.quote;
+    if (quote == null ||
+        quote.tailorId == null ||
+        quote.tailorId!.isEmpty ||
+        draft.deliveryLat == null ||
+        draft.deliveryLng == null) {
+      _fail('Pricing expired. Go back and refresh your quote.');
+      return;
+    }
+
+    final orderResult = await ordersRepo.createWeddingOrder(
+      weddingDressId: draft.wedding.dressId,
+      fulfillmentType: draft.wedding.fulfillmentType,
+      fulfillment: draft.wedding.fulfillmentApiValue,
+      rentalDays: draft.wedding.rentalDays,
+      deliveryAddress: draft.address,
+      deliveryCity: draft.city,
+      deliveryPhone: draft.phone,
+      deliveryLat: draft.deliveryLat!,
+      deliveryLng: draft.deliveryLng!,
+      tailorId: quote.tailorId!,
+      basePrice: quote.basePrice,
+      fabricFee: quote.fabricFee,
+      deliveryFee: quote.deliveryFee,
+      totalPrice: quote.total,
+      deliveryNotes: draft.notes,
+      idempotencyKey: draft.idempotencyKey,
+    );
+    final orderOrError = orderResult.fold<String>(
+      (e) => orderErrorMessage(e, fallback: 'Could not create order.'),
+      (_) => '',
+    );
+    if (orderOrError.isNotEmpty) {
+      _fail(orderOrError);
+      return;
+    }
+    final order = orderResult.toNullable();
+    if (order == null) {
+      _fail('Order creation returned no payload.');
+      return;
+    }
+    ref.read(weddingCheckoutDraftProvider.notifier).state =
+        draft.copyWith(orderId: order.id);
+
+    final intentResult = await paymentsRepo.createIntent(
+      orderId: order.id,
+      idempotencyKey: draft.idempotencyKey,
+    );
+    final intentError = intentResult.fold<String>(
+      (e) => orderErrorMessage(e, fallback: 'Could not start payment.'),
+      (_) => '',
+    );
+    if (intentError.isNotEmpty) {
+      _fail(intentError);
+      return;
+    }
+    final intent = intentResult.toNullable();
+    if (intent == null) {
+      _fail('Payment intent returned no payload.');
+      return;
+    }
+    ref.read(weddingCheckoutDraftProvider.notifier).state = (ref
+                .read(weddingCheckoutDraftProvider) ??
+            draft)
+        .copyWith(paymentReference: intent.reference);
+
+    final tapToken = await _requestTapToken();
+    if (tapToken == null) {
+      _fail('Payment was cancelled.');
+      return;
+    }
+
+    final chargeResult = tapToken == _kSandboxToken
+        ? await paymentsRepo.sandboxConfirm(paymentReference: intent.reference)
+        : await paymentsRepo.confirmWithToken(
+            paymentReference: intent.reference,
+            tapToken: tapToken,
+            idempotencyKey: draft.idempotencyKey,
+          );
+    final chargeError = chargeResult.fold<String>(
+      (e) => orderErrorMessage(e, fallback: 'Payment could not be captured.'),
+      (_) => '',
+    );
+    if (chargeError.isNotEmpty) {
+      _fail(chargeError);
+      return;
+    }
+
+    if (!mounted) return;
+    unawaited(ref.read(myOrdersProvider.notifier).reload());
+    ref.read(weddingCheckoutDraftProvider.notifier).state = null;
+    context.go('/order/confirmed/${order.id}');
   }
 
   Future<void> _pay(CheckoutDraft draft) async {

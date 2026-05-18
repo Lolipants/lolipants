@@ -35,8 +35,7 @@ class SizeConfirmationScreen extends ConsumerWidget {
               padding: const EdgeInsets.all(AppSpacing.xl),
               children: [
                 Text(
-                  'We will tailor ${draft?.design.name ?? 'your design'} using '
-                  'these measurements.',
+                  _sizingMessage(ref),
                   style: AppTextStyles.bodyMedium,
                 ),
                 const SizedBox(height: AppSpacing.lg),
@@ -61,6 +60,15 @@ class SizeConfirmationScreen extends ConsumerWidget {
 
   bool _hasCore(BodyMeasurements m) =>
       m.height != null && m.chest != null && m.waist != null;
+}
+
+String _sizingMessage(WidgetRef ref) {
+  final wedding = ref.read(weddingCheckoutDraftProvider)?.wedding;
+  if (wedding != null) {
+    return 'We will fit ${wedding.dressLabel} using these measurements.';
+  }
+  final name = ref.read(checkoutDraftProvider)?.design.name ?? 'your design';
+  return 'We will tailor $name using these measurements.';
 }
 
 class _MeasurementsTable extends StatelessWidget {

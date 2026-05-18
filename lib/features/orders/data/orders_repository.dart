@@ -5,6 +5,7 @@ import 'package:lolipants/core/network/api_endpoints.dart';
 import 'package:lolipants/features/auth/data/auth_local_storage.dart';
 import 'package:lolipants/features/orders/models/order.dart';
 import 'package:lolipants/features/orders/models/order_quote.dart';
+import 'package:lolipants/features/orders/models/wedding_order_quote.dart';
 
 /// API-backed repository for customer orders.
 class OrdersRepository {
@@ -95,6 +96,101 @@ class OrdersRepository {
         return left(const ServerException(500, 'Missing quote payload'));
       }
       return right(OrderQuote.fromApi(data));
+    } on DioException catch (e) {
+      return left(_mapDio(e));
+    } on Exception {
+      return left(const UnknownException());
+    }
+  }
+
+  /// Wedding dress quote (`GET /orders/wedding-quote`).
+  Future<Either<AppException, WeddingOrderQuote>> getWeddingQuote({
+    required String dressId,
+    required String fulfillment,
+    required int rentalDays,
+    required String city,
+    required double deliveryLat,
+    required double deliveryLng,
+  }) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        ApiEndpoints.ordersWeddingQuote,
+        queryParameters: {
+          'dressId': dressId,
+          'fulfillment': fulfillment,
+          'rentalDays': rentalDays,
+          'city': city,
+          'deliveryLat': deliveryLat,
+          'deliveryLng': deliveryLng,
+        },
+        options: await _authOptions(),
+      );
+      final data = response.data;
+      if (data == null) {
+        return left(const ServerException(500, 'Missing quote payload'));
+      }
+      return right(WeddingOrderQuote.fromApi(data));
+    } on DioException catch (e) {
+      return left(_mapDio(e));
+    } on Exception {
+      return left(const UnknownException());
+    }
+  }
+
+  /// Places a wedding rent or purchase order.
+  Future<Either<AppException, Order>> createWeddingOrder({
+    required String weddingDressId,
+    required String fulfillmentType,
+    required String fulfillment,
+    required int rentalDays,
+    required String deliveryAddress,
+    required String deliveryCity,
+    required String deliveryPhone,
+    required double deliveryLat,
+    required double deliveryLng,
+    required String tailorId,
+    required int basePrice,
+    required int fabricFee,
+    required int deliveryFee,
+    required int totalPrice,
+    String? deliveryNotes,
+    String? idempotencyKey,
+  }) async {
+    try {
+      final key = idempotencyKey ??
+          'wedding_${DateTime.now().millisecondsSinceEpoch}_$weddingDressId';
+      final authOptions = await _authOptions();
+      final response = await _dio.post<Map<String, dynamic>>(
+        ApiEndpoints.orders,
+        data: {
+          'weddingDressId': weddingDressId,
+          'fulfillmentType': fulfillmentType,
+          'fulfillment': fulfillment,
+          'rentalDays': rentalDays,
+          'deliveryAddress': deliveryAddress,
+          'deliveryCity': deliveryCity,
+          'deliveryPhone': deliveryPhone,
+          'deliveryLat': deliveryLat,
+          'deliveryLng': deliveryLng,
+          'tailorId': tailorId,
+          'basePrice': basePrice,
+          'fabricFee': fabricFee,
+          'deliveryFee': deliveryFee,
+          'totalPrice': totalPrice,
+          'deliveryNotes': deliveryNotes,
+        },
+        options: authOptions.copyWith(
+          headers: {
+            ...?(authOptions.headers),
+            'X-Idempotency-Key': key,
+          },
+        ),
+      );
+      final data = response.data;
+      if (data == null) {
+        return left(const ServerException(500, 'Missing order payload'));
+      }
+      return right(Order.fromApi(data));
     } on DioException catch (e) {
       return left(_mapDio(e));
     } on Exception {

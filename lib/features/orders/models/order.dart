@@ -45,6 +45,8 @@ class Order {
     this.courierName,
     this.tailorShopName,
     this.garmentType,
+    this.fulfillmentType,
+    this.rentalDays,
   });
 
   /// Public identifier fragment (e.g. `0042`).
@@ -112,6 +114,21 @@ class Order {
 
   /// Garment type from the linked design.
   final String? garmentType;
+
+  /// `custom`, `wedding_rent`, or `wedding_purchase`.
+  final String? fulfillmentType;
+
+  /// Rental period for wedding rent orders.
+  final int? rentalDays;
+
+  String? get weddingFulfillmentLabel {
+    if (fulfillmentType == 'wedding_rent') {
+      final days = rentalDays;
+      return days != null ? 'Wedding rent · $days days' : 'Wedding rent';
+    }
+    if (fulfillmentType == 'wedding_purchase') return 'Wedding purchase';
+    return null;
+  }
 
   /// Builds an [Order] from API payload.
   factory Order.fromApi(Map<String, dynamic> json) {
@@ -196,6 +213,9 @@ class Order {
       tailorShopName: tailorShopName?.trim().isEmpty == true
           ? null
           : tailorShopName?.trim(),
+      fulfillmentType: json['fulfillment_type']?.toString() ??
+          json['fulfillmentType']?.toString(),
+      rentalDays: asInt(json['rental_days'] ?? json['rentalDays']),
       garmentType:
           garmentType?.trim().isEmpty == true ? null : garmentType?.trim(),
     );

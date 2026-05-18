@@ -6,6 +6,8 @@ import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/core/location/delivery_location_service.dart';
 import 'package:lolipants/core/permissions/device_permission_prompt.dart';
+import 'package:lolipants/features/orders/models/checkout_draft.dart';
+import 'package:lolipants/features/orders/models/wedding_checkout_draft.dart';
 import 'package:lolipants/features/orders/providers/checkout_providers.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
@@ -34,13 +36,18 @@ class _DeliveryDetailsScreenState extends ConsumerState<DeliveryDetailsScreen> {
   @override
   void initState() {
     super.initState();
+    final weddingDraft = ref.read(weddingCheckoutDraftProvider);
     final draft = ref.read(checkoutDraftProvider);
-    _addressController = TextEditingController(text: draft?.address ?? '');
-    _cityController = TextEditingController(text: draft?.city ?? 'Doha');
-    _phoneController = TextEditingController(text: draft?.phone ?? '');
-    _notesController = TextEditingController(text: draft?.notes ?? '');
-    _deliveryLat = draft?.deliveryLat;
-    _deliveryLng = draft?.deliveryLng;
+    final activeAddress = weddingDraft?.address ?? draft?.address ?? '';
+    _addressController = TextEditingController(text: activeAddress);
+    _cityController =
+        TextEditingController(text: weddingDraft?.city ?? draft?.city ?? 'Doha');
+    _phoneController =
+        TextEditingController(text: weddingDraft?.phone ?? draft?.phone ?? '');
+    _notesController =
+        TextEditingController(text: weddingDraft?.notes ?? draft?.notes ?? '');
+    _deliveryLat = weddingDraft?.deliveryLat ?? draft?.deliveryLat;
+    _deliveryLng = weddingDraft?.deliveryLng ?? draft?.deliveryLng;
     WidgetsBinding.instance.addPostFrameCallback((_) => _collectLocation());
   }
 
@@ -80,8 +87,9 @@ class _DeliveryDetailsScreenState extends ConsumerState<DeliveryDetailsScreen> {
 
   void _saveAndContinue() {
     if (!_formKey.currentState!.validate()) return;
+    final weddingDraft = ref.read(weddingCheckoutDraftProvider);
     final draft = ref.read(checkoutDraftProvider);
-    if (draft == null) {
+    if (weddingDraft == null && draft == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Checkout session expired. Restart.')),
       );
@@ -95,13 +103,31 @@ class _DeliveryDetailsScreenState extends ConsumerState<DeliveryDetailsScreen> {
       );
       return;
     }
-    ref.read(checkoutDraftProvider.notifier).state = draft.copyWith(
-      address: _addressController.text.trim(),
-      city: _cityController.text.trim(),
-      phone: _phoneController.text.trim(),
-      notes: _notesController.text.trim().isEmpty
-          ? null
-          : _notesController.text.trim(),
+    final address = _addressController.text.trim();
+    final city = _cityController.text.trim();
+    final phone = _phoneController.text.trim();
+    final notes = _notesController.text.trim().isEmpty
+        ? null
+        : _notesController.text.trim();
+    if (weddingDraft != null) {
+      ref.read(weddingCheckoutDraftProvider.notifier).state =
+          weddingDraft.copyWith(
+        address: address,
+        city: city,
+        phone: phone,
+        notes: notes,
+        deliveryLat: lat,
+        deliveryLng: lng,
+        quote: null,
+      );
+      context.push('/order/wedding-quote-review');
+      return;
+    }
+    ref.read(checkoutDraftProvider.notifier).state = draft!.copyWith(
+      address: address,
+      city: city,
+      phone: phone,
+      notes: notes,
       deliveryLat: lat,
       deliveryLng: lng,
       quote: null,
