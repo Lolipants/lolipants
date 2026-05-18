@@ -24,12 +24,13 @@ import 'package:lolipants/features/editor/data/configurator_metadata.dart';
 import 'package:lolipants/features/editor/data/editor_design_restore.dart';
 import 'package:lolipants/features/editor/widgets/editor_resize_handle.dart';
 import 'package:lolipants/features/editor/models/configurator_catalog.dart';
+import 'package:lolipants/features/wedding/models/wedding_dress.dart';
 
 /// Editor interaction tools shown in the side rail.
 enum EditorTool { colour, text, image, sizing }
 
 /// Bottom panel tabs for the editor shell.
-enum EditorTab { designs, build, ai }
+enum EditorTab { designs, build, wedding, ai }
 
 /// Hero preview: schematic compose vs Gemini-refined look.
 enum EditorHeroMode { compose, look }
@@ -101,6 +102,10 @@ class EditorState {
     required this.configuratorTemplateId,
     required this.configuratorSelections,
     required this.configuratorSummary,
+    required this.selectedWeddingDressId,
+    required this.weddingCategoryFilter,
+    required this.weddingFulfillment,
+    required this.rentalDays,
   });
 
   factory EditorState.initial() {
@@ -156,6 +161,10 @@ class EditorState {
       configuratorTemplateId: '',
       configuratorSelections: const {},
       configuratorSummary: '',
+      selectedWeddingDressId: null,
+      weddingCategoryFilter: WeddingCategoryFilter.all,
+      weddingFulfillment: WeddingFulfillment.rent,
+      rentalDays: 3,
     );
   }
 
@@ -220,6 +229,15 @@ class EditorState {
   /// Human-readable summary for save / quote (Build tab).
   final String configuratorSummary;
 
+  /// Selected catalogue dress on the Wedding tab.
+  final String? selectedWeddingDressId;
+
+  final WeddingCategoryFilter weddingCategoryFilter;
+  final WeddingFulfillment weddingFulfillment;
+  final int rentalDays;
+
+  bool get isWeddingTab => activeTab == EditorTab.wedding;
+
   EditorState copyWith({
     String? designName,
     String? mannequinId,
@@ -259,6 +277,11 @@ class EditorState {
     String? configuratorTemplateId,
     ConfiguratorSelections? configuratorSelections,
     String? configuratorSummary,
+    String? selectedWeddingDressId,
+    bool unsetSelectedWeddingDressId = false,
+    WeddingCategoryFilter? weddingCategoryFilter,
+    WeddingFulfillment? weddingFulfillment,
+    int? rentalDays,
   }) {
     return EditorState(
       designName: designName ?? this.designName,
@@ -306,6 +329,13 @@ class EditorState {
       configuratorSelections:
           configuratorSelections ?? this.configuratorSelections,
       configuratorSummary: configuratorSummary ?? this.configuratorSummary,
+      selectedWeddingDressId: unsetSelectedWeddingDressId
+          ? null
+          : (selectedWeddingDressId ?? this.selectedWeddingDressId),
+      weddingCategoryFilter:
+          weddingCategoryFilter ?? this.weddingCategoryFilter,
+      weddingFulfillment: weddingFulfillment ?? this.weddingFulfillment,
+      rentalDays: rentalDays ?? this.rentalDays,
     );
   }
 }
@@ -398,7 +428,30 @@ class EditorNotifier extends StateNotifier<EditorState> {
     if (tab == EditorTab.ai && !kFeatureAiEditorTab) {
       next = EditorTab.designs;
     }
+    if (tab == EditorTab.wedding && !kFeatureWeddingTab) {
+      next = EditorTab.designs;
+    }
     state = state.copyWith(activeTab: next);
+  }
+
+  void setInitialTab(EditorTab tab) {
+    setTab(tab);
+  }
+
+  void setWeddingDressId(String? dressId) {
+    state = state.copyWith(selectedWeddingDressId: dressId);
+  }
+
+  void setWeddingCategoryFilter(WeddingCategoryFilter filter) {
+    state = state.copyWith(weddingCategoryFilter: filter);
+  }
+
+  void setWeddingFulfillment(WeddingFulfillment fulfillment) {
+    state = state.copyWith(weddingFulfillment: fulfillment);
+  }
+
+  void setRentalDays(int days) {
+    state = state.copyWith(rentalDays: days < 1 ? 1 : days);
   }
 
   /// Applies [kDefaultConfiguratorTemplateId] when build has no valid template.
@@ -578,6 +631,10 @@ class EditorNotifier extends StateNotifier<EditorState> {
       configuratorTemplateId: '',
       configuratorSelections: const {},
       configuratorSummary: '',
+      selectedWeddingDressId: initial.selectedWeddingDressId,
+      weddingCategoryFilter: initial.weddingCategoryFilter,
+      weddingFulfillment: initial.weddingFulfillment,
+      rentalDays: initial.rentalDays,
     );
   }
 

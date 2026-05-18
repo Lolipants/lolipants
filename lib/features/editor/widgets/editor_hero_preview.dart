@@ -12,6 +12,9 @@ import 'package:lolipants/features/editor/providers/configurator_providers.dart'
 import 'package:lolipants/features/editor/providers/editor_provider.dart';
 import 'package:lolipants/features/editor/widgets/configurator_option_image.dart';
 import 'package:lolipants/features/editor/widgets/design_flatlay_compose.dart';
+import 'package:lolipants/features/editor/widgets/editor_wedding_hero.dart';
+import 'package:lolipants/features/wedding/models/wedding_dress.dart';
+import 'package:lolipants/features/wedding/providers/wedding_providers.dart';
 
 /// Hero: Designs = catalogue flat-lay; Build = mannequin + layers; AI look when set.
 class EditorHeroPreview extends ConsumerWidget {
@@ -31,6 +34,10 @@ class EditorHeroPreview extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (activeTab == EditorTab.wedding) {
+      return _WeddingHeroBody(state: state);
+    }
+
     if (state.heroMode == EditorHeroMode.look) {
       return _AiLookBody(state: state);
     }
@@ -73,6 +80,36 @@ class EditorHeroPreview extends ConsumerWidget {
     }
 
     return _DesignsFlatLay(state: state);
+  }
+}
+
+class _WeddingHeroBody extends ConsumerWidget {
+  const _WeddingHeroBody({required this.state});
+
+  final EditorState state;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final asyncDresses =
+        ref.watch(weddingDressesProvider(state.weddingCategoryFilter));
+    return asyncDresses.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (_, __) => const EditorWeddingHero(dress: null),
+      data: (dresses) {
+        WeddingDress? selected;
+        final id = state.selectedWeddingDressId;
+        if (id != null) {
+          for (final d in dresses) {
+            if (d.id == id) {
+              selected = d;
+              break;
+            }
+          }
+        }
+        selected ??= dresses.isNotEmpty ? dresses.first : null;
+        return EditorWeddingHero(dress: selected);
+      },
+    );
   }
 }
 

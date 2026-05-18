@@ -73,6 +73,7 @@ class EditorBootstrapArgs {
     this.designId,
     this.source = 'unknown',
     this.customMannequinImagePath,
+    this.initialTab,
   });
 
   final String? mannequinId;
@@ -82,6 +83,9 @@ class EditorBootstrapArgs {
   /// Local file path from image picker; used as AI / mannequin body reference.
   final String? customMannequinImagePath;
 
+  /// Optional editor bottom tab: `designs`, `build`, or `wedding`.
+  final String? initialTab;
+
   Map<String, dynamic> toJson() {
     return {
       'mannequinId': mannequinId,
@@ -89,6 +93,7 @@ class EditorBootstrapArgs {
       'designId': designId,
       'source': source,
       'customMannequinImagePath': customMannequinImagePath,
+      'initialTab': initialTab,
     };
   }
 
@@ -103,6 +108,7 @@ class EditorBootstrapArgs {
       source: json['source']?.toString() ?? 'unknown',
       customMannequinImagePath:
           json['customMannequinImagePath']?.toString(),
+      initialTab: json['initialTab']?.toString(),
     );
   }
 }

@@ -22,6 +22,7 @@ class EditorPanelTabs extends StatelessWidget {
     final tabs = <(EditorTab, String)>[
       (EditorTab.designs, AppStrings.editorTabDesigns),
       if (kFeatureConfiguratorBuild) (EditorTab.build, AppStrings.editorTabBuild),
+      if (kFeatureWeddingTab) (EditorTab.wedding, AppStrings.editorTabWedding),
     ];
     return Material(
       color: AppColors.stone,

@@ -1,0 +1,87 @@
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/material.dart';
+import 'package:lolipants/core/constants/app_colors.dart';
+import 'package:lolipants/core/constants/app_spacing.dart';
+import 'package:lolipants/core/constants/app_strings.dart';
+import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/features/wedding/models/wedding_dress.dart';
+
+/// Read-only full-bleed preview of the selected wedding catalogue dress.
+class EditorWeddingHero extends StatelessWidget {
+  const EditorWeddingHero({
+    required this.dress,
+    super.key,
+  });
+
+  final WeddingDress? dress;
+
+  @override
+  Widget build(BuildContext context) {
+    if (dress == null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Text(
+            AppStrings.weddingSelectDressHint,
+            style: AppTextStyles.bodyMedium.copyWith(color: AppColors.fog),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppColors.stone,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: AppColors.borderDefault),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            CachedNetworkImage(
+              imageUrl: dress!.imageUrl,
+              fit: BoxFit.cover,
+              placeholder: (_, __) => const Center(
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              errorWidget: (_, __, ___) => ColoredBox(
+                color: AppColors.stone,
+                child: Icon(
+                  Icons.checkroom_outlined,
+                  size: 64,
+                  color: AppColors.fog.withValues(alpha: 0.6),
+                ),
+              ),
+            ),
+            Positioned(
+              left: AppSpacing.sm,
+              right: AppSpacing.sm,
+              bottom: AppSpacing.sm,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: AppColors.ink.withValues(alpha: 0.72),
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                    vertical: AppSpacing.xs,
+                  ),
+                  child: Text(
+                    dress!.labelEn,
+                    style: AppTextStyles.labelGold.copyWith(fontSize: 13),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
