@@ -1,9 +1,15 @@
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { v4 as uuidv4 } from "uuid";
 import { apiError } from "../lib/http";
 import { orderStatusTemplates, sendToUser } from "../lib/onesignal";
 import { pickCourierForDelivery } from "../lib/courierAssignment";
 import { pickTailorForDelivery } from "../lib/tailorAssignment";
+import {
+  computeWeddingQuote,
+  pickTailorForWedding,
+  type WeddingDressRow,
+  type WeddingFulfillment,
+} from "../lib/weddingPricing";
 import { requireAuth, requireRole } from "../middleware/auth";
 import type { AppVariables, Env } from "../types";
 
@@ -279,6 +285,93 @@ orderRoutes.get("/quote", async (c) => {
   });
 });
 
+orderRoutes.get("/wedding-quote", async (c) => {
+  const dressId = (c.req.query("dressId") ?? "").trim();
+  const fulfillmentRaw = (c.req.query("fulfillment") ?? "rent").trim().toLowerCase();
+  const fulfillment: WeddingFulfillment =
+    fulfillmentRaw === "buy" ? "buy" : "rent";
+  const rentalDays = Math.max(
+    1,
+    Math.floor(Number(c.req.query("rentalDays") ?? "3")),
+  );
+  const city = (c.req.query("city") ?? "Doha").trim();
+  const latParsed = parseCoord(c.req.query("deliveryLat"), "deliveryLat");
+  const lngParsed = parseCoord(c.req.query("deliveryLng"), "deliveryLng");
+  if (!dressId) {
+    return apiError(c, 400, "DRESS_ID_REQUIRED", "dressId is required");
+  }
+  if (!latParsed.ok) {
+    return apiError(c, 400, "DELIVERY_LAT_REQUIRED", latParsed.message);
+  }
+  if (!lngParsed.ok) {
+    return apiError(c, 400, "DELIVERY_LNG_REQUIRED", lngParsed.message);
+  }
+
+  const dress = await c.env.DB.prepare(
+    `SELECT id, label_en, label_ar, category, image_url,
+            rent_price_per_day, sale_price, insurance_deposit, is_active, sort_order
+     FROM wedding_dresses WHERE id = ? AND is_active = 1`,
+  )
+    .bind(dressId)
+    .first<WeddingDressRow>();
+  if (!dress) {
+    return apiError(c, 404, "DRESS_NOT_FOUND", "Wedding dress not found");
+  }
+
+  const picked = await pickTailorForWedding({
+    db: c.env.DB,
+    dress,
+    city,
+    deliveryLat: latParsed.value,
+    deliveryLng: lngParsed.value,
+  });
+  if (!picked) {
+    return apiError(
+      c,
+      404,
+      "NO_TAILOR_AVAILABLE",
+      "No tailor is available for wedding dresses",
+    );
+  }
+
+  const quote = computeWeddingQuote({
+    dress,
+    fulfillment,
+    rentalDays,
+    city,
+    deliveryFee: picked.deliveryFee,
+    prices: picked.prices,
+  });
+
+  return c.json({
+    dressId,
+    dressLabel: dress.label_en,
+    dressCategory: dress.category,
+    dressImageUrl: dress.image_url,
+    fulfillment: quote.fulfillment,
+    fulfillmentType:
+      fulfillment === "rent" ? "wedding_rent" : "wedding_purchase",
+    rentalDays: quote.rentalDays,
+    rentPricePerDay: quote.rentPricePerDay,
+    rentSubtotal: quote.rentSubtotal,
+    insuranceDeposit: quote.insuranceDeposit,
+    salePrice: quote.salePrice,
+    city,
+    deliveryLat: latParsed.value,
+    deliveryLng: lngParsed.value,
+    tailorId: picked.tailorId,
+    tailorName: picked.tailorName,
+    shopName: picked.shopName,
+    distanceKm: Math.round(picked.distanceKm * 10) / 10,
+    assignmentMethod: picked.assignmentMethod,
+    basePrice: quote.basePrice,
+    fabricFee: quote.fabricFee,
+    deliveryFee: quote.deliveryFee,
+    total: quote.total,
+    currency: quote.currency,
+  });
+});
+
 orderRoutes.get("/queue", requireRole("tailor"), async (c) => {
   const tailorId = c.get("userId") as string;
   const statusFilter = (c.req.query("status") ?? "").trim().toLowerCase();
@@ -348,6 +441,240 @@ orderRoutes.get("/:id", async (c) => {
   return c.json(order);
 });
 
+async function placeWeddingOrder(
+  c: Context<{ Bindings: Env; Variables: AppVariables }>,
+  input: {
+    userId: string;
+    idempotencyKey: string;
+    body: Record<string, unknown>;
+    weddingDressId: string;
+    fulfillmentTypeRaw: string;
+  },
+) {
+  const { userId, idempotencyKey, body, weddingDressId, fulfillmentTypeRaw } =
+    input;
+  if (!weddingDressId) {
+    return apiError(c, 400, "DRESS_ID_REQUIRED", "weddingDressId is required");
+  }
+
+  const fulfillmentRaw = String(body.fulfillment ?? "").trim().toLowerCase();
+  let fulfillment: WeddingFulfillment = "rent";
+  let fulfillmentType = "wedding_rent";
+  if (
+    fulfillmentTypeRaw === "wedding_purchase" ||
+    fulfillmentRaw === "buy"
+  ) {
+    fulfillment = "buy";
+    fulfillmentType = "wedding_purchase";
+  } else if (
+    fulfillmentTypeRaw === "wedding_rent" ||
+    fulfillmentRaw === "rent" ||
+    fulfillmentTypeRaw === ""
+  ) {
+    fulfillment = "rent";
+    fulfillmentType = "wedding_rent";
+  } else {
+    return apiError(c, 400, "INVALID_FULFILLMENT", "Invalid fulfillment type");
+  }
+
+  const rentalDays = Math.max(
+    1,
+    Math.floor(Number(body.rentalDays ?? body.rental_days ?? 3)),
+  );
+
+  const deliveryAddress = String(body.deliveryAddress ?? "").trim();
+  const deliveryCity = String(body.deliveryCity ?? "").trim();
+  const deliveryPhone = String(body.deliveryPhone ?? "").trim();
+  if (!deliveryAddress || !deliveryCity || !deliveryPhone) {
+    return apiError(
+      c,
+      400,
+      "DELIVERY_FIELDS_REQUIRED",
+      "deliveryAddress, deliveryCity, and deliveryPhone are required",
+    );
+  }
+
+  const latRaw = body.deliveryLat ?? body.delivery_lat;
+  const lngRaw = body.deliveryLng ?? body.delivery_lng;
+  const lat =
+    typeof latRaw === "number" ? latRaw : Number(String(latRaw ?? "").trim());
+  const lng =
+    typeof lngRaw === "number" ? lngRaw : Number(String(lngRaw ?? "").trim());
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    return apiError(
+      c,
+      400,
+      "DELIVERY_COORDS_REQUIRED",
+      "deliveryLat and deliveryLng are required",
+    );
+  }
+
+  const requestedTailorId = String(body.tailorId ?? body.tailor_id ?? "").trim();
+  if (!requestedTailorId) {
+    return apiError(c, 400, "TAILOR_ID_REQUIRED", "tailorId is required");
+  }
+
+  const sizing = await c.env.DB.prepare(
+    "SELECT id FROM measurements WHERE user_id = ? ORDER BY saved_at DESC LIMIT 1",
+  )
+    .bind(userId)
+    .first<{ id: string }>();
+  if (!sizing) {
+    return apiError(
+      c,
+      400,
+      "MEASUREMENTS_REQUIRED",
+      "Please save measurements before ordering",
+    );
+  }
+
+  const dress = await c.env.DB.prepare(
+    `SELECT id, label_en, label_ar, category, image_url,
+            rent_price_per_day, sale_price, insurance_deposit, is_active, sort_order
+     FROM wedding_dresses WHERE id = ? AND is_active = 1`,
+  )
+    .bind(weddingDressId)
+    .first<WeddingDressRow>();
+  if (!dress) {
+    return apiError(c, 404, "DRESS_NOT_FOUND", "Wedding dress not found");
+  }
+
+  const picked = await pickTailorForWedding({
+    db: c.env.DB,
+    dress,
+    city: deliveryCity,
+    deliveryLat: lat,
+    deliveryLng: lng,
+  });
+  if (!picked) {
+    return apiError(
+      c,
+      404,
+      "NO_TAILOR_AVAILABLE",
+      "No tailor is available for wedding dresses",
+    );
+  }
+  if (picked.tailorId !== requestedTailorId) {
+    return apiError(
+      c,
+      409,
+      "QUOTE_STALE",
+      "Assigned tailor changed. Refresh your quote before paying.",
+    );
+  }
+
+  const quote = computeWeddingQuote({
+    dress,
+    fulfillment,
+    rentalDays,
+    city: deliveryCity,
+    deliveryFee: picked.deliveryFee,
+    prices: picked.prices,
+  });
+
+  const clientBase = Number(body.basePrice ?? body.base_price);
+  const clientFabric = Number(body.fabricFee ?? body.fabric_fee);
+  const clientDelivery = Number(body.deliveryFee ?? body.delivery_fee);
+  const clientTotal = Number(body.totalPrice ?? body.total_price);
+  if (
+    Number.isFinite(clientTotal) &&
+    !pricesMatch(
+      {
+        base: clientBase,
+        fabric: clientFabric,
+        delivery: clientDelivery,
+        total: clientTotal,
+      },
+      {
+        base: quote.basePrice,
+        fabric: quote.fabricFee,
+        delivery: quote.deliveryFee,
+        total: quote.total,
+      },
+    )
+  ) {
+    return apiError(
+      c,
+      409,
+      "QUOTE_MISMATCH",
+      "Price no longer matches the server quote. Refresh and try again.",
+    );
+  }
+
+  const designId = uuidv4();
+  await c.env.DB.prepare(
+    `INSERT INTO designs (id, user_id, name, garment_type, fabric_quality,
+      primary_colour, print_image_url, text_layers, render_metadata, is_public)
+      VALUES (?, ?, ?, 'dress', 'standard', '#FFFFFF', ?, '[]', ?, 0)`,
+  )
+    .bind(
+      designId,
+      userId,
+      dress.label_en,
+      dress.image_url,
+      JSON.stringify({
+        weddingDressId: dress.id,
+        weddingCategory: dress.category,
+        fulfillmentType,
+      }),
+    )
+    .run();
+
+  const orderId = uuidv4();
+  try {
+    await c.env.DB.prepare(
+      `INSERT INTO orders (id, user_id, design_id, tailor_id, status,
+        delivery_address, delivery_city, delivery_phone, delivery_notes,
+        delivery_lat, delivery_lng, assignment_method,
+        base_price, fabric_fee, delivery_fee, total_price, payment_token,
+        fulfillment_type, wedding_dress_id, rental_days, insurance_deposit, rent_subtotal)
+        VALUES (?, ?, ?, ?, 'placed', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                ?, ?, ?, ?, ?)`,
+    )
+      .bind(
+        orderId,
+        userId,
+        designId,
+        picked.tailorId,
+        deliveryAddress,
+        deliveryCity,
+        deliveryPhone,
+        body.deliveryNotes ?? null,
+        lat,
+        lng,
+        picked.assignmentMethod,
+        quote.basePrice,
+        quote.fabricFee,
+        quote.deliveryFee,
+        quote.total,
+        body.paymentToken ?? null,
+        fulfillmentType,
+        weddingDressId,
+        quote.rentalDays,
+        quote.insuranceDeposit > 0 ? quote.insuranceDeposit : null,
+        quote.rentSubtotal > 0 ? quote.rentSubtotal : null,
+      )
+      .run();
+
+    await c.env.DB.prepare(
+      "INSERT INTO order_status_history (id, order_id, status) VALUES (?, ?, 'placed')",
+    )
+      .bind(uuidv4(), orderId)
+      .run();
+    await c.env.DB.prepare(
+      "INSERT INTO order_idempotency_keys (id, user_id, idempotency_key, order_id) VALUES (?, ?, ?, ?)",
+    )
+      .bind(uuidv4(), userId, idempotencyKey, orderId)
+      .run();
+  } catch (err) {
+    console.error("[wedding-order]", err);
+    return apiError(c, 500, "ORDER_FAILED", "Could not place wedding order");
+  }
+
+  const created = await loadCustomerOrderPayload(c.env.DB, userId, orderId);
+  return c.json(created ?? { id: orderId }, 201);
+}
+
 orderRoutes.post("/", async (c) => {
   const userId = c.get("userId") as string;
   const idempotencyKey = c.req.header("x-idempotency-key")?.trim() ?? "";
@@ -369,6 +696,25 @@ orderRoutes.post("/", async (c) => {
   if (existing) return c.json(existing, 200);
 
   const body = (await c.req.json()) as Record<string, unknown>;
+  const weddingDressId = String(body.weddingDressId ?? body.wedding_dress_id ?? "").trim();
+  const fulfillmentTypeRaw = String(
+    body.fulfillmentType ?? body.fulfillment_type ?? "",
+  ).trim();
+  const isWeddingOrder =
+    weddingDressId.length > 0 ||
+    fulfillmentTypeRaw === "wedding_rent" ||
+    fulfillmentTypeRaw === "wedding_purchase";
+
+  if (isWeddingOrder) {
+    return placeWeddingOrder(c, {
+      userId,
+      idempotencyKey,
+      body,
+      weddingDressId,
+      fulfillmentTypeRaw,
+    });
+  }
+
   const designId = String(body.designId ?? "").trim();
   if (!designId) {
     return apiError(c, 400, "DESIGN_ID_REQUIRED", "designId is required");
