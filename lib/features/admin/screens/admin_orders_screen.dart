@@ -112,6 +112,18 @@ class _OrderRow extends ConsumerWidget {
     final courierId = data['courierId']?.toString() ?? data['courier_id']?.toString() ?? '';
     final designName = data['designName']?.toString() ?? data['design_name']?.toString() ?? 'Order';
     final city = data['deliveryCity']?.toString() ?? data['delivery_city']?.toString() ?? '';
+    final fulfillment = data['fulfillment_type']?.toString() ??
+        data['fulfillmentType']?.toString() ??
+        '';
+    final rentalDays = data['rental_days'] ?? data['rentalDays'];
+    String? fulfillmentLabel;
+    if (fulfillment == 'wedding_rent') {
+      fulfillmentLabel = rentalDays != null
+          ? 'Wedding rent · $rentalDays days'
+          : 'Wedding rent';
+    } else if (fulfillment == 'wedding_purchase') {
+      fulfillmentLabel = 'Wedding purchase';
+    }
 
     return Card(
       child: Padding(
@@ -129,6 +141,8 @@ class _OrderRow extends ConsumerWidget {
             ),
             const SizedBox(height: 2),
             Text('Order #$id  $city', style: AppTextStyles.bodySmall),
+            if (fulfillmentLabel != null)
+              Text(fulfillmentLabel, style: AppTextStyles.labelGold.copyWith(fontSize: 12)),
             const SizedBox(height: AppSpacing.xs),
             Text(
               'Tailor: ${tailorId.isEmpty ? '—' : tailorId}  '

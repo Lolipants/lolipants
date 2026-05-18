@@ -22,7 +22,7 @@ class AdminCmsScreen extends ConsumerStatefulWidget {
 class _AdminCmsScreenState extends ConsumerState<AdminCmsScreen>
     with TickerProviderStateMixin {
   static const _assetResources = ['mannequins', 'fabrics', 'patterns', 'presets'];
-  late final TabController _sectionTabs = TabController(length: 2, vsync: this);
+  late final TabController _sectionTabs = TabController(length: 3, vsync: this);
   late final TabController _assetTabs =
       TabController(length: _assetResources.length, vsync: this);
 
@@ -42,6 +42,7 @@ class _AdminCmsScreenState extends ConsumerState<AdminCmsScreen>
           tabs: const [
             Tab(text: 'Assets'),
             Tab(text: 'Configurator'),
+            Tab(text: 'Wedding'),
           ],
         ),
         Expanded(
@@ -67,6 +68,7 @@ class _AdminCmsScreenState extends ConsumerState<AdminCmsScreen>
                 ],
               ),
               const AdminConfiguratorCmsTab(),
+              const _ResourceList(resource: 'wedding-dresses'),
             ],
           ),
         ),
@@ -196,7 +198,13 @@ class _ResourceRow extends ConsumerWidget {
               )
             : const Icon(Icons.image_outlined),
         title: Text(name),
-        subtitle: Text(id, style: AppTextStyles.bodySmall),
+        subtitle: Text(
+          resource == 'wedding-dresses'
+              ? '${data['category'] ?? ''} · rent ${data['rent_price_per_day']}/day · '
+                  'sale ${data['sale_price']} · deposit ${data['insurance_deposit']}'
+              : id,
+          style: AppTextStyles.bodySmall,
+        ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -306,7 +314,6 @@ class _CmsFormDialogState extends ConsumerState<_CmsFormDialog> {
           _FieldSpec('image_url', 'Pattern image', isImage: true),
         ];
       case 'presets':
-      default:
         return const [
           _FieldSpec('type', 'Type (style/pattern/fabric)'),
           _FieldSpec('name', 'Name'),
@@ -314,6 +321,22 @@ class _CmsFormDialogState extends ConsumerState<_CmsFormDialog> {
           _FieldSpec('garment_type', 'Garment type'),
           _FieldSpec('is_active', 'Active', isBool: true),
           _FieldSpec('image_url', 'Image', isImage: true),
+        ];
+      case 'wedding-dresses':
+        return const [
+          _FieldSpec('label_en', 'Label (EN)'),
+          _FieldSpec('label_ar', 'Label (AR)'),
+          _FieldSpec('category', 'Category (wedding_dress / bridesmaid)'),
+          _FieldSpec('rent_price_per_day', 'Rent / day (QAR)', isNumber: true),
+          _FieldSpec('sale_price', 'Sale price (QAR)', isNumber: true),
+          _FieldSpec('insurance_deposit', 'Insurance deposit (QAR)', isNumber: true),
+          _FieldSpec('sort_order', 'Sort order', isNumber: true),
+          _FieldSpec('is_active', 'Active', isBool: true),
+          _FieldSpec('image_url', 'Dress image', isImage: true),
+        ];
+      default:
+        return const [
+          _FieldSpec('name', 'Name'),
         ];
     }
   }
