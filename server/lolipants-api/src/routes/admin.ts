@@ -563,6 +563,21 @@ const CMS_TABLES: Record<string, CmsTableConfig> = {
     columns: ["type", "name", "name_ar", "garment_type", "image_url", "is_active"],
     required: ["type", "name", "name_ar"],
   },
+  "wedding-dresses": {
+    table: "wedding_dresses",
+    columns: [
+      "label_en",
+      "label_ar",
+      "category",
+      "image_url",
+      "rent_price_per_day",
+      "sale_price",
+      "insurance_deposit",
+      "is_active",
+      "sort_order",
+    ],
+    required: ["label_en", "label_ar", "category", "image_url"],
+  },
 };
 
 // "patterns" is shown as a separate menu item in the Flutter CMS screen even
