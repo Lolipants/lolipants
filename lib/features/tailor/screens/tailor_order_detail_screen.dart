@@ -353,6 +353,13 @@ class _SummaryCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(order.designName, style: AppTextStyles.titleMedium),
+          if (order.weddingFulfillmentLabel != null) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              order.weddingFulfillmentLabel!,
+              style: AppTextStyles.labelGold.copyWith(fontSize: 12),
+            ),
+          ],
           if (showStatus) ...[
             const SizedBox(height: AppSpacing.xs),
             Text(

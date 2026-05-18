@@ -10,6 +10,7 @@ import 'package:lolipants/core/errors/app_exception.dart';
 import 'package:lolipants/core/errors/app_exception_message_mapper.dart';
 import 'package:lolipants/features/tailor/models/tailor_pricing_catalog.dart';
 import 'package:lolipants/features/tailor/providers/tailor_pricing_providers.dart';
+import 'package:lolipants/features/tailor/widgets/tailor_wedding_pricing_section.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
 
 /// Tailor workshop location + garment price matrix + delivery fees.
@@ -368,6 +369,8 @@ class _TailorPricingScreenState extends ConsumerState<TailorPricingScreen> {
                   ),
                 );
               }),
+              const SizedBox(height: AppSpacing.lg),
+              const TailorWeddingPricingSection(),
               const SizedBox(height: AppSpacing.lg),
               LolipantsButton(
                 label: 'Save pricing',
