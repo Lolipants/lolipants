@@ -98,6 +98,15 @@ abstract final class ApiEndpoints {
   /// Tailor workshop location and price plan management.
   static const String tailorPricing = '/tailor/pricing';
 
+  /// Tailor wedding dress rent/sale/deposit overrides.
+  static const String tailorWeddingPricing = '/tailor/wedding-pricing';
+
+  /// Public wedding dress catalogue.
+  static const String weddingDresses = '/wedding/dresses';
+
+  /// Proximity quote for wedding rent or purchase.
+  static const String ordersWeddingQuote = '/orders/wedding-quote';
+
   /// Complaints collection path.
   static const String complaints = '/complaints';
 

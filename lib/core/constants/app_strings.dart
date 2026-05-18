@@ -752,6 +752,23 @@ class AppStrings {
   static const String editorTabDesigns = 'Designs';
   static const String editorTabBuild = 'Build';
   static const String editorTabBuildAr = 'صمّم';
+  static const String editorTabWedding = 'Wedding';
+  static const String editorTabWeddingAr = 'عرس';
+  static const String weddingFilterAll = 'All';
+  static const String weddingFilterBridal = 'Bridal';
+  static const String weddingFilterBridesmaids = 'Bridesmaids';
+  static const String weddingRent = 'Rent';
+  static const String weddingBuy = 'Buy';
+  static const String weddingRentalDays = 'Rental days';
+  static const String weddingSelectDressHint =
+      'Select a dress from the catalogue below';
+  static const String weddingCatalogEmpty = 'No dresses available yet';
+  static const String weddingCatalogError = 'Could not load wedding dresses';
+  static const String weddingRentDress = 'Rent dress';
+  static const String weddingBuyDress = 'Buy dress';
+  static const String weddingDepositDisclaimer =
+      'Insurance deposit is refundable when the dress is returned in good condition.';
+  static const String weddingOrderSummaryTitle = 'Wedding order';
   static const String editorBuildSummaryTitle = 'Your design';
   static const String editorBuildPickTemplate = 'Choose a template';
   static const String editorBuildTemplate = 'Garment template';

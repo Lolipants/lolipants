@@ -51,6 +51,12 @@ const bool kFeatureConfiguratorBuild = bool.fromEnvironment(
   defaultValue: true,
 );
 
+/// Editor **Wedding** tab: read-only wedding/bridesmaid catalogue + rent/buy.
+const bool kFeatureWeddingTab = bool.fromEnvironment(
+  'FEATURE_WEDDING_TAB',
+  defaultValue: true,
+);
+
 /// "Use my photo" custom mannequin generation.
 ///
 /// Disabled by default in low-cost mode because it needs a paid backend job.
