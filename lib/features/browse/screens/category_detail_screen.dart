@@ -6,7 +6,9 @@ import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/features/browse/data/region_presets.dart';
 import 'package:lolipants/features/browse/widgets/region_style_button.dart';
+import 'package:lolipants/features/editor/models/editor_preset_args.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
+import 'package:lolipants/shared/widgets/lolipants_button.dart';
 
 /// Phase 3 `/browse/:category` screen. Filters the regional preset catalogue
 /// by a high-level category slug (men, women, kids, wedding, accessories) and
@@ -26,7 +28,7 @@ class CategoryDetailScreen extends StatelessWidget {
     'men': ['thobe', 'bisht', 'kandura', 'dishdasha', 'jubbah', 'suit', 'coat'],
     'women': ['abaya', 'kaftan', 'dress', 'jalabiya'],
     'kids': ['dishdasha', 'kandura', 'thobe', 'dress'],
-    'wedding': ['bisht', 'kaftan', 'dress', 'djellaba'],
+    'wedding': ['dress'],
     'accessories': <String>[],
   };
 
@@ -123,6 +125,24 @@ class CategoryDetailScreen extends StatelessWidget {
                           ),
                         ),
                       const SizedBox(height: AppSpacing.md),
+                      if (key == 'wedding' && kFeatureWeddingTab) ...[
+                        LolipantsButton(
+                          label: 'Wedding & bridesmaid dresses',
+                          onPressed: () => context.push(
+                            '/editor',
+                            extra: const EditorBootstrapArgs(
+                              source: 'browse_wedding',
+                              initialTab: 'wedding',
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.lg),
+                        Text(
+                          'Regional styles',
+                          style: AppTextStyles.titleSmall,
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                      ],
                       for (final preset in presets) ...[
                         RegionStyleButton(
                           preset: preset,
