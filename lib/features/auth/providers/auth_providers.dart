@@ -3,6 +3,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:lolipants/core/errors/app_exception.dart';
+import 'package:lolipants/core/preferences/user_gender_provider.dart';
 import 'package:lolipants/features/auth/data/auth_local_storage.dart';
 import 'package:lolipants/features/auth/data/auth_repository.dart';
 import 'package:lolipants/features/auth/models/user.dart';
@@ -114,10 +115,13 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   }
 
   /// Signs up and updates [authProvider] on success.
+  ///
+  /// When [avatarUrl] is set, patches the Better Auth profile after registration.
   Future<Either<AppException, User>> signUpWithProfile({
     required String name,
     required String email,
     required String password,
+    String? avatarUrl,
   }) async {
     final repo = ref.read(authRepositoryProvider);
     final result = await repo.signUp(
@@ -125,14 +129,22 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
       email: email,
       password: password,
     );
-    result.fold(
-      (_) {},
-      (user) {
-        state = AsyncValue.data(AuthAuthenticated(user));
+    return result.fold(
+      left,
+      (user) async {
+        User current = user;
+        if (avatarUrl != null && avatarUrl.trim().isNotEmpty) {
+          final patched = await repo.updateProfile(
+            name: name.trim(),
+            image: avatarUrl.trim(),
+          );
+          patched.fold((_) {}, (u) => current = u);
+        }
+        state = AsyncValue.data(AuthAuthenticated(current));
         ref.read(authRecoveryMessageProvider.notifier).state = null;
+        return right(current);
       },
     );
-    return result;
   }
 
   /// Starts Google OAuth against better-auth and updates [authProvider] on
@@ -185,6 +197,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   Future<Either<AppException, void>> signOutEverywhere() async {
     final repo = ref.read(authRepositoryProvider);
     final result = await repo.signOut();
+    await ref.read(userGenderProvider.notifier).clear();
     state = const AsyncValue.data(AuthUnauthenticated());
     return result;
   }
@@ -193,6 +206,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   Future<Either<AppException, void>> deleteAccount() async {
     final repo = ref.read(authRepositoryProvider);
     final result = await repo.deleteAccount();
+    await ref.read(userGenderProvider.notifier).clear();
     state = const AsyncValue.data(AuthUnauthenticated());
     return result;
   }
