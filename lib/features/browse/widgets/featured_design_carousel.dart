@@ -10,14 +10,19 @@ import 'package:lolipants/features/browse/data/region_presets.dart';
 import 'package:lolipants/features/browse/widgets/region_pattern_painter.dart';
 import 'package:lolipants/features/editor/data/built_in_mannequin_assets.dart';
 import 'package:lolipants/features/editor/models/editor_preset_args.dart';
+import 'package:lolipants/shared/widgets/catalog_image.dart';
 
 /// Opens the editor seeded from a regional preset (shared with list tiles).
 void openRegionStylePreset(BuildContext context, RegionStylePreset preset) {
   final preview = preset.resolvedPreviewAssetPath;
-  final catalogPath =
-      preview != null && preview.startsWith('assets/images/designs/')
-          ? preview
-          : null;
+  String? catalogPath;
+  if (preview != null && preview.isNotEmpty) {
+    if (preview.startsWith('assets/images/designs/') ||
+        preview.startsWith('http://') ||
+        preview.startsWith('https://')) {
+      catalogPath = preview;
+    }
+  }
   final presetArgs = EditorPresetArgs(
     presetId: preset.id,
     designName: preset.title,
@@ -324,12 +329,11 @@ class _PreviewImage extends StatelessWidget {
             opacity: 0.88,
             child: RegionPresetPatternFallback(preset: preset),
           )
-        : Image.asset(
-            assetPath,
+        : CatalogImage(
+            path: assetPath,
             fit: BoxFit.contain,
             alignment: Alignment.center,
-            errorBuilder: (_, __, ___) =>
-                RegionPresetPatternFallback(preset: preset),
+            errorWidget: RegionPresetPatternFallback(preset: preset),
           );
 
     return Padding(

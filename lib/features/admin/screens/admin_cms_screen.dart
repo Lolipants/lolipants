@@ -315,10 +315,14 @@ class _CmsFormDialogState extends ConsumerState<_CmsFormDialog> {
         ];
       case 'presets':
         return const [
-          _FieldSpec('type', 'Type (style/pattern/fabric)'),
+          _FieldSpec('type', 'Type (style/casual/pattern/fabric)'),
           _FieldSpec('name', 'Name'),
           _FieldSpec('name_ar', 'Name (AR)'),
           _FieldSpec('garment_type', 'Garment type'),
+          _FieldSpec(
+            'region',
+            'Region (gulf/levant/maghreb/modern/casual)',
+          ),
           _FieldSpec('is_active', 'Active', isBool: true),
           _FieldSpec('image_url', 'Image', isImage: true),
         ];

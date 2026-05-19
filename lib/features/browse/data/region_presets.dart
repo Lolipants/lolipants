@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lolipants/core/config/app_features.dart';
+import 'package:lolipants/features/editor/data/bundled_design_assets.dart';
 
 /// Cultural region of a traditional style preset.
 ///
@@ -77,6 +78,8 @@ class RegionStylePreset {
     required this.accentColour,
     this.fabricId,
     this.previewAssetPath,
+    this.presetType = 'style',
+    this.isActive = true,
   });
 
   factory RegionStylePreset.fromApi(Map<String, dynamic> json) {
@@ -95,20 +98,40 @@ class RegionStylePreset {
     }
 
     String? parsePreviewPath() {
-      final raw = json['previewAssetPath'] ?? json['preview_asset_path'];
-      if (raw is String) {
-        final t = raw.trim();
-        if (t.isNotEmpty) return t;
+      for (final key in [
+        'previewAssetPath',
+        'preview_asset_path',
+        'image_url',
+        'imageUrl',
+      ]) {
+        final raw = json[key];
+        if (raw is String) {
+          final t = raw.trim();
+          if (t.isNotEmpty) return t;
+        }
       }
       return null;
     }
 
+    bool parseBool(dynamic value, bool fallback) {
+      if (value is bool) return value;
+      if (value is int) return value != 0;
+      final raw = value?.toString().trim().toLowerCase() ?? '';
+      if (raw == '1' || raw == 'true') return true;
+      if (raw == '0' || raw == 'false') return false;
+      return fallback;
+    }
+
     final id = json['id']?.toString() ?? '';
+    final presetType =
+        json['type']?.toString().trim().toLowerCase() ?? 'style';
 
     return RegionStylePreset(
       id: id,
       title: json['title']?.toString() ?? json['name']?.toString() ?? 'Preset',
-      subtitle: json['subtitle']?.toString() ?? '',
+      subtitle: json['subtitle']?.toString() ??
+          json['name_ar']?.toString() ??
+          '',
       region: _regionFromToken(json['region']?.toString()),
       garmentType: json['garmentType']?.toString() ??
           json['garment_type']?.toString() ??
@@ -123,6 +146,8 @@ class RegionStylePreset {
       ),
       fabricId: json['fabricId']?.toString() ?? json['fabric_id']?.toString(),
       previewAssetPath: parsePreviewPath(),
+      presetType: presetType,
+      isActive: parseBool(json['is_active'] ?? json['isActive'], true),
     );
   }
 
@@ -135,16 +160,45 @@ class RegionStylePreset {
   final Color accentColour;
   final String? fabricId;
 
+  /// CMS `type` column: `style`, `casual`, `pattern`, `fabric`, etc.
+  final String presetType;
+
+  /// Mirrors API `is_active`; bundled presets default to true.
+  final bool isActive;
+
   /// Optional override from the catalog API; otherwise
-  /// [kRegionPresetPreviewAssetById].
+  /// [kRegionPresetPreviewAssetById] for legacy bundled ids.
   final String? previewAssetPath;
 
-  /// Asset path for list thumbnails, or null to use geometric fallback only.
+  /// Shown on Home/Browse grids (excludes pattern/fabric CMS rows).
+  bool get showInBrowseCatalog {
+    final t = presetType.trim().toLowerCase();
+    return t.isEmpty || t == 'style' || t == 'casual';
+  }
+
+  /// Casual browse pill and editor casual lane.
+  bool get isCasualStyle =>
+      presetType == 'casual' ||
+      id.startsWith('casual_') ||
+      kCasualGarmentTypes.contains(garmentType);
+
+  /// Asset path or URL for list thumbnails; null → geometric fallback.
   String? get resolvedPreviewAssetPath {
     final direct = previewAssetPath;
     if (direct != null && direct.isNotEmpty) return direct;
     return kRegionPresetPreviewAssetById[id];
   }
+}
+
+/// Filters API presets for home/browse (active style rows, audience flags).
+List<RegionStylePreset> filterPresetCatalog(List<RegionStylePreset> raw) {
+  return raw.where((p) {
+    if (!p.isActive || !p.showInBrowseCatalog) return false;
+    if (!kFeatureMens && kMensCategoryGarmentTypes.contains(p.garmentType)) {
+      return false;
+    }
+    return true;
+  }).toList(growable: false);
 }
 
 /// Curated list of regional presets shown on Home and Browse
@@ -393,60 +447,24 @@ List<RegionStylePreset> _presetsForAudience() {
       .toList(growable: false);
 }
 
-/// Curated grid on Home (Gulf + casual + modern mix).
-List<RegionStylePreset> regionPresetsForHomeShowcase() {
-  const homeShowcaseCount = 8;
-  final pool = _presetsForAudience();
+/// Home featured grid — first [count] presets from [pool] (API order = newest).
+List<RegionStylePreset> regionPresetsForHomeShowcase(
+  List<RegionStylePreset> pool, {
+  int count = 8,
+}) {
   if (pool.isEmpty) return const [];
-
-  List<String> preferredIds() {
-    if (kFeatureMens) {
-      return const [
-        'mens_anorak_sand',
-        'lev_kaftan',
-        'qa_thobe',
-        'casual_tee',
-        'mens_overcoat_navy',
-        'sa_bisht',
-        'mens_shacket_camel',
-        'casual_coat',
-      ];
-    }
-    return const [
-      'lev_kaftan',
-      'ma_djellaba',
-      'casual_tee',
-      'casual_denim',
-      'sa_bisht',
-      'ae_kandura',
-      'lev_jubbah',
-      'ma_gandoura',
-    ];
-  }
-
-  final byId = {for (final p in pool) p.id: p};
-  final out = <RegionStylePreset>[];
-  for (final id in preferredIds()) {
-    final p = byId[id];
-    if (p != null) out.add(p);
-  }
-  for (final p in pool) {
-    if (out.length >= homeShowcaseCount) break;
-    if (!out.any((e) => e.id == p.id)) out.add(p);
-  }
-  return out.take(homeShowcaseCount).toList(growable: false);
+  return pool.take(count).toList(growable: false);
 }
 
-/// First browse pill that has at least one preset in the home-grid pool
-/// (`regionPresetsForHomeGrid`).
-String defaultBrowseCatalogPill() {
-  final pool = regionPresetsForHomeGrid();
+/// First browse pill that has at least one preset in [pool].
+String defaultBrowseCatalogPill([List<RegionStylePreset>? pool]) {
+  final catalog = pool ?? regionPresetsForHomeGrid();
   const regionOrder = ['gulf', 'levant', 'maghreb', 'modern'];
   for (final name in regionOrder) {
     final r = Region.values.byName(name);
-    if (pool.any((p) => p.region == r)) return name;
+    if (catalog.any((p) => p.region == r)) return name;
   }
-  if (kFeatureCasual && pool.any((p) => p.id.startsWith('casual_'))) {
+  if (kFeatureCasual && catalog.any((p) => p.isCasualStyle)) {
     return 'casual';
   }
   return 'modern';
@@ -459,9 +477,7 @@ List<RegionStylePreset> regionPresetsForBrowsePill(
 ) {
   final key = pill.trim().toLowerCase();
   if (key == 'casual') {
-    return source
-        .where((p) => p.id.startsWith('casual_'))
-        .toList(growable: false);
+    return source.where((p) => p.isCasualStyle).toList(growable: false);
   }
   final region = Region.values.byName(key);
   return source

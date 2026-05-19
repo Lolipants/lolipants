@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lolipants/core/config/app_features.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
+import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/features/browse/data/region_presets.dart';
+import 'package:lolipants/features/browse/providers/preset_providers.dart';
 import 'package:lolipants/features/browse/widgets/region_style_button.dart';
 import 'package:lolipants/features/editor/models/editor_preset_args.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
@@ -14,7 +17,7 @@ import 'package:lolipants/shared/widgets/lolipants_button.dart';
 /// by a high-level category slug (men, women, kids, wedding, accessories) and
 /// re-uses [RegionStyleButton] rows so tapping a preset opens the editor
 /// pre-seeded the same way the home and browse screens do.
-class CategoryDetailScreen extends StatelessWidget {
+class CategoryDetailScreen extends ConsumerWidget {
   /// Creates the screen.
   const CategoryDetailScreen({required this.category, super.key});
 
@@ -52,8 +55,22 @@ class CategoryDetailScreen extends StatelessWidget {
     'casual': 'كاجوال وقمصان',
   };
 
+  static List<RegionStylePreset> _presetsForCategory(
+    String key,
+    List<RegionStylePreset> catalog,
+  ) {
+    if (key == 'casual') {
+      return catalog.where((p) => p.isCasualStyle).toList(growable: false);
+    }
+    final garments = _categoryGarments[key] ?? const <String>[];
+    if (garments.isEmpty) return catalog;
+    return catalog
+        .where((p) => garments.contains(p.garmentType))
+        .toList(growable: false);
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final key = category.toLowerCase().trim();
     if (!kFeatureCasual && key == 'casual') {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -67,19 +84,9 @@ class CategoryDetailScreen extends StatelessWidget {
       });
       return const SizedBox.shrink();
     }
-    final List<RegionStylePreset> presets;
-    if (key == 'casual') {
-      presets = kRegionPresets
-          .where((p) => p.id.startsWith('casual_'))
-          .toList(growable: false);
-    } else {
-      final garments = _categoryGarments[key] ?? const <String>[];
-      presets = garments.isEmpty
-          ? kRegionPresets
-          : kRegionPresets
-              .where((p) => garments.contains(p.garmentType))
-              .toList(growable: false);
-    }
+    final catalog =
+        ref.watch(presetCatalogProvider).valueOrNull ?? regionPresetsForHomeGrid();
+    final presets = _presetsForCategory(key, catalog);
     final titleEn = _categoryTitles[key] ?? 'Browse';
     final titleAr = _categoryTitlesAr[key] ?? '';
 
@@ -103,9 +110,17 @@ class CategoryDetailScreen extends StatelessWidget {
         children: [
           const ArabesqueBackground(),
           SafeArea(
-            child: presets.isEmpty
+            child: presets.isEmpty && key != 'accessories'
                 ? _EmptyState(titleEn: titleEn)
-                : ListView(
+                : presets.isEmpty && key == 'accessories'
+                    ? _AccessoriesHub(
+                        onDesignTshirt: () {
+                          if (kFeatureCasual) {
+                            context.push('/browse/c/casual');
+                          }
+                        },
+                      )
+                    : ListView(
                     padding: const EdgeInsets.fromLTRB(
                       AppSpacing.xl,
                       AppSpacing.md,
@@ -175,6 +190,105 @@ class _EmptyState extends StatelessWidget {
           textAlign: TextAlign.center,
           style: AppTextStyles.bodyMedium,
         ),
+      ),
+    );
+  }
+}
+
+class _AccessoriesHub extends StatelessWidget {
+  const _AccessoriesHub({required this.onDesignTshirt});
+
+  final VoidCallback onDesignTshirt;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.xl,
+        AppSpacing.md,
+        AppSpacing.xl,
+        AppSpacing.xxl,
+      ),
+      children: [
+        Text(
+          AppStrings.homeAccessoriesSubtitle,
+          style: AppTextStyles.bodyMedium,
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        if (kFeatureCasual) ...[
+          LolipantsButton(
+            label: AppStrings.accessoriesTshirtCta,
+            onPressed: onDesignTshirt,
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Directionality(
+            textDirection: TextDirection.rtl,
+            child: Text(
+              AppStrings.accessoriesTshirtCtaAr,
+              style: AppTextStyles.arabicLabel.copyWith(fontSize: 12),
+            ),
+          ),
+        ],
+        const SizedBox(height: AppSpacing.xl),
+        _AccessoryTile(
+          icon: Icons.checkroom_outlined,
+          title: 'Scarves & shawls',
+          subtitle: 'Coming soon',
+        ),
+        const SizedBox(height: AppSpacing.md),
+        _AccessoryTile(
+          icon: Icons.shopping_bag_outlined,
+          title: 'Bags',
+          subtitle: 'Coming soon',
+        ),
+        const SizedBox(height: AppSpacing.md),
+        _AccessoryTile(
+          icon: Icons.watch_outlined,
+          title: 'Jewellery & watches',
+          subtitle: 'Coming soon',
+        ),
+      ],
+    );
+  }
+}
+
+class _AccessoryTile extends StatelessWidget {
+  const _AccessoryTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: AppColors.stone.withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: AppColors.borderSubtle),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: AppColors.gold),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: AppTextStyles.titleSmall),
+                Text(
+                  subtitle,
+                  style: AppTextStyles.bodySmall.copyWith(color: AppColors.fog),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

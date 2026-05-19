@@ -1,19 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/features/browse/data/region_presets.dart';
+import 'package:lolipants/features/browse/providers/preset_providers.dart';
 import 'package:lolipants/features/browse/widgets/featured_design_carousel.dart';
 import 'package:lolipants/features/browse/widgets/region_pattern_painter.dart';
 import 'package:lolipants/features/browse/widgets/region_style_button.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
+import 'package:lolipants/shared/widgets/catalog_image.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
 
 /// Phase 3 `/browse/style/:id` detail screen. Shows the ornament patch for the
 /// selected regional preset plus a primary "Design this" CTA that hands the
 /// editor an [EditorPresetArgs] so it seeds palette, garment, and fabric.
-class GarmentStyleScreen extends StatelessWidget {
+class GarmentStyleScreen extends ConsumerWidget {
   /// Creates the screen.
   const GarmentStyleScreen({required this.styleId, super.key});
 
@@ -21,9 +24,11 @@ class GarmentStyleScreen extends StatelessWidget {
   final String styleId;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final catalog =
+        ref.watch(presetCatalogProvider).valueOrNull ?? regionPresetsForHomeGrid();
     RegionStylePreset? preset;
-    for (final candidate in kRegionPresets) {
+    for (final candidate in catalog) {
       if (candidate.id == styleId) {
         preset = candidate;
         break;
@@ -55,7 +60,7 @@ class GarmentStyleScreen extends StatelessWidget {
           SafeArea(
             child: preset == null
                 ? const _UnknownStyle()
-                : _StyleDetail(preset: preset),
+                : _StyleDetail(preset: preset, catalog: catalog),
           ),
         ],
       ),
@@ -64,13 +69,14 @@ class GarmentStyleScreen extends StatelessWidget {
 }
 
 class _StyleDetail extends StatelessWidget {
-  const _StyleDetail({required this.preset});
+  const _StyleDetail({required this.preset, required this.catalog});
 
   final RegionStylePreset preset;
+  final List<RegionStylePreset> catalog;
 
   @override
   Widget build(BuildContext context) {
-    final variants = kRegionPresets
+    final variants = catalog
         .where(
           (p) => p.region == preset.region && p.id != preset.id,
         )
@@ -152,11 +158,11 @@ class _StyleHeroImage extends StatelessWidget {
     if (assetPath == null) {
       return RegionPresetPatternFallback(preset: preset);
     }
-    return Image.asset(
-      assetPath,
+    return CatalogImage(
+      path: assetPath,
       fit: BoxFit.cover,
       alignment: Alignment.topCenter,
-      errorBuilder: (_, __, ___) => RegionPresetPatternFallback(preset: preset),
+      errorWidget: RegionPresetPatternFallback(preset: preset),
     );
   }
 }

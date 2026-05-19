@@ -12,6 +12,9 @@ final presetCatalogProvider = FutureProvider<List<RegionStylePreset>>((ref) asyn
   final result = await repo.getPresets();
   return result.fold(
     (_) => regionPresetsForHomeGrid(),
-    (presets) => presets.isEmpty ? regionPresetsForHomeGrid() : presets,
+    (presets) {
+      final filtered = filterPresetCatalog(presets);
+      return filtered.isEmpty ? regionPresetsForHomeGrid() : filtered;
+    },
   );
 });

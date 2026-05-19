@@ -19,19 +19,19 @@ class BrowseScreen extends ConsumerStatefulWidget {
 }
 
 class _BrowseScreenState extends ConsumerState<BrowseScreen> {
-  late String _pill;
-
-  @override
-  void initState() {
-    super.initState();
-    _pill = defaultBrowseCatalogPill();
-  }
+  String? _pill;
+  bool _pillSyncedToCatalog = false;
 
   @override
   Widget build(BuildContext context) {
     final presetCatalog = ref.watch(presetCatalogProvider).valueOrNull;
     final source = presetCatalog ?? regionPresetsForHomeGrid();
-    final presets = regionPresetsForBrowsePill(_pill, source);
+    if (!_pillSyncedToCatalog && presetCatalog != null) {
+      _pill = defaultBrowseCatalogPill(source);
+      _pillSyncedToCatalog = true;
+    }
+    _pill ??= defaultBrowseCatalogPill(source);
+    final presets = regionPresetsForBrowsePill(_pill!, source);
 
     return Scaffold(
       body: Stack(
@@ -51,7 +51,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
                   const _BrowseHeader(),
                   const SizedBox(height: AppSpacing.lg),
                   _BrowsePillsRow(
-                    selected: _pill,
+                    selected: _pill!,
                     onChanged: (v) => setState(() => _pill = v),
                   ),
                   const SizedBox(height: AppSpacing.lg),

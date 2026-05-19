@@ -643,7 +643,9 @@ class EditorNotifier extends StateNotifier<EditorState> {
   void loadPreset(EditorPresetArgs args) {
     final trimmedCatalog = args.catalogDesignPath?.trim() ?? '';
     final catalogOk = trimmedCatalog.isNotEmpty &&
-        trimmedCatalog.startsWith('assets/images/designs/');
+        (trimmedCatalog.startsWith('assets/images/designs/') ||
+            trimmedCatalog.startsWith('http://') ||
+            trimmedCatalog.startsWith('https://'));
     final presetId = args.presetId ?? '';
     final garment = args.garmentType ?? '';
     final isCasual = presetId.startsWith('casual_') ||
