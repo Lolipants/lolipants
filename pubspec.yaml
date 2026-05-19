@@ -59,9 +59,8 @@ flutter:
     - assets/animations/
     - assets/animations/lolipants_splash.gif
     - assets/images/
-    - assets/images/mannequins/
-    - assets/images/designs/
-    - assets/images/configurator/
+    # designs / mannequins / configurator: hosted on R2 (see upload-catalog-assets).
+    # Pass --dart-define=FEATURE_BUNDLED_CATALOG_ASSETS=true to bundle locally.
     - assets/google/
     - .env
 
@@ -74,3 +73,99 @@ flutter:
     - family: NotoNaskhArabic
       fonts:
         - asset: assets/fonts/NotoNaskhArabic-Variable.ttf
+    - family: Ashborn
+      fonts:
+        - asset: assets/fonts/Ashborn.otf
+    - family: Blaugrana
+      fonts:
+        - asset: assets/fonts/Blaugrana Personal Use.ttf
+    - family: ComicRoasting
+      fonts:
+        - asset: assets/fonts/Comic Roasting.otf
+    - family: Curseyt
+      fonts:
+        - asset: assets/fonts/Curseyt.ttf
+    - family: Dracutaz
+      fonts:
+        - asset: assets/fonts/Dracutaz.ttf
+    - family: Gorecobra
+      fonts:
+        - asset: assets/fonts/Gorecobra.ttf
+    - family: Hellshunx
+      fonts:
+        - asset: assets/fonts/Hellshunx.ttf
+    - family: HigherJump
+      fonts:
+        - asset: assets/fonts/Higher Jump.ttf
+    - family: HoneyBear
+      fonts:
+        - asset: assets/fonts/Honey Bear.ttf
+    - family: Kabisat
+      fonts:
+        - asset: assets/fonts/Kabisat Demo-ItalicTall.ttf
+    - family: KatalesBroken
+      fonts:
+        - asset: assets/fonts/Katales Broken copy.otf
+    - family: Meltdown
+      fonts:
+        - asset: assets/fonts/Meltdown.ttf
+    - family: MerryBright
+      fonts:
+        - asset: assets/fonts/Merry Bright.otf
+    - family: Midorima
+      fonts:
+        - asset: assets/fonts/Midorima-PersonalUse-Regular.ttf
+    - family: NoctraDripOutline
+      fonts:
+        - asset: assets/fonts/NoctraDrip-Outline.ttf
+    - family: NoctraDripOutlineMelt
+      fonts:
+        - asset: assets/fonts/NoctraDrip-OutlineMelt.ttf
+    - family: NoctraDripSolid
+      fonts:
+        - asset: assets/fonts/NoctraDrip-Solid.ttf
+    - family: NoctraDripSolidMelt
+      fonts:
+        - asset: assets/fonts/NoctraDrip-SolidMelt.ttf
+    - family: QomariahArabic
+      fonts:
+        - asset: assets/fonts/Qomariah Arabic.ttf
+    - family: Redeyes
+      fonts:
+        - asset: assets/fonts/Redeyes demo1.otf
+    - family: Rockybilly
+      fonts:
+        - asset: assets/fonts/Rockybilly.ttf
+    - family: RollingBeat
+      fonts:
+        - asset: assets/fonts/Rolling Beat_Personal Use.ttf
+    - family: Rooster
+      fonts:
+        - asset: assets/fonts/ROOSTER PERSONAL USE.ttf
+    - family: Rusted
+      fonts:
+        - asset: assets/fonts/RUSTED PERSONAL USE.ttf
+    - family: ScholarVarsity
+      fonts:
+        - asset: assets/fonts/Scholar Varsity.ttf
+    - family: SyamsiahArabic
+      fonts:
+        - asset: assets/fonts/Syamsiah Arabic.ttf
+    - family: Tottenham1
+      fonts:
+        - asset: assets/fonts/Tottenham - Personal 1.otf
+    - family: Tottenham2
+      fonts:
+        - asset: assets/fonts/Tottenham - Personal 2.otf
+    - family: Tottenham3
+      fonts:
+        - asset: assets/fonts/Tottenham - Personal 3.otf
+    - family: Tottenham4
+      fonts:
+        - asset: assets/fonts/Tottenham - Personal 4.otf
+    - family: Tottenham5
+      fonts:
+        - asset: assets/fonts/Tottenham - Personal 5.otf
+    - family: UrbanStarblues
+      fonts:
+        - asset: assets/fonts/Urban Starblues Demo.otf
