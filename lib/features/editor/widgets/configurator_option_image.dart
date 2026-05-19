@@ -1,9 +1,7 @@
-import 'dart:io';
-
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/features/editor/models/configurator_catalog.dart';
+import 'package:lolipants/shared/widgets/catalog_image.dart';
 
 /// Renders a configurator option from CDN or bundled asset at native colours.
 class ConfiguratorOptionImage extends StatelessWidget {
@@ -28,19 +26,15 @@ class ConfiguratorOptionImage extends StatelessWidget {
   Widget? _buildImage() {
     final url = option.assetUrl?.trim();
     if (url != null && url.startsWith('http')) {
-      return CachedNetworkImage(
-        imageUrl: url,
-        fit: fit,
-        alignment: alignment,
-      );
+      return CatalogImage(path: url, fit: fit, alignment: alignment);
     }
     final bundled = option.bundledAssetPath;
     if (bundled != null) {
-      return Image.asset(
-        bundled,
+      return CatalogImage(
+        path: bundled,
         fit: fit,
         alignment: alignment,
-        errorBuilder: (_, __, ___) => const Icon(
+        errorWidget: const Icon(
           Icons.image_not_supported_outlined,
           color: AppColors.fog,
         ),
@@ -61,30 +55,11 @@ class EditorMannequinBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const fit = BoxFit.fitHeight;
-    const align = Alignment.bottomCenter;
-    if (assetPath.startsWith('assets/')) {
-      return Image.asset(
-        assetPath,
-        fit: fit,
-        alignment: align,
-        errorBuilder: (_, __, ___) => const Center(
-          child: Icon(Icons.person_outlined, color: AppColors.fog, size: 48),
-        ),
-      );
-    }
-    if (assetPath.startsWith('http')) {
-      return CachedNetworkImage(
-        imageUrl: assetPath,
-        fit: fit,
-        alignment: align,
-      );
-    }
-    return Image.file(
-      File(assetPath),
-      fit: fit,
-      alignment: align,
-      errorBuilder: (_, __, ___) => const Center(
+    return CatalogImage(
+      path: assetPath,
+      fit: BoxFit.fitHeight,
+      alignment: Alignment.bottomCenter,
+      errorWidget: const Center(
         child: Icon(Icons.person_outlined, color: AppColors.fog, size: 48),
       ),
     );

@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:lolipants/features/editor/data/bundled_design_assets.dart';
+import 'package:lolipants/features/editor/data/editor_text_fonts.dart';
 import 'package:lolipants/features/editor/models/design_text_layer.dart';
 import 'package:lolipants/features/editor/models/garment_design.dart';
 import 'package:lolipants/features/editor/models/print_placement.dart';
@@ -98,7 +99,9 @@ List<DesignTextLayer> _parseTextLayers(dynamic raw) {
       DesignTextLayer(
         id: map['id']?.toString() ?? 'layer_$index',
         text: text,
-        fontFamily: map['fontFamily']?.toString() ?? 'Poppins',
+        fontFamily: normalizeEditorFontId(
+          map['fontFamily']?.toString(),
+        ),
         fontSize: _num(map['fontSize'], 20).clamp(8.0, 96.0),
         colour: _parseHexColor(
           map['colour']?.toString() ?? map['color']?.toString() ?? '#1B1621',

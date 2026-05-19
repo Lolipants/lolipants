@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "seed:dev-accounts": "tsx scripts/seed-dev-accounts.ts",
+    "upload:catalog-assets": "tsx scripts/upload-catalog-assets.ts",
     "secrets:push-internal-sync": "tsx scripts/push-internal-sync-secret.ts"
   },
   "dependencies": {

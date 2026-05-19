@@ -14,6 +14,7 @@ import 'package:lolipants/features/editor/models/editor_preset_args.dart';
 import 'package:lolipants/features/editor/providers/editor_provider.dart';
 import 'package:lolipants/features/editor/widgets/mannequin_viewer.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
+import 'package:lolipants/shared/widgets/catalog_image.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
 
 /// Selects mannequin shape before opening the editor.
@@ -164,13 +165,12 @@ class _MannequinSelectorScreenState
                                       ),
                                       child: ColoredBox(
                                         color: const Color(0xFFE8E4EA),
-                                        child: Image.asset(
-                                          builtIn,
+                                        child: CatalogImage(
+                                          path: builtIn,
                                           width: 88,
                                           height: 110,
                                           fit: BoxFit.contain,
-                                          errorBuilder: (_, __, ___) =>
-                                              MiniMannequin(
+                                          errorWidget: MiniMannequin(
                                             primaryColour:
                                                 editor.primaryColour,
                                             accentColour: editor.accentColour,

@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/features/editor/data/bundled_design_assets.dart';
+import 'package:lolipants/features/editor/data/editor_text_fonts.dart';
 import 'package:lolipants/features/editor/providers/editor_provider.dart';
 import 'package:lolipants/features/editor/widgets/editor_layer_resize_wrapper.dart';
 import 'package:lolipants/features/editor/widgets/editor_print_overlay.dart';
+import 'package:lolipants/shared/widgets/catalog_image.dart';
 
 /// Catalogue flat-lay with optional print and text overlays (casual customization).
 class DesignFlatlayCompose extends ConsumerWidget {
@@ -51,11 +53,11 @@ class DesignFlatlayCompose extends ConsumerWidget {
               minScale: 0.85,
               maxScale: 3,
               child: Center(
-                child: Image.asset(
-                  path,
+                child: CatalogImage(
+                  path: path,
                   key: ValueKey<String>(path),
                   fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) => Center(
+                  errorWidget: Center(
                     child: Text(
                       'Design asset missing',
                       style: AppTextStyles.bodySmall,
@@ -132,10 +134,11 @@ class DesignFlatlayCompose extends ConsumerWidget {
                               ),
                               child: Text(
                                 layer.text,
-                                style: TextStyle(
+                                style: editorLayerTextStyle(
                                   fontFamily: layer.fontFamily,
                                   fontSize: layer.fontSize,
                                   color: layer.colour,
+                                ).copyWith(
                                   shadows: const [
                                     Shadow(
                                       color: Colors.black26,

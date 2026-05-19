@@ -1,8 +1,6 @@
-import 'dart:io';
-
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
+import 'package:lolipants/shared/widgets/catalog_image.dart';
 import 'package:lolipants/features/editor/models/print_placement.dart';
 import 'package:lolipants/features/editor/widgets/editor_layer_resize_wrapper.dart'
     show EditorLayerResizeWrapper, EditorResizeDragCallback;
@@ -104,31 +102,12 @@ class EditorAdaptiveImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (path.startsWith('assets/')) {
-      return Image.asset(
-        path,
-        width: width,
-        height: height,
-        fit: fit,
-        errorBuilder: (_, __, ___) => _fallback(),
-      );
-    }
-    final isRemote = path.startsWith('http://') || path.startsWith('https://');
-    if (isRemote) {
-      return CachedNetworkImage(
-        imageUrl: path,
-        width: width,
-        height: height,
-        fit: fit,
-        errorWidget: (_, __, ___) => _fallback(),
-      );
-    }
-    return Image.file(
-      File(path),
+    return CatalogImage(
+      path: path,
       width: width,
       height: height,
       fit: fit,
-      errorBuilder: (_, __, ___) => _fallback(),
+      errorWidget: _fallback(),
     );
   }
 

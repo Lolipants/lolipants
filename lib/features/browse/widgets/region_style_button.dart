@@ -5,6 +5,7 @@ import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/features/browse/data/region_presets.dart';
 import 'package:lolipants/features/browse/widgets/featured_design_carousel.dart';
 import 'package:lolipants/features/browse/widgets/region_pattern_painter.dart';
+import 'package:lolipants/shared/widgets/catalog_image.dart';
 
 /// Rounded-rectangle long button used on Home and Browse to open the editor
 /// with a seeded `RegionStylePreset`.
@@ -95,13 +96,12 @@ class _RegionPatch extends StatelessWidget {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(14),
         child: assetPath != null
-            ? Image.asset(
-                assetPath,
+            ? CatalogImage(
+                path: assetPath,
                 fit: BoxFit.cover,
                 width: 64,
                 height: 64,
-                errorBuilder: (context, error, stackTrace) =>
-                    RegionPresetPatternFallback(preset: preset),
+                errorWidget: RegionPresetPatternFallback(preset: preset),
               )
             : RegionPresetPatternFallback(preset: preset),
       ),

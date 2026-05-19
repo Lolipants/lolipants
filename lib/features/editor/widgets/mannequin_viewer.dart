@@ -6,6 +6,8 @@ import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/features/editor/data/built_in_mannequin_assets.dart';
+import 'package:lolipants/features/editor/data/editor_text_fonts.dart';
+import 'package:lolipants/shared/widgets/catalog_image.dart';
 import 'package:lolipants/features/editor/providers/editor_provider.dart';
 
 /// Render-only mannequin viewer for the Phase 3A shell.
@@ -83,10 +85,10 @@ class MannequinViewer extends StatelessWidget {
                         child: ColoredBox(
                           // Transparent PNG mannequins read on dark compose card.
                           color: const Color(0xFFE8E4EA),
-                          child: Image.asset(
-                            builtInMannequinAssetPath(mannequinId)!,
+                          child: CatalogImage(
+                            path: builtInMannequinAssetPath(mannequinId)!,
                             fit: BoxFit.contain,
-                            errorBuilder: (_, __, ___) => const Center(
+                            errorWidget: const Center(
                               child: Icon(
                                 Icons.person_outlined,
                                 color: AppColors.fog,
@@ -156,10 +158,11 @@ class MannequinViewer extends StatelessWidget {
                                   : null,
                               child: Text(
                                 layer.text,
-                                style: TextStyle(
+                                style: editorLayerTextStyle(
                                   fontFamily: layer.fontFamily,
                                   fontSize: layer.fontSize,
                                   color: layer.colour,
+                                ).copyWith(
                                   shadows: const [
                                     Shadow(
                                       color: Colors.black26,
@@ -674,31 +677,12 @@ class _AdaptiveImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (path.startsWith('assets/')) {
-      return Image.asset(
-        path,
-        width: width,
-        height: height,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => _fallback(),
-      );
-    }
-    final isRemote = path.startsWith('http://') || path.startsWith('https://');
-    if (isRemote) {
-      return CachedNetworkImage(
-        imageUrl: path,
-        width: width,
-        height: height,
-        fit: BoxFit.cover,
-        errorWidget: (_, __, ___) => _fallback(),
-      );
-    }
-    return Image.file(
-      File(path),
+    return CatalogImage(
+      path: path,
       width: width,
       height: height,
       fit: BoxFit.cover,
-      errorBuilder: (_, __, ___) => _fallback(),
+      errorWidget: _fallback(),
     );
   }
 
