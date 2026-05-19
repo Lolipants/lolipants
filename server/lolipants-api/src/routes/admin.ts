@@ -560,7 +560,15 @@ const CMS_TABLES: Record<string, CmsTableConfig> = {
   },
   presets: {
     table: "presets",
-    columns: ["type", "name", "name_ar", "garment_type", "image_url", "is_active"],
+    columns: [
+      "type",
+      "name",
+      "name_ar",
+      "garment_type",
+      "region",
+      "image_url",
+      "is_active",
+    ],
     required: ["type", "name", "name_ar"],
   },
   "wedding-dresses": {
@@ -604,7 +612,15 @@ adminRoutes.post("/cms/:resource", requireAdmin(AdminScopes.cms), async (c) => {
   if (resource === "patterns") {
     cfg = {
       table: "presets",
-      columns: ["type", "name", "name_ar", "garment_type", "image_url", "is_active"],
+      columns: [
+        "type",
+        "name",
+        "name_ar",
+        "garment_type",
+        "region",
+        "image_url",
+        "is_active",
+      ],
       required: ["name", "name_ar"],
     };
   }
@@ -641,7 +657,14 @@ adminRoutes.patch("/cms/:resource/:id", requireAdmin(AdminScopes.cms), async (c)
   if (resource === "patterns") {
     cfg = {
       table: "presets",
-      columns: ["name", "name_ar", "garment_type", "image_url", "is_active"],
+      columns: [
+        "name",
+        "name_ar",
+        "garment_type",
+        "region",
+        "image_url",
+        "is_active",
+      ],
       required: [],
     };
   }
