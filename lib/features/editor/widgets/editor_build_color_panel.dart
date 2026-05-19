@@ -5,6 +5,7 @@ import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/features/editor/providers/editor_provider.dart';
+import 'package:lolipants/shared/widgets/full_spectrum_color_picker.dart';
 
 /// Preset swatches for AI refined look (not applied to build layer PNGs).
 const List<Color> kEditorBuildColorPresets = [
@@ -81,16 +82,71 @@ class _ColorSection extends StatelessWidget {
         Wrap(
           spacing: AppSpacing.sm,
           runSpacing: AppSpacing.sm,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             for (final c in kEditorBuildColorPresets)
               _Swatch(
                 color: c,
-                selected: selected.value == c.value,
+                selected: selected.toARGB32() == c.toARGB32(),
                 onTap: () => onPick(c),
               ),
+            _CustomSwatch(
+              selected: !kEditorBuildColorPresets.any(
+                (c) => c.toARGB32() == selected.toARGB32(),
+              ),
+              onTap: () async {
+                final picked = await showFullSpectrumColorPicker(
+                  context,
+                  initialColor: selected,
+                  title: title,
+                );
+                if (picked != null) onPick(picked);
+              },
+            ),
           ],
         ),
       ],
+    );
+  }
+}
+
+class _CustomSwatch extends StatelessWidget {
+  const _CustomSwatch({required this.selected, required this.onTap});
+
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        child: Ink(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+            gradient: const SweepGradient(
+              colors: [
+                Color(0xFFFF0000),
+                Color(0xFFFFFF00),
+                Color(0xFF00FF00),
+                Color(0xFF00FFFF),
+                Color(0xFF0000FF),
+                Color(0xFFFF00FF),
+                Color(0xFFFF0000),
+              ],
+            ),
+            border: Border.all(
+              color: selected ? AppColors.gold : AppColors.borderSubtle,
+              width: selected ? 2.5 : 1,
+            ),
+          ),
+          child: const Icon(Icons.tune, size: 18, color: Colors.white),
+        ),
+      ),
     );
   }
 }

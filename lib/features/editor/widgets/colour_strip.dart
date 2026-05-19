@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
+import 'package:lolipants/shared/widgets/full_spectrum_color_picker.dart';
 
 /// Right-side quick colour swatches for editor.
 class ColourStrip extends StatelessWidget {
@@ -70,29 +70,9 @@ class ColourStrip extends StatelessWidget {
   }
 
   Future<void> _openPicker(BuildContext context) async {
-    var temp = selectedColour;
-    final picked = await showModalBottomSheet<Color>(
-      context: context,
-      backgroundColor: AppColors.stone,
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              BlockPicker(
-                pickerColor: selectedColour,
-                onColorChanged: (color) => temp = color,
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              FilledButton(
-                onPressed: () => Navigator.of(context).pop(temp),
-                child: const Text('Apply'),
-              ),
-            ],
-          ),
-        ),
-      ),
+    final picked = await showFullSpectrumColorPicker(
+      context,
+      initialColor: selectedColour,
     );
     if (picked != null) onSelected(picked);
   }

@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/features/editor/data/editor_text_fonts.dart';
 import 'package:lolipants/features/editor/providers/editor_provider.dart';
+import 'package:lolipants/shared/widgets/full_spectrum_color_picker.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
 
 /// Text editing controls shown in the editor bottom panel.
@@ -35,15 +37,6 @@ class TextToolPanel extends StatefulWidget {
 
 class _TextToolPanelState extends State<TextToolPanel> {
   final _textController = TextEditingController();
-
-  static const _fonts = <String>[
-    'Poppins',
-    'NotoNaskhArabic',
-    'PlayfairDisplay',
-    'RobotoMono',
-    'DancingScript',
-    'Amiri',
-  ];
 
   static const _colours = <Color>[
     AppColors.sand,
@@ -105,24 +98,39 @@ class _TextToolPanelState extends State<TextToolPanel> {
         ],
         Text('Font', style: AppTextStyles.titleSmall),
         const SizedBox(height: AppSpacing.xs),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              for (final font in _fonts)
-                Padding(
-                  padding: const EdgeInsetsDirectional.only(end: AppSpacing.xs),
-                  child: ChoiceChip(
-                    label: Text(font, style: TextStyle(fontFamily: font)),
-                    selected: selected?.fontFamily == font,
-                    onSelected: selected == null
-                        ? null
-                        : (_) => widget.onUpdateSelected(fontFamily: font),
-                  ),
-                ),
-            ],
+        SizedBox(
+          height: 44,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: kCasualEditorTextFonts.length,
+            separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.xs),
+            itemBuilder: (context, index) {
+              final font = kCasualEditorTextFonts[index];
+              final isSelected = editorTextFontById(selected?.fontFamily)?.id ==
+                  font.id;
+              final preview = font.build(
+                fontSize: 16,
+                color: isSelected ? AppColors.ink : AppColors.sand,
+              );
+              return ChoiceChip(
+                label: Text(font.previewSample, style: preview),
+                showCheckmark: false,
+                labelPadding: const EdgeInsets.symmetric(horizontal: 10),
+                selected: isSelected,
+                onSelected: selected == null
+                    ? null
+                    : (_) => widget.onUpdateSelected(fontFamily: font.id),
+              );
+            },
           ),
         ),
+        if (selected != null) ...[
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            editorTextFontById(selected.fontFamily)?.label ?? selected.fontFamily,
+            style: AppTextStyles.bodySmall.copyWith(color: AppColors.fog),
+          ),
+        ],
         const SizedBox(height: AppSpacing.md),
         Text('Size: ${selected?.fontSize.toStringAsFixed(0) ?? '-'}'),
         Slider(
@@ -146,8 +154,12 @@ class _TextToolPanelState extends State<TextToolPanel> {
               : (value) => widget.onUpdateSelected(rotation: value),
         ),
         const SizedBox(height: AppSpacing.sm),
+        Text('Colour', style: AppTextStyles.titleSmall),
+        const SizedBox(height: AppSpacing.xs),
         Wrap(
           spacing: AppSpacing.xs,
+          runSpacing: AppSpacing.xs,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             for (final colour in _colours)
               GestureDetector(
@@ -155,14 +167,29 @@ class _TextToolPanelState extends State<TextToolPanel> {
                     ? null
                     : () => widget.onUpdateSelected(colour: colour),
                 child: Container(
-                  width: 22,
-                  height: 22,
+                  width: 28,
+                  height: 28,
                   decoration: BoxDecoration(
                     color: colour,
                     shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.borderDefault),
+                    border: Border.all(
+                      color: selected?.colour.toARGB32() == colour.toARGB32()
+                          ? AppColors.gold
+                          : AppColors.borderDefault,
+                      width: selected?.colour.toARGB32() == colour.toARGB32()
+                          ? 2
+                          : 1,
+                    ),
                   ),
                 ),
+              ),
+            if (selected != null)
+              CustomColourSwatch(
+                size: 28,
+                selected: !_colours.any(
+                  (c) => c.toARGB32() == selected.colour.toARGB32(),
+                ),
+                onColourPicked: (c) => widget.onUpdateSelected(colour: c),
               ),
           ],
         ),

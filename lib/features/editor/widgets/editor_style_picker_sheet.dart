@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
@@ -7,6 +6,7 @@ import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/features/editor/models/fabric_option.dart';
 import 'package:lolipants/features/editor/providers/editor_provider.dart';
+import 'package:lolipants/shared/widgets/full_spectrum_color_picker.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
 
 /// Opens the editor colour + fabric bottom sheet.
@@ -278,32 +278,10 @@ class EditorStylePickerSheet extends ConsumerWidget {
     Color current,
     ValueChanged<Color> onSelected,
   ) async {
-    var temp = current;
-    final picked = await showModalBottomSheet<Color>(
-      context: context,
-      backgroundColor: AppColors.stone,
-      isScrollControlled: true,
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Custom colour', style: AppTextStyles.titleMedium),
-              const SizedBox(height: AppSpacing.md),
-              BlockPicker(
-                pickerColor: current,
-                onColorChanged: (c) => temp = c,
-              ),
-              const SizedBox(height: AppSpacing.md),
-              LolipantsButton(
-                label: 'Apply',
-                onPressed: () => Navigator.of(ctx).pop(temp),
-              ),
-            ],
-          ),
-        ),
-      ),
+    final picked = await showFullSpectrumColorPicker(
+      context,
+      initialColor: current,
+      title: 'Custom colour',
     );
     if (picked != null) onSelected(picked);
   }
