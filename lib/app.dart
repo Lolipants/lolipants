@@ -5,6 +5,7 @@ import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/router/app_router.dart';
 import 'package:lolipants/core/theme/app_theme.dart';
 import 'package:lolipants/features/settings/providers/settings_provider.dart';
+import 'package:lolipants/shared/widgets/arabesque_background.dart';
 
 /// Root widget configuring theme and the go_router configuration.
 class LolipantsApp extends ConsumerWidget {
@@ -34,12 +35,21 @@ class LolipantsApp extends ConsumerWidget {
       ],
       builder: (context, child) {
         final mq = MediaQuery.of(context);
+        final content = child ?? const SizedBox.shrink();
         final wrapped = MediaQuery(
           data: mq.copyWith(
             textScaler: TextScaler.linear(textScale),
             disableAnimations: mq.disableAnimations || reduceMotion,
           ),
-          child: child ?? const SizedBox.shrink(),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              const ArabesqueBackground(
+                opacity: ArabesqueBackground.defaultOpacity,
+              ),
+              content,
+            ],
+          ),
         );
         return wrapped;
       },

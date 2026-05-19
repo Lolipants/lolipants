@@ -10,6 +10,7 @@ import 'package:lolipants/features/editor/data/bundled_design_assets.dart';
 import 'package:lolipants/features/editor/models/garment_design.dart';
 import 'package:lolipants/features/editor/providers/designs_providers.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
+import 'package:lolipants/shared/widgets/catalog_image.dart';
 import 'package:lolipants/shared/widgets/loading_overlay.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
 import 'package:lolipants/shared/widgets/lolipants_text_field.dart';
@@ -369,12 +370,12 @@ class _DesignThumbnail extends StatelessWidget {
     final assetPath =
         catalogDesignAssetFromRenderMetadata(design.renderMetadata);
     if (assetPath != null) {
-      return Image.asset(
-        assetPath,
+      return CatalogImage(
+        path: assetPath,
         fit: BoxFit.cover,
         width: double.infinity,
         height: double.infinity,
-        errorBuilder: (_, __, ___) => const _ThumbnailPlaceholder(),
+        errorWidget: const _ThumbnailPlaceholder(),
       );
     }
 

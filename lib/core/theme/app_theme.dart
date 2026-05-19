@@ -5,7 +5,7 @@ import 'package:lolipants/core/constants/app_colors.dart';
 ThemeData buildAppTheme() {
   return ThemeData(
     brightness: Brightness.dark,
-    scaffoldBackgroundColor: AppColors.ink,
+    scaffoldBackgroundColor: Colors.transparent,
     colorScheme: const ColorScheme.dark(
       primary: AppColors.gold,
       secondary: AppColors.blush,
