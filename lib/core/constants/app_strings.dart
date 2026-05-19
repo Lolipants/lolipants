@@ -308,10 +308,98 @@ class AppStrings {
   static const String goodAfternoonAr = 'مساء الخير';
 
   /// Short tagline (English).
-  static const String tagline = 'wear your heritage';
+  static const String tagline = 'Enjoy designing your fashion';
 
   /// Short tagline (Arabic).
-  static const String taglineAr = 'ارتدِ تراثك';
+  static const String taglineAr = 'استمتع بتصميم أزيائك';
+
+  /// Home: shop by gender header (English).
+  static const String homeShopByGender = 'Shop by category';
+
+  /// Home: shop by gender header (Arabic).
+  static const String homeShopByGenderAr = 'تسوّق حسب الفئة';
+
+  /// Home category: Men (English).
+  static const String homeCategoryMen = 'Male';
+
+  /// Home category: Men (Arabic).
+  static const String homeCategoryMenAr = 'رجال';
+
+  /// Home category: Women (English).
+  static const String homeCategoryWomen = 'Female';
+
+  /// Home category: Women (Arabic).
+  static const String homeCategoryWomenAr = 'نساء';
+
+  /// Home category: Kids (English).
+  static const String homeCategoryKids = 'Kids';
+
+  /// Home category: Kids (Arabic).
+  static const String homeCategoryKidsAr = 'أطفال';
+
+  /// Home traditional lane title (English).
+  static const String homeTraditionalTitle = 'Traditional fashion';
+
+  /// Home traditional lane title (Arabic).
+  static const String homeTraditionalTitleAr = 'الأزياء التقليدية';
+
+  /// Home traditional lane subtitle (English).
+  static const String homeTraditionalSubtitle =
+      'Choose your country and region to start designing';
+
+  /// Home traditional lane subtitle (Arabic).
+  static const String homeTraditionalSubtitleAr =
+      'اختر بلدك ومنطقتك لبدء التصميم';
+
+  /// Home accessories lane title (English).
+  static const String homeAccessoriesTitle = 'Accessories';
+
+  /// Home accessories lane title (Arabic).
+  static const String homeAccessoriesTitleAr = 'إكسسوارات';
+
+  /// Home accessories lane subtitle (English).
+  static const String homeAccessoriesSubtitle =
+      'Complete your look with scarves, bags, and more';
+
+  /// Home accessories lane subtitle (Arabic).
+  static const String homeAccessoriesSubtitleAr =
+      'أكمل إطلالتك بالأوشحة والحقائب والمزيد';
+
+  /// Home casual / T-shirt lane title (English).
+  static const String homeCasualTitle = 'T-shirts & casual';
+
+  /// Home casual / T-shirt lane title (Arabic).
+  static const String homeCasualTitleAr = 'قمصان وكاجوال';
+
+  /// Home casual lane subtitle (English).
+  static const String homeCasualSubtitle =
+      'Add your own text or photo on T-shirts and casual wear';
+
+  /// Home casual lane subtitle (Arabic).
+  static const String homeCasualSubtitleAr =
+      'أضف نصك أو صورتك على القمصان والملابس الكاجوال';
+
+  /// Sign-up gender label (English).
+  static const String signupGenderLabel = 'I shop for';
+
+  /// Sign-up gender label (Arabic).
+  static const String signupGenderLabelAr = 'أتسوّق لـ';
+
+  /// Sign-up profile photo hint (English).
+  static const String signupPhotoHint = 'Profile photo (optional)';
+
+  /// Sign-up profile photo hint (Arabic).
+  static const String signupPhotoHintAr = 'صورة الملف (اختياري)';
+
+  /// Sign-up gender required error (English).
+  static const String signupGenderRequired = 'Please choose a category';
+
+  /// Accessories: design T-shirt CTA (English).
+  static const String accessoriesTshirtCta = 'Design a T-shirt with text or photo';
+
+  /// Accessories: design T-shirt CTA (Arabic).
+  static const String accessoriesTshirtCtaAr =
+      'صمّم قميصاً بنصك أو صورتك';
 
   /// Coming soon snack (English).
   static const String comingSoon = 'Coming soon';

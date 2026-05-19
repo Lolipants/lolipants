@@ -3,11 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/features/editor/widgets/ai_prompt_bar.dart';
 import 'package:lolipants/features/home/widgets/hero_banner.dart';
+import 'package:lolipants/features/home/widgets/home_category_shortcuts.dart';
 import 'package:lolipants/features/home/widgets/home_header.dart';
 import 'package:lolipants/features/home/widgets/style_grid.dart';
-import 'package:lolipants/shared/widgets/arabesque_background.dart';
 
-/// Authenticated home feed: greeting, hero (AI), and style grid.
+/// Authenticated home: greeting, AI hero, category shortcuts, featured grid.
 class HomeScreen extends ConsumerWidget {
   /// Creates the home tab screen.
   const HomeScreen({super.key});
@@ -31,31 +31,28 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      body: Stack(
-        children: [
-          const ArabesqueBackground(),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.xl,
-                AppSpacing.lg,
-                AppSpacing.xl,
-                AppSpacing.lg,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const HomeHeader(),
-                  HeroBanner(onTryNow: () => _openAiPrompt(context)),
-                  const SizedBox(height: AppSpacing.xl),
-                  const Expanded(
-                    child: StyleGrid(),
-                  ),
-                ],
-              ),
-            ),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.xl,
+            AppSpacing.lg,
+            AppSpacing.xl,
+            AppSpacing.lg,
           ),
-        ],
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const HomeHeader(),
+              HeroBanner(onTryNow: () => _openAiPrompt(context)),
+              const SizedBox(height: AppSpacing.lg),
+              const HomeCategoryShortcuts(),
+              const SizedBox(height: AppSpacing.lg),
+              const Expanded(
+                child: StyleGrid(),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

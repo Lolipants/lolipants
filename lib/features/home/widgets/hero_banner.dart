@@ -52,6 +52,14 @@ class HeroBanner extends StatelessWidget {
                   AppStrings.heroDreamOutfit,
                   style: AppTextStyles.titleMedium.copyWith(height: 1.2),
                 ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  AppStrings.tagline,
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.fog,
+                    fontSize: 10,
+                  ),
+                ),
               ],
             ),
           ),
