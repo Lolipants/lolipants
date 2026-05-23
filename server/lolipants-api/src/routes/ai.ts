@@ -401,11 +401,15 @@ function _readEditorRenderHints(renderMetadata: string | null): {
   editorMannequinImageUrl: string | null;
   aiLookUserPrompt: string | null;
   aiLookPromptSuffix: string | null;
+  configuratorSummary: string | null;
+  configuratorComposeImageUrl: string | null;
 } {
   const empty = {
     editorMannequinImageUrl: null as string | null,
     aiLookUserPrompt: null as string | null,
     aiLookPromptSuffix: null as string | null,
+    configuratorSummary: null as string | null,
+    configuratorComposeImageUrl: null as string | null,
   };
   if (!renderMetadata?.trim()) return empty;
   try {
@@ -414,10 +418,19 @@ function _readEditorRenderHints(renderMetadata: string | null): {
     const man = pick("editorMannequinImageUrl");
     const user = pick("aiLookUserPrompt");
     const suf = pick("aiLookPromptSuffix");
+    const compose = pick("configuratorComposeImageUrl");
+    let summary = "";
+    const cfg = o["configurator"];
+    if (typeof cfg === "object" && cfg !== null) {
+      const block = cfg as Record<string, unknown>;
+      summary = typeof block["summary"] === "string" ? block["summary"].trim() : "";
+    }
     return {
       editorMannequinImageUrl: man.length > 0 ? man : null,
       aiLookUserPrompt: user.length > 0 ? user : null,
       aiLookPromptSuffix: suf.length > 0 ? suf : null,
+      configuratorSummary: summary.length > 0 ? summary : null,
+      configuratorComposeImageUrl: compose.length > 0 ? compose : null,
     };
   } catch {
     return empty;
@@ -451,14 +464,20 @@ async function _runGeminiGarmentRefinement(input: {
     printPlacement: placement,
     textLayersSummary: textSummary,
     userExtra: hints.aiLookUserPrompt,
+    configuratorSummary: hints.configuratorSummary,
     brandSuffix: hints.aiLookPromptSuffix ?? DEFAULT_LOLIPANTS_LOOK_SUFFIX,
   });
+
+  const garmentRefUrl =
+    hints.configuratorComposeImageUrl?.trim() ||
+    design?.print_image_url?.trim() ||
+    null;
 
   const refs: GeminiInlinePart[] = [];
   const candidates: Array<{ url: string | null; caption: string }> = [
     {
-      url: design?.print_image_url ?? null,
-      caption: "Reference — catalogue garment flat (apply to model):",
+      url: garmentRefUrl,
+      caption: "Reference — composed garment / flat (apply to model):",
     },
     {
       url: hints.editorMannequinImageUrl ?? design?.mannequin_preview_url ?? null,

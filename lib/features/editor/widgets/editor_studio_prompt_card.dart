@@ -293,6 +293,17 @@ class _EditorStudioPromptCardState extends ConsumerState<EditorStudioPromptCard>
                 loading: editor.lookGenerating,
                 fullWidth: true,
               ),
+            if (editor.lookGenerationError != null &&
+                editor.lookGenerationError!.trim().isNotEmpty) ...[
+              SizedBox(height: dense ? 4 : AppSpacing.sm),
+              Text(
+                editor.lookGenerationError!,
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.rubyLight,
+                  fontSize: dense ? 11 : null,
+                ),
+              ),
+            ],
           ],
         ),
       ),

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -29,8 +30,18 @@ class _FakeDesignsRepository extends DesignsRepository {
   @override
   Future<Either<AppException, String>> uploadPrintImage({
     required String filePath,
+    ProgressCallback? onSendProgress,
   }) async {
     return right('https://cdn.example.com/prints/remote.jpg');
+  }
+
+  @override
+  Future<Either<AppException, String>> uploadPrintBytes({
+    required List<int> bytes,
+    required String filename,
+    ProgressCallback? onSendProgress,
+  }) async {
+    return right('https://cdn.example.com/prints/$filename');
   }
 
   @override
@@ -72,6 +83,8 @@ class _FakeDesignsRepository extends DesignsRepository {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   test('editor save uploads local print and persists remote url', () async {
     final fakeRepo = _FakeDesignsRepository();
     final container = ProviderContainer(
@@ -126,5 +139,33 @@ void main() {
     final first = layers.first as Map<String, dynamic>;
     expect(first['x'], 0.63);
     expect(first['y'], 0.42);
+  });
+
+  test('compose preview uploads as print and render metadata', () async {
+    final fakeRepo = _FakeDesignsRepository();
+    final container = ProviderContainer(
+      overrides: [
+        designsRepositoryProvider.overrideWithValue(fakeRepo),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final notifier = container.read(editorProvider.notifier);
+    notifier.setDesignName('Compose AI Test');
+
+    final result = await notifier.saveDesign(
+      composePreviewBytes: Uint8List.fromList([9, 9, 9, 9, 9]),
+    );
+    expect(result.success, isTrue);
+    expect(
+      fakeRepo.lastPayload?['printImageUrl'],
+      'https://cdn.example.com/prints/configurator-compose.png',
+    );
+    final meta =
+        fakeRepo.lastPayload?['renderMetadata'] as Map<String, dynamic>?;
+    expect(
+      meta?['configuratorComposeImageUrl'],
+      'https://cdn.example.com/prints/configurator-compose.png',
+    );
   });
 }

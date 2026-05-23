@@ -80,7 +80,18 @@ class RenderPreviewRepository {
 
   AppException _mapDio(DioException e) {
     final status = e.response?.statusCode ?? 0;
-    final message = e.message ?? 'network';
+    final body = e.response?.data;
+    var message = e.message ?? 'network';
+    if (body is Map) {
+      final err = body['error'];
+      if (err is Map && err['message'] != null) {
+        message = err['message'].toString();
+      } else if (body['message'] != null) {
+        message = body['message'].toString();
+      } else if (body['error'] != null) {
+        message = body['error'].toString();
+      }
+    }
     if (status >= 500) return ServerException(status, message);
     if (status >= 400) return ServerException(status, message);
     return NetworkException(message);

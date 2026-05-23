@@ -16,6 +16,8 @@ export type GarmentLookPromptInput = {
   textLayersSummary?: string | null;
   /** Optional client free-text (editor AI bar). */
   userExtra?: string | null;
+  /** Modular configurator summary (slot picks). */
+  configuratorSummary?: string | null;
   /** Consistent catalogue / brand suffix. */
   brandSuffix?: string | null;
 };
@@ -37,6 +39,10 @@ export function buildGarmentLookPrompt(input: GarmentLookPromptInput): string {
   const userBlock =
     input.userExtra != null && input.userExtra.trim().length > 0
       ? `\n\nUser direction:\n${input.userExtra.trim()}`
+      : "";
+  const configuratorBlock =
+    input.configuratorSummary != null && input.configuratorSummary.trim().length > 0
+      ? `\n\nModular design (slot selections from configurator):\n${input.configuratorSummary.trim()}`
       : "";
   const suffixBlock =
     input.brandSuffix != null && input.brandSuffix.trim().length > 0
@@ -60,6 +66,7 @@ export function buildGarmentLookPrompt(input: GarmentLookPromptInput): string {
       "Output must be modest formalwear appropriate for Gulf / Middle Eastern contexts.",
       "SynthID watermark from the API is acceptable.",
     ].join("\n") +
+    configuratorBlock +
     userBlock +
     suffixBlock
   );

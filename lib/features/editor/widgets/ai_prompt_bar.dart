@@ -46,12 +46,19 @@ class _AiPromptBarState extends ConsumerState<AiPromptBar> {
   bool _isLoading = false;
   String? _error;
   GarmentDesignSuggestion? _suggestion;
+  String _garmentType = 'abaya';
 
   static const _quickPrompts = <String>[
     'Traditional Qatari Thobe with gold trim',
     'Modern black Abaya with silver embroidery',
     'Minimalist white Kandura',
     "Colourful children's Jalabiya",
+  ];
+
+  static const _garmentTypes = <(String label, String value)>[
+    ('Abaya', 'abaya'),
+    ('Thobe', 'thobe'),
+    ('Dress', 'dress'),
   ];
 
   @override
@@ -94,6 +101,27 @@ class _AiPromptBarState extends ConsumerState<AiPromptBar> {
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: _garmentTypes
+                  .map(
+                    (pair) => Padding(
+                      padding:
+                          const EdgeInsetsDirectional.only(end: AppSpacing.xs),
+                      child: ChoiceChip(
+                        label: Text(pair.$1),
+                        selected: _garmentType == pair.$2,
+                        onSelected: (selected) {
+                          if (selected) setState(() => _garmentType = pair.$2);
+                        },
+                      ),
+                    ),
+                  )
+                  .toList(growable: false),
+            ),
           ),
           const SizedBox(height: AppSpacing.sm),
           SingleChildScrollView(
@@ -192,7 +220,7 @@ class _AiPromptBarState extends ConsumerState<AiPromptBar> {
       _error = null;
       _suggestion = null;
     });
-    final garmentType = 'thobe';
+    final garmentType = _garmentType;
     final service = ref.read(aiDesignServiceProvider);
     final result = await service.generateDesign(
       prompt: prompt,
@@ -232,7 +260,7 @@ class _AiPromptBarState extends ConsumerState<AiPromptBar> {
     final result = await repo.createDesign(
       payload: {
         'name': 'AI Draft',
-        'garmentType': 'thobe',
+        'garmentType': _garmentType,
         'primaryColour': suggestion.primaryColour,
         'accentColour': suggestion.accentColour,
         'fabricId': suggestion.fabricId,
