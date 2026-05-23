@@ -106,7 +106,7 @@ class _MannequinSelectorScreenState
   @override
   void initState() {
     super.initState();
-    _selectedId = kFeatureMens ? 'standard_male' : 'standard_female';
+    _selectedId = kFeatureMens ? 'standard_male' : kPresetCatalogMannequinId;
   }
 
   @override

@@ -13,6 +13,7 @@ class OrderDesignDraft {
     this.previewImageUrl,
     this.designerId,
     this.designerName,
+    this.configuratorSummary,
   });
 
   final String? designId;
@@ -35,6 +36,9 @@ class OrderDesignDraft {
   /// Originating designer name (for UI attribution).
   final String? designerName;
 
+  /// Human-readable configurator summary from the editor.
+  final String? configuratorSummary;
+
   Map<String, dynamic> toMap() {
     return {
       'designId': designId,
@@ -49,6 +53,7 @@ class OrderDesignDraft {
       'previewImageUrl': previewImageUrl,
       'designerId': designerId,
       'designerName': designerName,
+      'configuratorSummary': configuratorSummary,
     };
   }
 }

@@ -860,15 +860,14 @@ class AppStrings {
   static const String editorBuildSummaryTitle = 'Your design';
   static const String editorBuildPickTemplate = 'Choose a template';
   static const String editorBuildTemplate = 'Garment template';
-  static const String editorBuildSelectSlot = 'Select options for each part';
+  static const String editorBuildSelectSlot = 'Pick a part';
+  static const String editorBuildChangeStyle = 'Change style';
   static const String editorBuildTabColor = 'Color';
   static const String editorBuildTabColorAr = 'اللون';
   static const String editorBuildColorAiHint =
-      'Colours apply to AI refined look only. Build layers keep their original fabric colours.';
+      'Primary colour applies to all garment layers. Accent applies to trim and overlay panels. AI refined look uses the same colours.';
   static const String editorBuildColorPrimary =
-      'AI garment colour / لون القماش للذكاء الاصطناعي';
-  static const String editorBuildColorAccent =
-      'AI trim & accent / زخرفة الذكاء الاصطناعي';
+      'Garment colour / لون القماش';
   static const String editorBuildHeroEmpty =
       'Pick a template and options to preview on your mannequin.';
   static const String editorBuildReset = 'Reset build / إعادة ضبط';

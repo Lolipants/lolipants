@@ -19,6 +19,7 @@ class EditorWeddingPanel extends ConsumerWidget {
     required this.onFulfillmentChanged,
     required this.onRentalDaysChanged,
     this.height,
+    this.embedded = false,
     super.key,
   });
 
@@ -28,6 +29,7 @@ class EditorWeddingPanel extends ConsumerWidget {
   final ValueChanged<WeddingFulfillment> onFulfillmentChanged;
   final ValueChanged<int> onRentalDaysChanged;
   final double? height;
+  final bool embedded;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -35,6 +37,164 @@ class EditorWeddingPanel extends ConsumerWidget {
         ref.watch(weddingDressesProvider(state.weddingCategoryFilter));
     final panelHeight = height ??
         (MediaQuery.sizeOf(context).height * 0.40).clamp(280.0, 380.0);
+
+    final body = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: EdgeInsets.fromLTRB(
+            AppSpacing.sm,
+            embedded ? AppSpacing.xs : AppSpacing.sm,
+            AppSpacing.sm,
+            AppSpacing.xs,
+          ),
+          child: SizedBox(
+            height: 32,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: [
+                _FilterChip(
+                  label: AppStrings.weddingFilterAll,
+                  selected:
+                      state.weddingCategoryFilter == WeddingCategoryFilter.all,
+                  onTap: () => onCategoryChanged(WeddingCategoryFilter.all),
+                ),
+                const SizedBox(width: 6),
+                _FilterChip(
+                  label: AppStrings.weddingFilterBridal,
+                  selected: state.weddingCategoryFilter ==
+                      WeddingCategoryFilter.weddingDress,
+                  onTap: () =>
+                      onCategoryChanged(WeddingCategoryFilter.weddingDress),
+                ),
+                const SizedBox(width: 6),
+                _FilterChip(
+                  label: AppStrings.weddingFilterBridesmaids,
+                  selected: state.weddingCategoryFilter ==
+                      WeddingCategoryFilter.bridesmaid,
+                  onTap: () =>
+                      onCategoryChanged(WeddingCategoryFilter.bridesmaid),
+                ),
+              ],
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+          child: Row(
+            children: [
+              Expanded(
+                child: _FulfillmentToggle(
+                  label: AppStrings.weddingRent,
+                  selected:
+                      state.weddingFulfillment == WeddingFulfillment.rent,
+                  onTap: () => onFulfillmentChanged(WeddingFulfillment.rent),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: _FulfillmentToggle(
+                  label: AppStrings.weddingBuy,
+                  selected:
+                      state.weddingFulfillment == WeddingFulfillment.buy,
+                  onTap: () => onFulfillmentChanged(WeddingFulfillment.buy),
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (state.weddingFulfillment == WeddingFulfillment.rent)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.sm,
+              AppSpacing.xs,
+              AppSpacing.sm,
+              0,
+            ),
+            child: Row(
+              children: [
+                Text(
+                  AppStrings.weddingRentalDays,
+                  style: AppTextStyles.bodySmall.copyWith(color: AppColors.fog),
+                ),
+                const Spacer(),
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  onPressed: state.rentalDays > 1
+                      ? () => onRentalDaysChanged(state.rentalDays - 1)
+                      : null,
+                  icon: const Icon(Icons.remove_circle_outline),
+                  color: AppColors.gold,
+                ),
+                Text(
+                  '${state.rentalDays}',
+                  style: AppTextStyles.labelGold,
+                ),
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () => onRentalDaysChanged(state.rentalDays + 1),
+                  icon: const Icon(Icons.add_circle_outline),
+                  color: AppColors.gold,
+                ),
+              ],
+            ),
+          ),
+        const SizedBox(height: AppSpacing.xs),
+        Expanded(
+          child: asyncDresses.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (_, __) => Center(
+              child: Text(
+                AppStrings.weddingCatalogError,
+                style: AppTextStyles.bodySmall,
+              ),
+            ),
+            data: (dresses) {
+              if (dresses.isEmpty) {
+                return Center(
+                  child: Text(
+                    AppStrings.weddingCatalogEmpty,
+                    style: AppTextStyles.bodySmall,
+                  ),
+                );
+              }
+              final selectedId = state.selectedWeddingDressId;
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (selectedId == null && dresses.isNotEmpty) {
+                  onDressSelected(dresses.first.id);
+                }
+              });
+              return ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                ),
+                itemCount: dresses.length,
+                separatorBuilder: (_, __) =>
+                    const SizedBox(width: AppSpacing.sm),
+                itemBuilder: (context, index) {
+                  final dress = dresses[index];
+                  final selected = dress.id == selectedId;
+                  return EditorAssetThumbCard(
+                    label: dress.labelEn,
+                    image: CachedNetworkImage(
+                      imageUrl: dress.imageUrl,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      height: double.infinity,
+                    ),
+                    selected: selected,
+                    onTap: () => onDressSelected(dress.id),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      ],
+    );
+
+    if (embedded) return body;
 
     return SizedBox(
       height: panelHeight,
@@ -45,162 +205,7 @@ class EditorWeddingPanel extends ConsumerWidget {
               const BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
           border: const Border(top: BorderSide(color: AppColors.borderStrong)),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.sm,
-                AppSpacing.sm,
-                AppSpacing.sm,
-                AppSpacing.xs,
-              ),
-              child: SizedBox(
-                height: 36,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  children: [
-                    _FilterChip(
-                      label: AppStrings.weddingFilterAll,
-                      selected:
-                          state.weddingCategoryFilter == WeddingCategoryFilter.all,
-                      onTap: () =>
-                          onCategoryChanged(WeddingCategoryFilter.all),
-                    ),
-                    const SizedBox(width: 6),
-                    _FilterChip(
-                      label: AppStrings.weddingFilterBridal,
-                      selected: state.weddingCategoryFilter ==
-                          WeddingCategoryFilter.weddingDress,
-                      onTap: () => onCategoryChanged(
-                        WeddingCategoryFilter.weddingDress,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    _FilterChip(
-                      label: AppStrings.weddingFilterBridesmaids,
-                      selected: state.weddingCategoryFilter ==
-                          WeddingCategoryFilter.bridesmaid,
-                      onTap: () =>
-                          onCategoryChanged(WeddingCategoryFilter.bridesmaid),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _FulfillmentToggle(
-                      label: AppStrings.weddingRent,
-                      selected: state.weddingFulfillment == WeddingFulfillment.rent,
-                      onTap: () => onFulfillmentChanged(WeddingFulfillment.rent),
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: _FulfillmentToggle(
-                      label: AppStrings.weddingBuy,
-                      selected: state.weddingFulfillment == WeddingFulfillment.buy,
-                      onTap: () => onFulfillmentChanged(WeddingFulfillment.buy),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (state.weddingFulfillment == WeddingFulfillment.rent)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.sm,
-                  AppSpacing.xs,
-                  AppSpacing.sm,
-                  0,
-                ),
-                child: Row(
-                  children: [
-                    Text(
-                      AppStrings.weddingRentalDays,
-                      style: AppTextStyles.bodySmall.copyWith(color: AppColors.fog),
-                    ),
-                    const Spacer(),
-                    IconButton(
-                      visualDensity: VisualDensity.compact,
-                      onPressed: state.rentalDays > 1
-                          ? () => onRentalDaysChanged(state.rentalDays - 1)
-                          : null,
-                      icon: const Icon(Icons.remove_circle_outline),
-                      color: AppColors.gold,
-                    ),
-                    Text(
-                      '${state.rentalDays}',
-                      style: AppTextStyles.labelGold,
-                    ),
-                    IconButton(
-                      visualDensity: VisualDensity.compact,
-                      onPressed: () => onRentalDaysChanged(state.rentalDays + 1),
-                      icon: const Icon(Icons.add_circle_outline),
-                      color: AppColors.gold,
-                    ),
-                  ],
-                ),
-              ),
-            const SizedBox(height: AppSpacing.xs),
-            Expanded(
-              child: asyncDresses.when(
-                loading: () =>
-                    const Center(child: CircularProgressIndicator()),
-                error: (_, __) => Center(
-                  child: Text(
-                    AppStrings.weddingCatalogError,
-                    style: AppTextStyles.bodySmall,
-                  ),
-                ),
-                data: (dresses) {
-                  if (dresses.isEmpty) {
-                    return Center(
-                      child: Text(
-                        AppStrings.weddingCatalogEmpty,
-                        style: AppTextStyles.bodySmall,
-                      ),
-                    );
-                  }
-                  final selectedId = state.selectedWeddingDressId;
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (selectedId == null && dresses.isNotEmpty) {
-                      onDressSelected(dresses.first.id);
-                    }
-                  });
-                  return ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.sm,
-                    ),
-                    itemCount: dresses.length,
-                    separatorBuilder: (_, __) =>
-                        const SizedBox(width: AppSpacing.sm),
-                    itemBuilder: (context, index) {
-                      final dress = dresses[index];
-                      final selected = dress.id == selectedId;
-                      return EditorAssetThumbCard(
-                        label: dress.labelEn,
-                        image: CachedNetworkImage(
-                          imageUrl: dress.imageUrl,
-                          fit: BoxFit.cover,
-                          width: double.infinity,
-                          height: double.infinity,
-                        ),
-                        selected: selected,
-                        onTap: () => onDressSelected(dress.id),
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
+        child: body,
       ),
     );
   }

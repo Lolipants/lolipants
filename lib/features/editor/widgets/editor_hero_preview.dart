@@ -10,13 +10,13 @@ import 'package:lolipants/features/editor/data/built_in_mannequin_assets.dart';
 import 'package:lolipants/features/editor/models/configurator_catalog.dart';
 import 'package:lolipants/features/editor/providers/configurator_providers.dart';
 import 'package:lolipants/features/editor/providers/editor_provider.dart';
+import 'package:lolipants/features/editor/utils/layer_tint.dart';
 import 'package:lolipants/features/editor/widgets/configurator_option_image.dart';
-import 'package:lolipants/features/editor/widgets/design_flatlay_compose.dart';
 import 'package:lolipants/features/editor/widgets/editor_wedding_hero.dart';
 import 'package:lolipants/features/wedding/models/wedding_dress.dart';
 import 'package:lolipants/features/wedding/providers/wedding_providers.dart';
 
-/// Hero: Designs = catalogue flat-lay; Build = mannequin + layers; AI look when set.
+/// Hero: mannequin + configurator layers (unified design); AI look when set.
 class EditorHeroPreview extends ConsumerWidget {
   const EditorHeroPreview({
     required this.state,
@@ -29,7 +29,7 @@ class EditorHeroPreview extends ConsumerWidget {
 
   bool get _usesConfiguratorCompose =>
       kFeatureConfiguratorBuild &&
-      activeTab == EditorTab.build &&
+      activeTab != EditorTab.wedding &&
       state.heroMode == EditorHeroMode.compose;
 
   @override
@@ -79,7 +79,7 @@ class EditorHeroPreview extends ConsumerWidget {
       );
     }
 
-    return _DesignsFlatLay(state: state);
+    return const SizedBox.shrink();
   }
 }
 
@@ -109,21 +109,6 @@ class _WeddingHeroBody extends ConsumerWidget {
         selected ??= dresses.isNotEmpty ? dresses.first : null;
         return EditorWeddingHero(dress: selected);
       },
-    );
-  }
-}
-
-/// Catalogue flat-lay for the Designs tab (updates when a thumbnail is picked).
-class _DesignsFlatLay extends ConsumerWidget {
-  const _DesignsFlatLay({required this.state});
-
-  final EditorState state;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return DesignFlatlayCompose(
-      designAssetPath: state.selectedCatalogDesignPath,
-      state: state,
     );
   }
 }
@@ -187,6 +172,14 @@ class _BuildComposeBody extends StatelessWidget {
               Positioned.fill(
                 child: ConfiguratorOptionImage(
                   option: opt,
+                  tintColor: template == null
+                      ? null
+                      : resolveOptionTintColor(
+                          option: opt,
+                          template: template!,
+                          primaryColour: state.primaryColour,
+                          accentColour: state.accentColour,
+                        ),
                   fit: layerFit,
                   alignment: layerAlign,
                 ),

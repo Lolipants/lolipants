@@ -5,9 +5,11 @@ import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/features/editor/data/configurator_defaults.dart';
+import 'package:lolipants/features/editor/logic/configurator_compat.dart';
 import 'package:lolipants/features/editor/models/configurator_catalog.dart';
 import 'package:lolipants/features/editor/providers/configurator_providers.dart';
 import 'package:lolipants/features/editor/providers/editor_provider.dart';
+import 'package:lolipants/features/editor/utils/layer_tint.dart';
 import 'package:lolipants/features/editor/widgets/configurator_option_image.dart';
 import 'package:lolipants/features/editor/widgets/editor_asset_thumb_card.dart';
 
@@ -89,7 +91,10 @@ class _EditorBuildPanelState extends ConsumerState<EditorBuildPanel> {
               orElse: () => templates.first,
             );
 
-            final slots = template.slots;
+            final slots = activeConfiguratorSlots(
+              template: template,
+              selections: editor.configuratorSelections,
+            );
             if (slots.isEmpty) {
               return const SizedBox.shrink();
             }
@@ -182,6 +187,10 @@ class _EditorBuildPanelState extends ConsumerState<EditorBuildPanel> {
                 const SizedBox(height: AppSpacing.xs),
                 Expanded(
                   child: _OptionStrip(
+                    template: template!,
+                    primaryColour: editor.primaryColour,
+                    accentColour: editor.accentColour,
+                    selections: editor.configuratorSelections,
                     slot: slot,
                     selectedOptionId: selectedOptionId,
                     onPick: (optionId) =>
@@ -338,11 +347,19 @@ class _TemplateMenu extends ConsumerWidget {
 /// Vertically scrollable grid of compact square configurator thumbs.
 class _OptionStrip extends StatelessWidget {
   const _OptionStrip({
+    required this.template,
+    required this.primaryColour,
+    required this.accentColour,
+    required this.selections,
     required this.slot,
     required this.selectedOptionId,
     required this.onPick,
   });
 
+  final ConfiguratorTemplate template;
+  final Color primaryColour;
+  final Color accentColour;
+  final ConfiguratorSelections selections;
   final ConfiguratorSlot slot;
   final String? selectedOptionId;
   final ValueChanged<String> onPick;
@@ -353,6 +370,11 @@ class _OptionStrip extends StatelessWidget {
   Widget build(BuildContext context) {
     const thumbW = EditorCompactThumbCard.thumbSize;
     const thumbH = EditorCompactThumbCard.stripHeight;
+    final options = filteredOptionsForSlot(
+      template: template,
+      selections: selections,
+      slot: slot,
+    );
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -372,9 +394,9 @@ class _OptionStrip extends StatelessWidget {
             crossAxisSpacing: _spacing,
             childAspectRatio: thumbW / thumbH,
           ),
-          itemCount: slot.options.length,
+          itemCount: options.length,
           itemBuilder: (context, index) {
-            final opt = slot.options[index];
+            final opt = options[index];
             final selected = selectedOptionId == opt.id;
             return EditorCompactThumbCard(
               label: opt.labelEn,
@@ -382,6 +404,12 @@ class _OptionStrip extends StatelessWidget {
               onTap: () => onPick(opt.id),
               image: ConfiguratorOptionImage(
                 option: opt,
+                tintColor: resolveOptionTintColor(
+                  option: opt,
+                  template: template,
+                  primaryColour: primaryColour,
+                  accentColour: accentColour,
+                ),
                 fit: BoxFit.contain,
                 alignment: Alignment.center,
               ),

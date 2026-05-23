@@ -94,6 +94,16 @@ class _OrderSummaryScreenState extends ConsumerState<OrderSummaryScreen> {
                       const SizedBox(height: AppSpacing.sm),
                     ],
                     _Row(label: 'Garment', value: design.garmentType),
+                    if (design.configuratorSummary != null &&
+                        design.configuratorSummary!.trim().isNotEmpty) ...[
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        design.configuratorSummary!.trim(),
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.fog,
+                        ),
+                      ),
+                    ],
                     _Row(label: 'Fabric', value: fabric),
                     _Row(label: 'Pattern', value: pattern),
                     _Row(label: 'Primary colour', value: colour),

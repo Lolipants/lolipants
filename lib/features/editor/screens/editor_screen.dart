@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
@@ -17,19 +19,20 @@ import 'package:lolipants/features/community/providers/community_providers.dart'
 import 'package:lolipants/features/editor/data/bundled_design_assets.dart';
 import 'package:lolipants/features/editor/providers/editor_provider.dart';
 import 'package:lolipants/core/config/app_features.dart';
+import 'package:lolipants/features/editor/widgets/editor_compose_tool_rail.dart';
 import 'package:lolipants/features/editor/widgets/editor_bottom_panel.dart';
-import 'package:lolipants/features/editor/widgets/editor_build_panel.dart';
+import 'package:lolipants/features/editor/widgets/editor_design_summary_bar.dart';
+import 'package:lolipants/features/editor/providers/configurator_providers.dart';
 import 'package:lolipants/features/editor/widgets/editor_style_picker_sheet.dart';
 import 'package:lolipants/features/editor/widgets/editor_hero_preview.dart';
-import 'package:lolipants/features/editor/widgets/editor_panel_tabs.dart';
-import 'package:lolipants/features/editor/widgets/editor_studio_prompt_card.dart';
-import 'package:lolipants/features/editor/widgets/editor_wedding_panel.dart';
 import 'package:lolipants/features/orders/models/wedding_order_draft.dart';
 import 'package:lolipants/features/wedding/models/wedding_dress.dart';
 import 'package:lolipants/features/wedding/providers/wedding_providers.dart';
 import 'package:lolipants/features/editor/widgets/image_print_panel.dart';
 import 'package:lolipants/features/editor/widgets/text_tool_panel.dart';
 import 'package:lolipants/features/orders/models/order_design_draft.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
 
@@ -101,8 +104,12 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
     final tabName = widget.bootstrap?.initialTab?.trim().toLowerCase();
     if (tabName == 'wedding' && kFeatureWeddingTab) {
       notifier.setInitialTab(EditorTab.wedding);
-    } else if (tabName == 'build' && kFeatureConfiguratorBuild) {
-      notifier.setInitialTab(EditorTab.build);
+    } else if (tabName == 'build' ||
+        tabName == 'designs' ||
+        tabName == 'design') {
+      if (kFeatureConfiguratorBuild) {
+        notifier.setInitialTab(EditorTab.build);
+      }
     }
   }
 
@@ -120,11 +127,6 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
     final editor = ref.watch(editorProvider);
     final notifier = ref.read(editorProvider.notifier);
     final isWedding = editor.isWeddingTab;
-    final useBuildStrip = !isWedding &&
-        kFeatureConfiguratorBuild &&
-        kFeatureAiEditorTab &&
-        (editor.activeTab == EditorTab.build ||
-            editor.activeTab == EditorTab.designs);
 
     return Scaffold(
       body: Stack(
@@ -145,7 +147,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                       onOrder: isWedding
                           ? () => _orderWeddingDress(context)
                           : () => _orderNow(context),
-                      onShare: isWedding ? null : () => _shareToCommunity(context),
+                      onShare: isWedding ? null : () => _showShareOptions(context),
                       onSizing: () => context.push('/sizing'),
                       saving: editor.isSaving,
                       heroMode: editor.heroMode,
@@ -213,8 +215,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                                     ),
                                   if (!isWedding &&
                                       editor.heroMode == EditorHeroMode.compose)
-                                    _HeroToolButtons(
-                                      editor: editor,
+                                    EditorComposeToolRail(
                                       onPalette: () =>
                                           _onHeroPalettePressed(context),
                                       onAddText: () =>
@@ -286,49 +287,14 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                           ),
                             ),
                           ),
-                          if (useBuildStrip)
-                            EditorStudioPromptCard(
-                              key: ValueKey<Object>(
-                                '${editor.remoteDesignId ?? 'new'}|${editor.configuratorTemplateId}|strip',
-                              ),
-                              buildStrip: true,
-                              onGenerate: () => _generateLook(context),
-                            )
-                          else if (kFeatureAiEditorTab && !isWedding)
-                            EditorStudioPromptCard(
-                              key: ValueKey<Object>(
-                                '${editor.remoteDesignId ?? 'new'}|${editor.configuratorTemplateId}|${editor.activeTab.name}',
-                              ),
-                              compact: true,
-                              onGenerate: () => _generateLook(context),
-                            ),
+                          if (!isWedding) const EditorDesignSummaryBar(),
                         ],
                       ),
                     ),
                     if (kFeatureConfiguratorBuild || kFeatureWeddingTab)
-                      EditorPanelTabs(
-                        activeTab: editor.activeTab,
-                        onTabChanged: notifier.setTab,
-                      ),
-                    if (editor.activeTab == EditorTab.wedding && kFeatureWeddingTab)
-                      EditorWeddingPanel(
-                        height: bottomPanelHeight,
-                        state: editor,
-                        onDressSelected: notifier.setWeddingDressId,
-                        onCategoryChanged: notifier.setWeddingCategoryFilter,
-                        onFulfillmentChanged: notifier.setWeddingFulfillment,
-                        onRentalDaysChanged: notifier.setRentalDays,
-                      )
-                    else if (editor.activeTab == EditorTab.build &&
-                        kFeatureConfiguratorBuild)
-                      EditorBuildPanel(height: bottomPanelHeight)
-                    else
                       EditorBottomPanel(
                         height: bottomPanelHeight,
-                        state: editor,
-                        onCatalogDesignSelected:
-                            notifier.setCatalogDesignPath,
-                        onCatalogFilterChanged: notifier.setCatalogFilter,
+                        onGenerateAi: () => _generateLook(context),
                       ),
                   ],
                 );
@@ -515,7 +481,15 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
 
   Future<void> _generateLook(BuildContext context) async {
     final notifier = ref.read(editorProvider.notifier);
-    final result = await notifier.generateRefinedLook();
+    final editor = ref.read(editorProvider);
+    if (editor.heroMode != EditorHeroMode.compose) {
+      notifier.setHeroMode(EditorHeroMode.compose);
+      await WidgetsBinding.instance.endOfFrame;
+    }
+    final composeBytes = await _captureHeroPng();
+    final result = await notifier.generateRefinedLook(
+      composePreviewBytes: composeBytes,
+    );
     if (!context.mounted) return;
     if (!result.success &&
         result.message != null &&
@@ -612,6 +586,24 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
   }
 
   Future<void> _orderNow(BuildContext context) async {
+    final catalog = ref.read(configuratorCatalogProvider).valueOrNull;
+    final editor = ref.read(editorProvider);
+    final notifier = ref.read(editorProvider.notifier);
+    if (catalog != null) {
+      for (final t in catalog.templates) {
+        if (t.id == editor.configuratorTemplateId) {
+          final message = notifier.validateConfiguratorForOrder(t);
+          if (message != null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(message)),
+            );
+            return;
+          }
+          break;
+        }
+      }
+    }
+
     final result = await _persistCurrentDesign(context);
     if (!mounted) return;
     if (!result.success) {
@@ -622,21 +614,22 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
       }
       return;
     }
-    final editor = ref.read(editorProvider);
+    final updatedEditor = ref.read(editorProvider);
     context.push(
       '/order/summary',
       extra: OrderDesignDraft(
         designId: result.designId,
-        name: editor.designName.trim().isEmpty
+        name: updatedEditor.designName.trim().isEmpty
             ? 'Current design'
-            : editor.designName,
-        garmentType: editor.garmentType,
-        primaryColour: _toHex(editor.primaryColour),
-        accentColour: _toHex(editor.accentColour),
-        fabricId: editor.selectedFabricId,
-        fabricQuality: editor.fabricQuality,
-        patternId: editor.selectedPatternId,
-        mannequinId: editor.mannequinId,
+            : updatedEditor.designName,
+        garmentType: updatedEditor.garmentType,
+        primaryColour: _toHex(updatedEditor.primaryColour),
+        accentColour: _toHex(updatedEditor.accentColour),
+        fabricId: updatedEditor.selectedFabricId,
+        fabricQuality: updatedEditor.fabricQuality,
+        patternId: updatedEditor.selectedPatternId,
+        mannequinId: updatedEditor.mannequinId,
+        configuratorSummary: updatedEditor.configuratorSummary,
       ),
     );
   }
@@ -668,6 +661,96 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
 
   String _toHex(Color color) {
     return '#${color.toARGB32().toRadixString(16).substring(2).toUpperCase()}';
+  }
+
+  Future<void> _showShareOptions(BuildContext context) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.stone,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.share_outlined),
+                title: const Text('Share image'),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _shareImageOs(context);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.save_alt_outlined),
+                title: const Text('Save image'),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _saveHeroImage(context);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.groups_outlined),
+                title: const Text('Share to community'),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _shareToCommunity(context);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _shareImageOs(BuildContext context) async {
+    if (_sharing) return;
+    _sharing = true;
+    try {
+      final bytes = await _captureHeroPng(pixelRatio: 3.2);
+      if (bytes == null || !mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not capture design preview.')),
+        );
+        return;
+      }
+      final dir = await getTemporaryDirectory();
+      final file = File(
+        '${dir.path}/lolipants-design-${DateTime.now().millisecondsSinceEpoch}.png',
+      );
+      await file.writeAsBytes(bytes);
+      await Share.shareXFiles([XFile(file.path)], text: 'My Lolipants design');
+    } finally {
+      if (mounted) _sharing = false;
+    }
+  }
+
+  Future<void> _saveHeroImage(BuildContext context) async {
+    if (_sharing) return;
+    _sharing = true;
+    try {
+      final bytes = await _captureHeroPng(pixelRatio: 3.2);
+      if (bytes == null || !mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not capture design preview.')),
+        );
+        return;
+      }
+      final dir = await getTemporaryDirectory();
+      final file = File(
+        '${dir.path}/lolipants-design-${DateTime.now().millisecondsSinceEpoch}.png',
+      );
+      await file.writeAsBytes(bytes);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Saved to ${file.path}')),
+      );
+    } finally {
+      if (mounted) _sharing = false;
+    }
   }
 
   Future<void> _shareToCommunity(BuildContext context) async {

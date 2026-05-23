@@ -23,6 +23,7 @@ import 'package:lolipants/features/editor/data/configurator_defaults.dart';
 import 'package:lolipants/features/editor/data/configurator_metadata.dart';
 import 'package:lolipants/features/editor/data/editor_design_restore.dart';
 import 'package:lolipants/features/editor/widgets/editor_resize_handle.dart';
+import 'package:lolipants/features/editor/logic/configurator_compat.dart';
 import 'package:lolipants/features/editor/models/configurator_catalog.dart';
 import 'package:lolipants/features/wedding/models/wedding_dress.dart';
 
@@ -102,6 +103,7 @@ class EditorState {
     required this.configuratorTemplateId,
     required this.configuratorSelections,
     required this.configuratorSummary,
+    required this.activeConfiguratorSlotIndex,
     required this.selectedWeddingDressId,
     required this.weddingCategoryFilter,
     required this.weddingFulfillment,
@@ -112,12 +114,12 @@ class EditorState {
     final useMensDefaults = kFeatureMens;
     return EditorState(
       designName: '',
-      mannequinId: useMensDefaults ? 'standard_male' : 'standard_female',
+      mannequinId: useMensDefaults ? 'standard_male' : kPresetCatalogMannequinId,
       garmentType: useMensDefaults ? 'thobe' : 'abaya',
       primaryColour: AppColors.teal,
       accentColour: AppColors.gold,
       activeTool: EditorTool.colour,
-      activeTab: EditorTab.designs,
+      activeTab: EditorTab.build,
       fabricQuality: 'standard',
       selectedFabricId: 'cotton',
       availableFabrics: const <FabricOption>[
@@ -161,6 +163,7 @@ class EditorState {
       configuratorTemplateId: '',
       configuratorSelections: const {},
       configuratorSummary: '',
+      activeConfiguratorSlotIndex: 0,
       selectedWeddingDressId: null,
       weddingCategoryFilter: WeddingCategoryFilter.all,
       weddingFulfillment: WeddingFulfillment.rent,
@@ -229,6 +232,9 @@ class EditorState {
   /// Human-readable summary for save / quote (Build tab).
   final String configuratorSummary;
 
+  /// Active slot chip index in the unified design panel.
+  final int activeConfiguratorSlotIndex;
+
   /// Selected catalogue dress on the Wedding tab.
   final String? selectedWeddingDressId;
 
@@ -277,6 +283,7 @@ class EditorState {
     String? configuratorTemplateId,
     ConfiguratorSelections? configuratorSelections,
     String? configuratorSummary,
+    int? activeConfiguratorSlotIndex,
     String? selectedWeddingDressId,
     bool unsetSelectedWeddingDressId = false,
     WeddingCategoryFilter? weddingCategoryFilter,
@@ -329,6 +336,8 @@ class EditorState {
       configuratorSelections:
           configuratorSelections ?? this.configuratorSelections,
       configuratorSummary: configuratorSummary ?? this.configuratorSummary,
+      activeConfiguratorSlotIndex:
+          activeConfiguratorSlotIndex ?? this.activeConfiguratorSlotIndex,
       selectedWeddingDressId: unsetSelectedWeddingDressId
           ? null
           : (selectedWeddingDressId ?? this.selectedWeddingDressId),
@@ -412,7 +421,11 @@ class EditorNotifier extends StateNotifier<EditorState> {
   }
 
   void setPrimaryColour(Color colour) {
-    state = state.copyWith(primaryColour: colour, hasUnsavedChanges: true);
+    state = state.copyWith(
+      primaryColour: colour,
+      accentColour: colour,
+      hasUnsavedChanges: true,
+    );
   }
 
   void setAccentColour(Color colour) {
@@ -425,13 +438,22 @@ class EditorNotifier extends StateNotifier<EditorState> {
 
   void setTab(EditorTab tab) {
     var next = tab;
+    if (tab == EditorTab.designs || tab == EditorTab.build) {
+      next = EditorTab.build;
+    }
     if (tab == EditorTab.ai && !kFeatureAiEditorTab) {
-      next = EditorTab.designs;
+      next = EditorTab.build;
     }
     if (tab == EditorTab.wedding && !kFeatureWeddingTab) {
-      next = EditorTab.designs;
+      next = EditorTab.build;
     }
     state = state.copyWith(activeTab: next);
+  }
+
+  void setConfiguratorSlotIndex(int index) {
+    state = state.copyWith(
+      activeConfiguratorSlotIndex: index < 0 ? 0 : index,
+    );
   }
 
   void setInitialTab(EditorTab tab) {
@@ -518,7 +540,7 @@ class EditorNotifier extends StateNotifier<EditorState> {
       configuratorTemplateId: '',
       configuratorSelections: const {},
       configuratorSummary: '',
-      activeTab: EditorTab.designs,
+      activeConfiguratorSlotIndex: 0,
     );
   }
 
@@ -558,8 +580,19 @@ class EditorNotifier extends StateNotifier<EditorState> {
     required String slotId,
     required String optionId,
   }) {
-    final selections = Map<String, String>.from(state.configuratorSelections);
-    selections[slotId] = optionId;
+    final selections = resolveConfiguratorConflicts(
+      template: template,
+      selections: state.configuratorSelections,
+      slotId: slotId,
+      optionId: optionId,
+    );
+    final activeCount = activeConfiguratorSlots(
+      template: template,
+      selections: selections,
+    ).length;
+    final clampedIndex = activeCount == 0
+        ? 0
+        : state.activeConfiguratorSlotIndex.clamp(0, activeCount - 1);
     final summary = configuratorSummaryText(
       template: template,
       selections: selections,
@@ -568,7 +601,16 @@ class EditorNotifier extends StateNotifier<EditorState> {
     state = state.copyWith(
       configuratorSelections: selections,
       configuratorSummary: summary,
+      activeConfiguratorSlotIndex: clampedIndex,
       hasUnsavedChanges: true,
+    );
+  }
+
+  /// Validates required configurator slots; returns user-facing message or null.
+  String? validateConfiguratorForOrder(ConfiguratorTemplate template) {
+    return configuratorRequiredSlotsMessage(
+      template: template,
+      selections: state.configuratorSelections,
     );
   }
 
@@ -631,6 +673,7 @@ class EditorNotifier extends StateNotifier<EditorState> {
       configuratorTemplateId: '',
       configuratorSelections: const {},
       configuratorSummary: '',
+      activeConfiguratorSlotIndex: 0,
       selectedWeddingDressId: initial.selectedWeddingDressId,
       weddingCategoryFilter: initial.weddingCategoryFilter,
       weddingFulfillment: initial.weddingFulfillment,
@@ -672,7 +715,7 @@ class EditorNotifier extends StateNotifier<EditorState> {
       selectedCatalogDesignPath: nextCatalogPath,
       catalogFilter: nextFilter,
       activeTool: EditorTool.colour,
-      activeTab: EditorTab.designs,
+      activeTab: EditorTab.build,
       remoteDesignId: null,
       unsetRefinedLook: true,
       heroMode: EditorHeroMode.compose,
@@ -708,7 +751,7 @@ class EditorNotifier extends StateNotifier<EditorState> {
       mannequinId: design.mannequinId ?? state.mannequinId,
       remoteDesignId: design.id,
       activeTool: EditorTool.colour,
-      activeTab: EditorTab.designs,
+      activeTab: EditorTab.build,
       selectedCatalogDesignPath: snapshot.catalogDesignPath,
       catalogFilter:
           snapshot.isCasual ? DesignCatalogFilter.casual : DesignCatalogFilter.all,
@@ -836,7 +879,7 @@ class EditorNotifier extends StateNotifier<EditorState> {
       selectedFabricId: fabricId,
       selectedPatternId: patternId,
       activeTool: EditorTool.colour,
-      activeTab: EditorTab.designs,
+      activeTab: EditorTab.build,
       hasUnsavedChanges: true,
     );
   }
@@ -900,7 +943,7 @@ class EditorNotifier extends StateNotifier<EditorState> {
       selectedTextLayerId: layer.id,
       isPrintOverlaySelected: false,
       activeTool: EditorTool.text,
-      activeTab: EditorTab.designs,
+      activeTab: EditorTab.build,
       hasUnsavedChanges: true,
     );
   }
@@ -1112,7 +1155,10 @@ class EditorNotifier extends StateNotifier<EditorState> {
     return state.garmentType;
   }
 
-  Future<SaveDesignResult> saveDesign({String? forceName}) async {
+  Future<SaveDesignResult> saveDesign({
+    String? forceName,
+    Uint8List? composePreviewBytes,
+  }) async {
     final repo = ref.read(designsRepositoryProvider);
     var name = (forceName ?? state.designName).trim();
     if (name.isEmpty) {
@@ -1129,7 +1175,7 @@ class EditorNotifier extends StateNotifier<EditorState> {
       try {
         final bd = await rootBundle.load(assetKey);
         return bd.buffer.asUint8List();
-      } on Exception {
+      } on Object {
         return null;
       }
     }
@@ -1183,6 +1229,21 @@ class EditorNotifier extends StateNotifier<EditorState> {
       }
     }
 
+    String? configuratorComposeUrl;
+    if (composePreviewBytes != null && composePreviewBytes.isNotEmpty) {
+      configuratorComposeUrl = await uploadBytes(
+        composePreviewBytes,
+        'configurator-compose.png',
+      );
+      if (configuratorComposeUrl == null) {
+        state = state.copyWith(isSaving: false);
+        return const SaveDesignResult(
+          success: false,
+          message: 'Could not upload design preview for AI.',
+        );
+      }
+    }
+
     // User artwork to print (separate from catalogue flat-lay reference).
     String? printArtworkUrl;
     final userPrint = state.printImagePath?.trim();
@@ -1204,6 +1265,12 @@ class EditorNotifier extends StateNotifier<EditorState> {
         printArtworkUrl = uploaded;
         state = state.copyWith(printImagePath: uploaded);
       }
+    }
+
+    if ((printArtworkUrl == null || printArtworkUrl.isEmpty) &&
+        configuratorComposeUrl != null &&
+        configuratorComposeUrl.isNotEmpty) {
+      printArtworkUrl = configuratorComposeUrl;
     }
 
     String? sketchImageUrl = state.sketchImagePath?.trim();
@@ -1279,6 +1346,8 @@ class EditorNotifier extends StateNotifier<EditorState> {
         'aiLookPromptSuffix': kAiLookPromptSuffix,
         if (editorMannequinUrl != null && editorMannequinUrl.isNotEmpty)
           'editorMannequinImageUrl': editorMannequinUrl,
+        if (configuratorComposeUrl != null && configuratorComposeUrl.isNotEmpty)
+          'configuratorComposeImageUrl': configuratorComposeUrl,
         if (state.configuratorTemplateId.isNotEmpty)
           kConfiguratorMetadataKey: buildConfiguratorMetadataBlock(
             templateId: state.configuratorTemplateId,
@@ -1332,12 +1401,17 @@ class EditorNotifier extends StateNotifier<EditorState> {
   }
 
   /// Saves the current design, starts `/ai/design-render`, polls until complete.
-  Future<GenerateLookResult> generateRefinedLook() async {
+  ///
+  /// Pass [composePreviewBytes] (mannequin + configurator layers PNG) so Gemini
+  /// can refine from the on-screen compose when no separate print is set.
+  Future<GenerateLookResult> generateRefinedLook({
+    Uint8List? composePreviewBytes,
+  }) async {
     state = state.copyWith(
       lookGenerating: true,
       unsetLookError: true,
     );
-    final saved = await saveDesign();
+    final saved = await saveDesign(composePreviewBytes: composePreviewBytes);
     if (!saved.success || saved.designId == null) {
       final msg = saved.message ?? 'Save failed';
       state = state.copyWith(

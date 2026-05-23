@@ -6,7 +6,7 @@ import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/features/editor/providers/editor_provider.dart';
 
-/// Switches bottom editor panel between Designs catalogue and Build configurator.
+/// Design / Wedding switcher inside the unified bottom panel.
 class EditorPanelTabs extends StatelessWidget {
   const EditorPanelTabs({
     required this.activeTab,
@@ -17,27 +17,44 @@ class EditorPanelTabs extends StatelessWidget {
   final EditorTab activeTab;
   final ValueChanged<EditorTab> onTabChanged;
 
+  bool get _designSelected =>
+      activeTab == EditorTab.build || activeTab == EditorTab.designs;
+
   @override
   Widget build(BuildContext context) {
     final tabs = <(EditorTab, String)>[
-      (EditorTab.designs, AppStrings.editorTabDesigns),
-      if (kFeatureConfiguratorBuild) (EditorTab.build, AppStrings.editorTabBuild),
+      if (kFeatureConfiguratorBuild) (EditorTab.build, 'Design'),
       if (kFeatureWeddingTab) (EditorTab.wedding, AppStrings.editorTabWedding),
     ];
-    return Material(
-      color: AppColors.stone,
-      child: Row(
-        children: [
-          for (final entry in tabs) ...[
-            Expanded(
-              child: _TabButton(
-                label: entry.$2,
-                selected: activeTab == entry.$1,
-                onTap: () => onTabChanged(entry.$1),
+    if (tabs.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.xs,
+        AppSpacing.md,
+        AppSpacing.xs,
+      ),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: AppColors.smoke,
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+          border: Border.all(color: AppColors.borderSubtle),
+        ),
+        child: Row(
+          children: [
+            for (final entry in tabs)
+              Expanded(
+                child: _TabButton(
+                  label: entry.$2,
+                  selected: entry.$1 == EditorTab.wedding
+                      ? activeTab == EditorTab.wedding
+                      : _designSelected,
+                  onTap: () => onTabChanged(entry.$1),
+                ),
               ),
-            ),
           ],
-        ],
+        ),
       ),
     );
   }
@@ -56,24 +73,28 @@ class _TabButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-        decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(
-              color: selected ? AppColors.gold : Colors.transparent,
-              width: 2,
-            ),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: selected
+                ? AppColors.gold.withValues(alpha: 0.16)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(AppRadius.pill),
           ),
-        ),
-        child: Text(
-          label,
-          textAlign: TextAlign.center,
-          style: AppTextStyles.labelGold.copyWith(
-            color: selected ? AppColors.gold : AppColors.fog,
-            fontSize: 12,
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: AppTextStyles.bodySmall.copyWith(
+              color: selected ? AppColors.gold : AppColors.fog,
+              fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+              fontSize: 12,
+            ),
           ),
         ),
       ),
