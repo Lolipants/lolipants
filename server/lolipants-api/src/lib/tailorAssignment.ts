@@ -63,7 +63,7 @@ function sortTailorCandidates(a: TailorCandidate, b: TailorCandidate): number {
   return a.tailorId < b.tailorId ? -1 : 1;
 }
 
-async function collectTailorCandidates(
+export async function collectTailorCandidates(
   input: {
     db: D1Database;
     deliveryLat: number;
@@ -176,4 +176,135 @@ export async function pickNearestTailor(input: {
 }): Promise<TailorCandidate | null> {
   const picked = await pickTailorForDelivery(input);
   return picked?.candidate ?? null;
+}
+
+export type GarmentEstimateRange = {
+  garmentType: string;
+  fabricQuality: string;
+  minBase: number;
+  maxBase: number;
+  minFabric: number;
+  maxFabric: number;
+  minTotal: number;
+  maxTotal: number;
+  currency: string;
+  tailorCount: number;
+};
+
+/** Min–max garment+fabric totals across accepting tailors (no delivery coords). */
+export async function estimateGarmentPriceRange(input: {
+  db: D1Database;
+  garmentType: string;
+  fabricQuality: string | null;
+}): Promise<GarmentEstimateRange | null> {
+  const { results } = await input.db
+    .prepare(
+      `SELECT tp.user_id
+       FROM tailor_profiles tp
+       JOIN users u ON u.id = tp.user_id
+       WHERE tp.is_accepting_orders = 1 AND u.role = 'tailor'`,
+    )
+    .all<{ user_id: string }>();
+
+  const rows = results ?? [];
+  const garmentTotals: number[] = [];
+  let currency = "QAR";
+
+  for (const row of rows) {
+    const plan = await loadActiveTailorPlan(input.db, row.user_id);
+    if (!plan || plan.garmentPrices.length === 0) continue;
+    if (
+      !planCanPriceDesign(
+        plan,
+        input.garmentType,
+        input.fabricQuality,
+      )
+    ) {
+      continue;
+    }
+    const quote = computeTailorQuote({
+      plan,
+      garmentType: input.garmentType,
+      fabricQuality: input.fabricQuality,
+      city: "Doha",
+    });
+    if (!quote) continue;
+    currency = quote.currency;
+    garmentTotals.push(quote.basePrice + quote.fabricFee);
+  }
+
+  if (garmentTotals.length === 0) return null;
+
+  garmentTotals.sort((a, b) => a - b);
+  const minTotal = garmentTotals[0]!;
+  const maxTotal = garmentTotals[garmentTotals.length - 1]!;
+
+  return {
+    garmentType: input.garmentType,
+    fabricQuality: input.fabricQuality ?? "standard",
+    minBase: minTotal,
+    maxBase: maxTotal,
+    minFabric: 0,
+    maxFabric: 0,
+    minTotal,
+    maxTotal,
+    currency,
+    tailorCount: garmentTotals.length,
+  };
+}
+
+export type CompareTailorQuote = {
+  tailorId: string;
+  tailorName: string;
+  shopName: string | null;
+  distanceKm: number;
+  basePrice: number;
+  fabricFee: number;
+  deliveryFee: number;
+  total: number;
+  currency: string;
+  assignmentMethod: TailorAssignmentMethod;
+};
+
+/** Returns up to [limit] ranked tailor quotes for checkout comparison. */
+export async function compareTailorsForDelivery(input: {
+  db: D1Database;
+  deliveryLat: number;
+  deliveryLng: number;
+  city: string;
+  design: DesignForAssignment;
+  limit?: number;
+}): Promise<CompareTailorQuote[]> {
+  const limit = Math.max(1, Math.min(input.limit ?? 5, 20));
+  const base = {
+    db: input.db,
+    deliveryLat: input.deliveryLat,
+    deliveryLng: input.deliveryLng,
+    city: input.city,
+    design: input.design,
+  };
+
+  const inRadius = await collectTailorCandidates(base, {
+    withinServiceRadius: true,
+  });
+  const pool =
+    inRadius.length > 0
+      ? inRadius
+      : await collectTailorCandidates(base, { withinServiceRadius: false });
+
+  const method: TailorAssignmentMethod =
+    inRadius.length > 0 ? "proximity" : "fallback";
+
+  return pool.slice(0, limit).map((c) => ({
+    tailorId: c.tailorId,
+    tailorName: c.tailorName,
+    shopName: c.shopName,
+    distanceKm: Math.round(c.distanceKm * 10) / 10,
+    basePrice: c.quote.basePrice,
+    fabricFee: c.quote.fabricFee,
+    deliveryFee: c.quote.deliveryFee,
+    total: c.quote.total,
+    currency: c.quote.currency,
+    assignmentMethod: method,
+  }));
 }

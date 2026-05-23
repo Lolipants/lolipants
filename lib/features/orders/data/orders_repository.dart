@@ -4,7 +4,9 @@ import 'package:lolipants/core/errors/app_exception.dart';
 import 'package:lolipants/core/network/api_endpoints.dart';
 import 'package:lolipants/features/auth/data/auth_local_storage.dart';
 import 'package:lolipants/features/orders/models/order.dart';
+import 'package:lolipants/features/orders/models/order_estimate.dart';
 import 'package:lolipants/features/orders/models/order_quote.dart';
+import 'package:lolipants/features/orders/models/tailor_quote_option.dart';
 import 'package:lolipants/features/orders/models/wedding_order_quote.dart';
 
 /// API-backed repository for customer orders.
@@ -66,6 +68,69 @@ class OrdersRepository {
         options: await _authOptions(),
       );
       return right(null);
+    } on DioException catch (e) {
+      return left(_mapDio(e));
+    } on Exception {
+      return left(const UnknownException());
+    }
+  }
+
+  /// Fetches a garment price estimate band (no delivery location required).
+  Future<Either<AppException, OrderEstimate>> getEstimate({
+    required String garmentType,
+    required String fabricQuality,
+  }) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        ApiEndpoints.ordersEstimate,
+        queryParameters: {
+          'garmentType': garmentType,
+          'fabricQuality': fabricQuality,
+        },
+      );
+      final data = response.data;
+      if (data == null) {
+        return left(const ServerException(500, 'Missing estimate payload'));
+      }
+      return right(OrderEstimate.fromApi(data));
+    } on DioException catch (e) {
+      return left(_mapDio(e));
+    } on Exception {
+      return left(const UnknownException());
+    }
+  }
+
+  /// Compares quotes from multiple tailors near delivery coordinates.
+  Future<Either<AppException, List<TailorQuoteOption>>> compareQuotes({
+    required String designId,
+    required String city,
+    required double deliveryLat,
+    required double deliveryLng,
+    int limit = 5,
+  }) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        ApiEndpoints.ordersQuotesCompare,
+        queryParameters: {
+          'designId': designId,
+          'city': city,
+          'deliveryLat': deliveryLat,
+          'deliveryLng': deliveryLng,
+          'limit': limit,
+        },
+      );
+      final data = response.data;
+      if (data == null) {
+        return left(const ServerException(500, 'Missing compare payload'));
+      }
+      final quotesRaw = data['quotes'];
+      final quotes = quotesRaw is List
+          ? quotesRaw
+              .whereType<Map<String, dynamic>>()
+              .map(TailorQuoteOption.fromApi)
+              .toList(growable: false)
+          : const <TailorQuoteOption>[];
+      return right(quotes);
     } on DioException catch (e) {
       return left(_mapDio(e));
     } on Exception {

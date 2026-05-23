@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 import { apiError } from "../lib/http";
 import { orderStatusTemplates, sendToUser } from "../lib/onesignal";
 import { pickCourierForDelivery } from "../lib/courierAssignment";
-import { pickTailorForDelivery } from "../lib/tailorAssignment";
+import { pickTailorForDelivery, estimateGarmentPriceRange, compareTailorsForDelivery } from "../lib/tailorAssignment";
 import {
   computeWeddingQuote,
   pickTailorForWedding,
@@ -282,6 +282,97 @@ orderRoutes.get("/quote", async (c) => {
     currency: quote.currency,
     fabricQuality: quote.fabricQuality,
     garmentType: quote.garmentType,
+  });
+});
+
+orderRoutes.get("/estimate", async (c) => {
+  const garmentType = (c.req.query("garmentType") ?? "abaya").trim();
+  const fabricQuality = (c.req.query("fabricQuality") ?? "standard").trim();
+  if (!garmentType) {
+    return apiError(c, 400, "GARMENT_TYPE_REQUIRED", "garmentType is required");
+  }
+
+  const estimate = await estimateGarmentPriceRange(c.env.DB, {
+    garmentType,
+    fabricQuality,
+  });
+  if (!estimate) {
+    return apiError(
+      c,
+      404,
+      "NO_TAILOR_PRICING",
+      "No tailor pricing available for this garment",
+    );
+  }
+
+  return c.json(estimate);
+});
+
+orderRoutes.get("/quotes/compare", async (c) => {
+  const userId = c.get("userId") as string;
+  const designId = (c.req.query("designId") ?? "").trim();
+  const city = (c.req.query("city") ?? "Doha").trim();
+  const limitRaw = Number(c.req.query("limit") ?? "5");
+  const limit = Number.isFinite(limitRaw) ? Math.floor(limitRaw) : 5;
+  const latParsed = parseCoord(c.req.query("deliveryLat"), "deliveryLat");
+  const lngParsed = parseCoord(c.req.query("deliveryLng"), "deliveryLng");
+  if (!latParsed.ok) {
+    return apiError(c, 400, "DELIVERY_LAT_REQUIRED", latParsed.message);
+  }
+  if (!lngParsed.ok) {
+    return apiError(c, 400, "DELIVERY_LNG_REQUIRED", lngParsed.message);
+  }
+  if (!designId) {
+    return apiError(c, 400, "DESIGN_ID_REQUIRED", "designId is required");
+  }
+
+  const design = await c.env.DB.prepare(
+    "SELECT id, user_id, garment_type, fabric_quality FROM designs WHERE id = ?",
+  )
+    .bind(designId)
+    .first<{
+      id: string;
+      user_id: string;
+      garment_type: string;
+      fabric_quality: string | null;
+    }>();
+  if (!design) return apiError(c, 404, "DESIGN_NOT_FOUND", "Design not found");
+  if (design.user_id !== userId) {
+    return apiError(
+      c,
+      403,
+      "QUOTE_OWN_DESIGN_ONLY",
+      "You can only quote your own design",
+    );
+  }
+
+  const quotes = await compareTailorsForDelivery({
+    db: c.env.DB,
+    deliveryLat: latParsed.value,
+    deliveryLng: lngParsed.value,
+    city,
+    design: {
+      garment_type: design.garment_type,
+      fabric_quality: design.fabric_quality,
+    },
+    limit,
+  });
+
+  if (quotes.length === 0) {
+    return apiError(
+      c,
+      404,
+      "NO_TAILOR_AVAILABLE",
+      "No tailor is available for this garment",
+    );
+  }
+
+  return c.json({
+    designId,
+    city,
+    deliveryLat: latParsed.value,
+    deliveryLng: lngParsed.value,
+    quotes,
   });
 });
 

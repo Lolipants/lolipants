@@ -107,6 +107,12 @@ abstract final class ApiEndpoints {
   /// Proximity quote for wedding rent or purchase.
   static const String ordersWeddingQuote = '/orders/wedding-quote';
 
+  /// Garment price estimate band (no delivery coords).
+  static const String ordersEstimate = '/orders/estimate';
+
+  /// Compare tailor quotes for checkout.
+  static const String ordersQuotesCompare = '/orders/quotes/compare';
+
   /// Complaints collection path.
   static const String complaints = '/complaints';
 
