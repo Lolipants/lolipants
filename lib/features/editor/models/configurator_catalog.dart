@@ -1,3 +1,6 @@
+import 'package:lolipants/features/editor/logic/configurator_compat.dart';
+import 'package:lolipants/features/editor/utils/layer_tint.dart';
+
 /// Remote or bundled modular garment configurator catalogue.
 
 class ConfiguratorCatalog {
@@ -26,6 +29,7 @@ class ConfiguratorTemplate {
     required this.sortOrder,
     required this.requiredSlotKeys,
     required this.slots,
+    this.layerTintEnabled = true,
   });
 
   factory ConfiguratorTemplate.fromApi(Map<String, dynamic> json) {
@@ -37,6 +41,7 @@ class ConfiguratorTemplate {
             .toList(growable: false)
         : const <ConfiguratorSlot>[];
     final req = json['requiredSlotKeys'];
+    final tintRaw = json['layerTintEnabled'];
     return ConfiguratorTemplate(
       id: json['id']?.toString() ?? '',
       nameEn: json['nameEn']?.toString() ?? '',
@@ -48,6 +53,7 @@ class ConfiguratorTemplate {
           ? req.map((e) => e.toString()).toList(growable: false)
           : const [],
       slots: slots,
+      layerTintEnabled: tintRaw is bool ? tintRaw : true,
     );
   }
 
@@ -59,6 +65,7 @@ class ConfiguratorTemplate {
   final int sortOrder;
   final List<String> requiredSlotKeys;
   final List<ConfiguratorSlot> slots;
+  final bool layerTintEnabled;
 }
 
 class ConfiguratorSlot {
@@ -143,6 +150,12 @@ class ConfiguratorOption {
     if (z is num) return z.toInt();
     return 0;
   }
+
+  ConfiguratorTintRole get tintRole => parseTintRole(metadata);
+
+  /// Whether this option accepts tint when [template] has tinting enabled.
+  bool isTintableFor(ConfiguratorTemplate template) =>
+      template.layerTintEnabled && tintRole != ConfiguratorTintRole.none;
 }
 
 /// User selection: slot id → option id.
@@ -154,18 +167,64 @@ List<ConfiguratorOption> collectConfiguratorLayers({
   required ConfiguratorSelections selections,
 }) {
   final layers = <ConfiguratorOption>[];
+  final suppressed = suppressedSlotKeysFor(
+    template: template,
+    selections: selections,
+  );
   for (final slot in template.slots) {
+    if (suppressed.contains(slot.slotKey)) continue;
     final optId = selections[slot.id];
     if (optId == null) continue;
     for (final o in slot.options) {
       if (o.id == optId) {
-        layers.add(o);
+        if (shouldRenderConfiguratorLayer(o)) {
+          layers.add(o);
+        }
         break;
       }
     }
   }
   layers.sort((a, b) => a.layerZ.compareTo(b.layerZ));
   return layers;
+}
+
+/// Single-line readable design description for the hero summary bar.
+String configuratorSummaryLine({
+  required ConfiguratorTemplate template,
+  required ConfiguratorSelections selections,
+}) {
+  final parts = <String>[template.nameEn];
+  for (final slot in template.slots) {
+    final optId = selections[slot.id];
+    if (optId == null) continue;
+    for (final o in slot.options) {
+      if (o.id == optId) {
+        parts.add(o.labelEn);
+        break;
+      }
+    }
+  }
+  return parts.join(' · ');
+}
+
+/// Arabic companion line (slot labels where available).
+String configuratorSummaryLineAr({
+  required ConfiguratorTemplate template,
+  required ConfiguratorSelections selections,
+}) {
+  final parts = <String>[template.nameAr.isNotEmpty ? template.nameAr : template.nameEn];
+  for (final slot in template.slots) {
+    final optId = selections[slot.id];
+    if (optId == null) continue;
+    for (final o in slot.options) {
+      if (o.id == optId) {
+        final label = o.labelAr.trim().isNotEmpty ? o.labelAr : o.labelEn;
+        parts.add(label);
+        break;
+      }
+    }
+  }
+  return parts.join(' · ');
 }
 
 /// Builds a quote-style summary line per slot.

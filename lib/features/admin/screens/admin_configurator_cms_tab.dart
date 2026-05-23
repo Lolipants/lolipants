@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:lolipants/core/permissions/device_permission_prompt.dart';
+import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/features/admin/providers/admin_providers.dart';
@@ -476,6 +477,27 @@ class _ConfiguratorFormDialogState
                               )
                             : const Icon(Icons.upload),
                         label: const Text('Upload image'),
+                      ),
+                    ],
+                  )
+                else if (f.key == 'metadata_json' &&
+                    widget.resource == 'configurator_options')
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      TextField(
+                        controller: _controllers[f.key],
+                        decoration: InputDecoration(labelText: f.label),
+                        maxLines: 6,
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        'Example: {"assetPath": "assets/images/configurator/cfg_mod_sleeve_bell_NEUTRAL.png", "layerZ": 2, "tintRole": "primary"}\n'
+                        'tintRole: primary | accent | none (default primary).\n'
+                        'Use neutral gray/ivory assets (~#E8E4EA) with shading preserved; same canvas size and layerZ per template.',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: AppColors.fog,
+                            ),
                       ),
                     ],
                   )

@@ -1,18 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/features/editor/models/configurator_catalog.dart';
+import 'package:lolipants/features/editor/utils/layer_tint.dart';
 import 'package:lolipants/shared/widgets/catalog_image.dart';
 
-/// Renders a configurator option from CDN or bundled asset at native colours.
+/// Renders a configurator option from CDN or bundled asset at native colours
+/// unless [tintColor] is set.
 class ConfiguratorOptionImage extends StatelessWidget {
   const ConfiguratorOptionImage({
     required this.option,
+    this.tintColor,
     this.fit = BoxFit.contain,
     this.alignment = Alignment.center,
     super.key,
   });
 
   final ConfiguratorOption option;
+  final Color? tintColor;
   final BoxFit fit;
   final Alignment alignment;
 
@@ -20,7 +24,7 @@ class ConfiguratorOptionImage extends StatelessWidget {
   Widget build(BuildContext context) {
     final image = _buildImage();
     if (image == null) return const SizedBox.shrink();
-    return image;
+    return applyLayerTint(child: image, tintColor: tintColor);
   }
 
   Widget? _buildImage() {
