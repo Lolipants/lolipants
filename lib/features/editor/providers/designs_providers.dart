@@ -20,6 +20,16 @@ final renderPreviewRepositoryProvider = Provider<RenderPreviewRepository>(
   (ref) => RenderPreviewRepository(dio: ref.watch(apiDioProvider)),
 );
 
+/// Weekly AI render quota for the signed-in user.
+final aiRenderQuotaProvider = FutureProvider<AiRenderQuota>((ref) async {
+  final repo = ref.watch(renderPreviewRepositoryProvider);
+  final result = await repo.getQuota();
+  return result.fold(
+    (error) => throw DesignsProviderException(error),
+    (quota) => quota,
+  );
+});
+
 /// User's saved designs list state.
 final myDesignsProvider =
     AsyncNotifierProvider<MyDesignsNotifier, List<GarmentDesign>>(
@@ -108,6 +118,7 @@ String designErrorMessage(
       404: 'The requested design could not be found.',
       409:
           'This design cannot be deleted because it is linked to an order.',
+      429: 'You have used all your AI renders for this week. Try again later.',
     },
   );
 }

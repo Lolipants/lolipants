@@ -394,6 +394,17 @@ class AppStrings {
   /// Sign-up gender required error (English).
   static const String signupGenderRequired = 'Please choose a category';
 
+  /// AI designer gender prompt title (English).
+  static const String designGenderDialogTitle = 'Who are you designing for?';
+
+  /// AI designer gender prompt body (English).
+  static const String designGenderDialogBody =
+      'Choose women or men so we can pick the right mannequin and styles.';
+
+  /// AI designer gender prompt body (Arabic).
+  static const String designGenderDialogBodyAr =
+      'اختر نساء أو رجال لاختيار المانيكان والأنماط المناسبة.';
+
   /// Accessories: design T-shirt CTA (English).
   static const String accessoriesTshirtCta = 'Design a T-shirt with text or photo';
 
@@ -873,6 +884,7 @@ class AppStrings {
   static const String editorBuildReset = 'Reset build / إعادة ضبط';
   static const String editorBuildResetHint =
       'Choose a template above to add garment parts, or keep mannequin only.';
+  static const String editorStyleCatalogMode = 'Design catalog';
   static const String editorTabFabric = 'Fabric';
   static const String editorAddText = 'Add text / أضف نصاً';
   static const String editorAddImage = 'Add image / أضف صورة';
@@ -891,6 +903,10 @@ class AppStrings {
   static const String editorHeroAiOutputEmpty =
       'Generate to see this design on a model / اضغط إنشاء لعرض التصميم على المانيكان';
   static const String editorGenerateLook = 'Generate look';
+  static const String editorAiRenderQuota =
+      'AI renders left this week: {remaining}/{limit}';
+  static const String editorAiRenderQuotaEmpty =
+      'No AI renders left this week. Try again after your quota resets.';
   static const String editorLookGenerating = 'Creating preview…';
   static const String editorLookDisclaimer =
       'Preview is AI-generated and illustrative only.';

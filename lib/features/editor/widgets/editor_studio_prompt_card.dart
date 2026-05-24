@@ -7,6 +7,8 @@ import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/features/editor/data/bundled_design_assets.dart';
 import 'package:lolipants/features/editor/data/casual_garment_ai_prompts.dart';
+import 'package:lolipants/features/editor/data/render_preview_repository.dart';
+import 'package:lolipants/features/editor/providers/designs_providers.dart';
 import 'package:lolipants/features/editor/providers/editor_provider.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
 import 'package:lolipants/shared/widgets/lolipants_text_field.dart';
@@ -39,6 +41,21 @@ class EditorStudioPromptCard extends ConsumerStatefulWidget {
 class _EditorStudioPromptCardState extends ConsumerState<EditorStudioPromptCard> {
   late final TextEditingController _controller;
 
+  bool _canGenerateLook({
+    required bool lookGenerating,
+    required AiRenderQuota? quota,
+  }) {
+    if (lookGenerating) return false;
+    if (quota == null) return true;
+    return quota.canRender;
+  }
+
+  String _quotaLabel(AiRenderQuota quota) {
+    return AppStrings.editorAiRenderQuota
+        .replaceAll('{remaining}', '${quota.remaining}')
+        .replaceAll('{limit}', '${quota.limit}');
+  }
+
   static const _quickPrompts = <String>[
     'Gold trim at cuffs and neckline',
     'Softer drape, floor-length hem',
@@ -66,6 +83,12 @@ class _EditorStudioPromptCardState extends ConsumerState<EditorStudioPromptCard>
 
     final editor = ref.watch(editorProvider);
     final notifier = ref.read(editorProvider.notifier);
+    final quotaAsync = ref.watch(aiRenderQuotaProvider);
+    final quota = quotaAsync.valueOrNull;
+    final canGenerate = _canGenerateLook(
+      lookGenerating: editor.lookGenerating,
+      quota: quota,
+    );
 
     if (widget.buildStrip) {
       return Material(
@@ -112,8 +135,7 @@ class _EditorStudioPromptCardState extends ConsumerState<EditorStudioPromptCard>
               ),
               const SizedBox(width: AppSpacing.sm),
               FilledButton(
-                onPressed:
-                    editor.lookGenerating ? null : () => widget.onGenerate(),
+                onPressed: canGenerate ? () => widget.onGenerate() : null,
                 style: FilledButton.styleFrom(
                   backgroundColor: AppColors.gold,
                   foregroundColor: AppColors.ink,
@@ -187,6 +209,18 @@ class _EditorStudioPromptCardState extends ConsumerState<EditorStudioPromptCard>
                 fontSize: dense ? 11 : null,
               ),
             ),
+            if (quota != null) ...[
+              SizedBox(height: dense ? 2 : 4),
+              Text(
+                quota.canRender
+                    ? _quotaLabel(quota)
+                    : AppStrings.editorAiRenderQuotaEmpty,
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: quota.canRender ? AppColors.fog : AppColors.rubyLight,
+                  fontSize: dense ? 10 : 11,
+                ),
+              ),
+            ],
             SizedBox(height: dense ? 6 : AppSpacing.sm),
             LolipantsTextField(
               label: AppStrings.aiPromptLabel,
@@ -257,8 +291,7 @@ class _EditorStudioPromptCardState extends ConsumerState<EditorStudioPromptCard>
                 width: double.infinity,
                 height: 40,
                 child: FilledButton(
-                  onPressed:
-                      editor.lookGenerating ? null : () => widget.onGenerate(),
+                  onPressed: canGenerate ? () => widget.onGenerate() : null,
                   style: FilledButton.styleFrom(
                     backgroundColor: AppColors.gold,
                     foregroundColor: AppColors.ink,
@@ -289,7 +322,7 @@ class _EditorStudioPromptCardState extends ConsumerState<EditorStudioPromptCard>
             else
               LolipantsButton(
                 label: AppStrings.editorGenerateLook,
-                onPressed: editor.lookGenerating ? null : widget.onGenerate,
+                onPressed: canGenerate ? widget.onGenerate : null,
                 loading: editor.lookGenerating,
                 fullWidth: true,
               ),

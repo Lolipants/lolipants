@@ -17,14 +17,15 @@ import 'package:lolipants/features/editor/models/editor_preset_args.dart';
 import 'package:lolipants/features/editor/models/garment_design.dart';
 import 'package:lolipants/features/community/providers/community_providers.dart';
 import 'package:lolipants/features/editor/data/bundled_design_assets.dart';
+import 'package:lolipants/features/editor/providers/designs_providers.dart';
 import 'package:lolipants/features/editor/providers/editor_provider.dart';
 import 'package:lolipants/core/config/app_features.dart';
 import 'package:lolipants/features/editor/widgets/editor_compose_tool_rail.dart';
 import 'package:lolipants/features/editor/widgets/editor_bottom_panel.dart';
 import 'package:lolipants/features/editor/widgets/editor_design_summary_bar.dart';
 import 'package:lolipants/features/editor/providers/configurator_providers.dart';
-import 'package:lolipants/features/editor/widgets/editor_style_picker_sheet.dart';
 import 'package:lolipants/features/editor/widgets/editor_hero_preview.dart';
+import 'package:lolipants/features/editor/widgets/editor_style_picker_sheet.dart';
 import 'package:lolipants/features/orders/models/wedding_order_draft.dart';
 import 'package:lolipants/features/wedding/models/wedding_dress.dart';
 import 'package:lolipants/features/wedding/providers/wedding_providers.dart';
@@ -126,6 +127,9 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
   Widget build(BuildContext context) {
     final editor = ref.watch(editorProvider);
     final notifier = ref.read(editorProvider.notifier);
+    final quotaAsync = ref.watch(aiRenderQuotaProvider);
+    final canGenerateLook = !editor.lookGenerating &&
+        (quotaAsync.valueOrNull?.canRender ?? true);
     final isWedding = editor.isWeddingTab;
 
     return Scaffold(
@@ -232,9 +236,9 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                                       child: IconButton.filledTonal(
                                         tooltip:
                                             AppStrings.editorGenerateLook,
-                                        onPressed: editor.lookGenerating
-                                            ? null
-                                            : () => _generateLook(context),
+                                        onPressed: canGenerateLook
+                                            ? () => _generateLook(context)
+                                            : null,
                                         icon: const Icon(Icons.refresh),
                                       ),
                                     ),
