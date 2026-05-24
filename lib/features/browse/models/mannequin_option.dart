@@ -1,3 +1,5 @@
+import 'package:lolipants/core/preferences/user_gender_provider.dart';
+
 /// Mannequin option from admin-managed backend data.
 class MannequinOption {
   const MannequinOption({
@@ -31,4 +33,33 @@ bool isMaleMannequinOption(MannequinOption o) {
   if (id.endsWith('_male')) return true;
   if (o.labelEn.toLowerCase().contains('(male)')) return true;
   return false;
+}
+
+/// Orders [options] so the shopper's gender lane appears first.
+List<MannequinOption> sortMannequinsForGender(
+  List<MannequinOption> options,
+  String? gender,
+) {
+  if (gender == null || gender.isEmpty) return options;
+  final copy = List<MannequinOption>.from(options);
+  copy.sort((a, b) {
+    final aMale = isMaleMannequinOption(a);
+    final bMale = isMaleMannequinOption(b);
+    if (gender == UserGenderPreference.men) {
+      if (aMale != bMale) return aMale ? -1 : 1;
+    } else if (gender == UserGenderPreference.women) {
+      if (aMale != bMale) return aMale ? 1 : -1;
+    } else if (gender == UserGenderPreference.kids) {
+      final aKid = _isKidsMannequinOption(a);
+      final bKid = _isKidsMannequinOption(b);
+      if (aKid != bKid) return aKid ? -1 : 1;
+    }
+    return a.labelEn.compareTo(b.labelEn);
+  });
+  return copy;
+}
+
+bool _isKidsMannequinOption(MannequinOption o) {
+  final id = o.id.toLowerCase();
+  return id == 'child' || id.contains('petite');
 }

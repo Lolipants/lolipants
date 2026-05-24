@@ -8,13 +8,15 @@ import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/preferences/design_gender_defaults.dart';
+import 'package:lolipants/core/preferences/user_gender_provider.dart';
 import 'package:lolipants/features/browse/models/mannequin_option.dart';
 import 'package:lolipants/features/editor/data/built_in_mannequin_assets.dart';
 import 'package:lolipants/features/editor/models/editor_preset_args.dart';
 import 'package:lolipants/features/editor/providers/editor_provider.dart';
+import 'package:lolipants/features/editor/widgets/bundled_mannequin_image.dart';
 import 'package:lolipants/features/editor/widgets/mannequin_viewer.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
-import 'package:lolipants/shared/widgets/catalog_image.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
 
 /// Selects mannequin shape before opening the editor.
@@ -29,39 +31,15 @@ class MannequinSelectorScreen extends ConsumerStatefulWidget {
 
 class _MannequinSelectorScreenState
     extends ConsumerState<MannequinSelectorScreen> {
-  /// One tile per bundled mannequin PNG; ids match [kBuiltInMannequinAssets].
-  static const _bundledMannequins = <MannequinOption>[
-    MannequinOption(
-      id: 'petite_female',
-      labelEn: 'Petite (Female)',
-      labelAr: 'نسائي قصير',
-    ),
-    MannequinOption(
-      id: 'standard_female',
-      labelEn: 'Standard (Female)',
-      labelAr: 'نسائي قياسي',
-    ),
-    MannequinOption(
-      id: 'athletic_female',
-      labelEn: 'Athletic (Female)',
-      labelAr: 'نسائي رياضي',
-    ),
-    MannequinOption(
-      id: 'curvy_female',
-      labelEn: 'Curvy (Female)',
-      labelAr: 'نسائي ممتلئ',
-    ),
-    MannequinOption(
-      id: 'plus_female',
-      labelEn: 'Plus (Female)',
-      labelAr: 'نسائي بلس',
-    ),
-    MannequinOption(
-      id: 'standard_male',
-      labelEn: 'Standard (Male)',
-      labelAr: 'رجالي قياسي',
-    ),
-  ];
+  static final _bundledMannequins = kVersionMannequinCatalog
+      .map(
+        (m) => MannequinOption(
+          id: m.id,
+          labelEn: m.labelEn,
+          labelAr: m.labelAr,
+        ),
+      )
+      .toList(growable: false);
 
   late String _selectedId;
   String? _customPhotoPath;
@@ -106,13 +84,30 @@ class _MannequinSelectorScreenState
   @override
   void initState() {
     super.initState();
-    _selectedId = kFeatureMens ? 'standard_male' : kPresetCatalogMannequinId;
+    _selectedId = kPresetCatalogMannequinId;
+    WidgetsBinding.instance.addPostFrameCallback((_) => _applyGenderDefaults());
+  }
+
+  void _applyGenderDefaults() {
+    if (!mounted) return;
+    final gender = ref.read(userGenderProvider);
+    final ordered = sortMannequinsForGender(_bundledMannequins, gender);
+    final preferred = gender != null
+        ? mannequinIdForGender(gender)
+        : (kFeatureMens ? 'standard_male' : kPresetCatalogMannequinId);
+    final id = ordered.any((m) => m.id == preferred)
+        ? preferred
+        : ordered.first.id;
+    if (_selectedId != id) {
+      setState(() => _selectedId = id);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final editor = ref.watch(editorProvider);
-    const mannequins = _bundledMannequins;
+    final gender = ref.watch(userGenderProvider);
+    final mannequins = sortMannequinsForGender(_bundledMannequins, gender);
     if (!mannequins.any((m) => m.id == _selectedId)) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
@@ -163,18 +158,9 @@ class _MannequinSelectorScreenState
                                       borderRadius: BorderRadius.circular(
                                         AppRadius.sm,
                                       ),
-                                      child: ColoredBox(
-                                        color: const Color(0xFFE8E4EA),
-                                        child: CatalogImage(
-                                          path: builtIn,
-                                          width: 88,
-                                          height: 110,
-                                          fit: BoxFit.contain,
-                                          errorWidget: MiniMannequin(
-                                            primaryColour:
-                                                editor.primaryColour,
-                                            accentColour: editor.accentColour,
-                                          ),
+                                      child: SizedBox.expand(
+                                        child: BundledMannequinImage(
+                                          assetPath: builtIn,
                                         ),
                                       ),
                                     );
@@ -268,7 +254,12 @@ class _MannequinCard extends StatelessWidget {
         ),
         child: Column(
           children: [
-            Expanded(child: Center(child: child)),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+                child: child,
+              ),
+            ),
             const SizedBox(height: AppSpacing.sm),
             Text(
               english,
