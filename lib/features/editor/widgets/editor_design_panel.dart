@@ -5,15 +5,19 @@ import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
-import 'package:lolipants/features/editor/data/configurator_defaults.dart';
+import 'package:lolipants/core/preferences/user_gender_provider.dart';
 import 'package:lolipants/features/editor/logic/configurator_compat.dart';
+import 'package:lolipants/features/editor/logic/configurator_gender.dart';
 import 'package:lolipants/features/editor/models/configurator_catalog.dart';
 import 'package:lolipants/features/editor/providers/configurator_providers.dart';
 import 'package:lolipants/features/editor/providers/editor_provider.dart';
 import 'package:lolipants/features/editor/utils/layer_tint.dart';
 import 'package:lolipants/features/editor/widgets/configurator_option_image.dart';
 import 'package:lolipants/features/editor/widgets/editor_asset_thumb_card.dart';
+import 'package:lolipants/features/editor/logic/catalog_design_gender_filter.dart';
+import 'package:lolipants/features/editor/widgets/catalog_design_picker.dart';
 import 'package:lolipants/features/editor/widgets/editor_studio_prompt_card.dart';
+import 'package:lolipants/features/editor/widgets/editor_style_dropdown.dart';
 
 /// Minimal configurator panel: pick a garment part, then choose an option.
 class EditorDesignPanel extends ConsumerStatefulWidget {
@@ -40,15 +44,16 @@ class _EditorDesignPanelState extends ConsumerState<EditorDesignPanel> {
     final editor = ref.watch(editorProvider);
     final notifier = ref.read(editorProvider.notifier);
     final catalogAsync = ref.watch(configuratorCatalogProvider);
+    final templates = ref.watch(genderOrderedConfiguratorTemplatesProvider);
     final panelHeight = widget.height ??
         (MediaQuery.sizeOf(context).height * 0.36).clamp(260.0, 340.0);
 
     ref.listen<AsyncValue<ConfiguratorCatalog>>(configuratorCatalogProvider,
         (previous, next) {
-      next.whenData((catalog) {
-        ref
-            .read(editorProvider.notifier)
-            .ensureDefaultConfiguratorTemplate(catalog.templates);
+      next.whenData((_) {
+        ref.read(editorProvider.notifier).ensureDefaultConfiguratorTemplate(
+              ref.read(genderOrderedConfiguratorTemplatesProvider),
+            );
       });
     });
 
@@ -60,8 +65,7 @@ class _EditorDesignPanelState extends ConsumerState<EditorDesignPanel> {
           style: AppTextStyles.bodySmall,
         ),
       ),
-      data: (catalog) {
-        final templates = catalog.templates;
+      data: (_) {
         if (templates.isEmpty) {
           return Center(
             child: Text(
@@ -77,6 +81,54 @@ class _EditorDesignPanelState extends ConsumerState<EditorDesignPanel> {
         });
 
         final template = _resolveTemplate(templates, editor);
+
+        if (editor.buildStyleMode == EditorBuildStyleMode.catalog) {
+          final sections = catalogSectionsForMannequin(editor.mannequinId);
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (!widget.embedded) ...[
+                const SizedBox(height: AppSpacing.xs),
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.borderDefault,
+                      borderRadius: BorderRadius.circular(100),
+                    ),
+                  ),
+                ),
+              ],
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                  AppSpacing.md,
+                  widget.embedded ? AppSpacing.xs : AppSpacing.sm,
+                  AppSpacing.md,
+                  AppSpacing.xs,
+                ),
+                child: EditorStyleDropdown(
+                  templates: templates,
+                  mannequinId: editor.mannequinId,
+                  selectedTemplateId: template.id,
+                  buildStyleMode: editor.buildStyleMode,
+                  onReset: () {
+                    notifier.setConfiguratorSlotIndex(0);
+                    notifier.resetConfiguratorBuild(templates);
+                  },
+                ),
+              ),
+              Expanded(
+                child: CatalogDesignPicker(
+                  sections: sections,
+                  selectedPath: editor.selectedCatalogDesignPath,
+                  onSelected: notifier.setCatalogDesignPath,
+                ),
+              ),
+            ],
+          );
+        }
+
         final slots = activeConfiguratorSlots(
           template: template,
           selections: editor.configuratorSelections,
@@ -120,9 +172,11 @@ class _EditorDesignPanelState extends ConsumerState<EditorDesignPanel> {
                 height: 32,
                 child: Row(
                   children: [
-                    _StyleMenu(
+                    EditorStyleDropdown(
                       templates: templates,
-                      selectedId: template.id,
+                      mannequinId: editor.mannequinId,
+                      selectedTemplateId: template.id,
+                      buildStyleMode: editor.buildStyleMode,
                       onReset: () {
                         notifier.setConfiguratorSlotIndex(0);
                         notifier.resetConfiguratorBuild(templates);
@@ -205,96 +259,9 @@ class _EditorDesignPanelState extends ConsumerState<EditorDesignPanel> {
     for (final t in templates) {
       if (t.id == selectedId) return t;
     }
-    return templates.firstWhere(
-      (t) => t.id == kDefaultConfiguratorTemplateId,
-      orElse: () => templates.first,
-    );
-  }
-}
-
-/// Garment style picker + reset in one compact menu.
-class _StyleMenu extends ConsumerWidget {
-  const _StyleMenu({
-    required this.templates,
-    required this.selectedId,
-    required this.onReset,
-  });
-
-  final List<ConfiguratorTemplate> templates;
-  final String selectedId;
-  final VoidCallback onReset;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    ConfiguratorTemplate? current;
-    for (final t in templates) {
-      if (t.id == selectedId) {
-        current = t;
-        break;
-      }
-    }
-
-    return PopupMenuButton<String>(
-      tooltip: AppStrings.editorBuildChangeStyle,
-      color: AppColors.stone,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        side: const BorderSide(color: AppColors.borderSubtle),
-      ),
-      offset: const Offset(0, 36),
-      onSelected: (value) {
-        if (value == '__reset__') {
-          onReset();
-          return;
-        }
-        ref
-            .read(editorProvider.notifier)
-            .setConfiguratorTemplate(value, templates);
-      },
-      itemBuilder: (context) => [
-        for (final t in templates)
-          PopupMenuItem(
-            value: t.id,
-            child: Text(
-              t.nameEn,
-              style: AppTextStyles.bodySmall.copyWith(
-                color: t.id == selectedId ? AppColors.gold : AppColors.sand,
-                fontWeight:
-                    t.id == selectedId ? FontWeight.w600 : FontWeight.w400,
-              ),
-            ),
-          ),
-        const PopupMenuDivider(),
-        PopupMenuItem(
-          value: '__reset__',
-          child: Text(
-            AppStrings.editorBuildReset,
-            style: AppTextStyles.bodySmall.copyWith(color: AppColors.fog),
-          ),
-        ),
-      ],
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-        decoration: BoxDecoration(
-          color: AppColors.smoke,
-          borderRadius: BorderRadius.circular(AppRadius.pill),
-          border: Border.all(color: AppColors.borderSubtle),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              current?.nameEn ?? 'Style',
-              style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.sand,
-                fontSize: 10,
-              ),
-            ),
-            const Icon(Icons.expand_more, size: 14, color: AppColors.fog),
-          ],
-        ),
-      ),
-    );
+    final gender = ref.read(userGenderProvider);
+    return preferredConfiguratorTemplateForGender(templates, gender) ??
+        templates.first;
   }
 }
 
