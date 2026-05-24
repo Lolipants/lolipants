@@ -130,6 +130,12 @@ String? _nonEmpty(dynamic value) {
   return s;
 }
 
+/// Persisted AI refined look URL from the last successful `/ai/design-render`.
+String? aiRefinedLookUrlFromRenderMetadata(Map<String, dynamic>? meta) {
+  if (meta == null) return null;
+  return _nonEmpty(meta['aiRefinedLookUrl']);
+}
+
 double _num(dynamic value, double fallback) {
   if (value is num) return value.toDouble();
   return double.tryParse(value?.toString() ?? '') ?? fallback;

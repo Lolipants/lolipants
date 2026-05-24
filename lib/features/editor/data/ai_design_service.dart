@@ -22,6 +22,7 @@ class AiDesignService {
     required String prompt,
     required String garmentType,
     required String currentStyle,
+    String? gender,
   }) async {
     try {
       final response = await _dio.post<Map<String, dynamic>>(
@@ -30,6 +31,7 @@ class AiDesignService {
           'prompt': prompt,
           'garmentType': garmentType,
           'currentStyle': currentStyle,
+          if (gender != null && gender.trim().isNotEmpty) 'gender': gender.trim(),
         },
         options: await _authOptions(),
       );

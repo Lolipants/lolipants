@@ -1,8 +1,7 @@
 /// Appended to Gemini look prompts for consistent Lolipants catalogue output.
 /// Keep in sync with server default in `geminiImageClient.ts` when possible.
 const String kAiLookPromptSuffix = ''
-    'Brand output rules (Lolipants): one modest adult model in full-length studio '
-    'photograph, Gulf/MENA-appropriate formalwear, neutral soft studio background, '
-    'even lighting, runway-catalog clarity. Honor the flat garment reference for '
-    'silhouette, colour blocking, and trim; honor the body reference for pose and fit. '
-    'No watermark, no readable text or logos. SynthID from the API is acceptable.';
+    'Lolipants refine rules: pure solid white background (#FFFFFF). '
+    'Keep the EXACT same mannequin, pose, proportions, framing, colours, panels, trim, and slot layout as the primary design-preview reference — do not swap the model or redesign the garment. '
+    'Only refine layered configurator graphics into ONE unified photorealistic sewn garment (natural fabric drape, subtle stitching, cohesive material). '
+    'No studio set, scenery, props, watermarks, or readable text/logos. SynthID from the API is acceptable.';

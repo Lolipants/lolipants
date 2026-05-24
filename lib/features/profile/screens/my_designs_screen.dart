@@ -7,6 +7,7 @@ import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/features/editor/data/bundled_design_assets.dart';
+import 'package:lolipants/features/editor/data/editor_design_restore.dart';
 import 'package:lolipants/features/editor/models/garment_design.dart';
 import 'package:lolipants/features/editor/providers/designs_providers.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
@@ -339,8 +340,8 @@ class _DesignThumbnail extends StatelessWidget {
 
   final GarmentDesign design;
 
-  static String? _firstHttpUrl(String? a, String? b) {
-    for (final u in [a, b]) {
+  static String? _firstHttpUrl(String? a, String? b, [String? c]) {
+    for (final u in [a, b, c]) {
       final s = u?.trim();
       if (s != null && s.isNotEmpty && s.startsWith('http')) return s;
     }
@@ -349,7 +350,12 @@ class _DesignThumbnail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final remote = _firstHttpUrl(design.printImageUrl, design.sketchImageUrl);
+    final refined = aiRefinedLookUrlFromRenderMetadata(design.renderMetadata);
+    final remote = _firstHttpUrl(
+      refined,
+      design.printImageUrl,
+      design.sketchImageUrl,
+    );
     if (remote != null) {
       return CachedNetworkImage(
         imageUrl: remote,

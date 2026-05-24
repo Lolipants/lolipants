@@ -13,6 +13,7 @@ import 'package:lolipants/features/editor/providers/editor_provider.dart';
 import 'package:lolipants/features/editor/utils/layer_tint.dart';
 import 'package:lolipants/features/editor/widgets/configurator_option_image.dart';
 import 'package:lolipants/features/editor/widgets/editor_wedding_hero.dart';
+import 'package:lolipants/shared/widgets/catalog_image.dart';
 import 'package:lolipants/features/wedding/models/wedding_dress.dart';
 import 'package:lolipants/features/wedding/providers/wedding_providers.dart';
 
@@ -47,27 +48,29 @@ class EditorHeroPreview extends ConsumerWidget {
 
       ref.listen<AsyncValue<ConfiguratorCatalog>>(configuratorCatalogProvider,
           (previous, next) {
-        next.whenData((cat) {
-          ref
-              .read(editorProvider.notifier)
-              .ensureDefaultConfiguratorTemplate(cat.templates);
+        next.whenData((_) {
+          ref.read(editorProvider.notifier).ensureDefaultConfiguratorTemplate(
+                ref.read(genderOrderedConfiguratorTemplatesProvider),
+              );
         });
       });
+
+      final templates = ref.watch(genderOrderedConfiguratorTemplatesProvider);
 
       return catalog.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, __) => _BuildComposeBody(state: state, template: null),
-        data: (cat) {
+        data: (_) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            ref
-                .read(editorProvider.notifier)
-                .ensureDefaultConfiguratorTemplate(cat.templates);
+            ref.read(editorProvider.notifier).ensureDefaultConfiguratorTemplate(
+                  templates,
+                );
           });
 
           ConfiguratorTemplate? template;
           final selectedId = state.configuratorTemplateId.trim();
           if (selectedId.isNotEmpty) {
-            for (final t in cat.templates) {
+            for (final t in templates) {
               if (t.id == selectedId) {
                 template = t;
                 break;
@@ -129,6 +132,38 @@ class _BuildComposeBody extends StatelessWidget {
     final mannequinPath = (custom != null && custom.isNotEmpty)
         ? custom
         : bundledPath;
+
+    if (state.buildStyleMode == EditorBuildStyleMode.catalog) {
+      final designPath = state.selectedCatalogDesignPath.trim();
+      if (designPath.isNotEmpty) {
+        return InteractiveViewer(
+          minScale: 0.85,
+          maxScale: 3,
+          alignment: Alignment.center,
+          child: SizedBox(
+            width: double.infinity,
+            height: double.infinity,
+            child: CatalogImage(
+              path: designPath,
+              fit: BoxFit.contain,
+              alignment: Alignment.bottomCenter,
+              errorWidget: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  child: Text(
+                    AppStrings.editorBuildHeroEmpty,
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.fog,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+    }
 
     final layers = template == null
         ? const <ConfiguratorOption>[]

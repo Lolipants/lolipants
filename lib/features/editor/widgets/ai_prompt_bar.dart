@@ -7,10 +7,14 @@ import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/features/auth/providers/auth_providers.dart';
 import 'package:lolipants/features/editor/data/ai_design_service.dart';
+import 'package:lolipants/core/preferences/design_gender_defaults.dart';
+import 'package:lolipants/core/preferences/user_gender_provider.dart';
 import 'package:lolipants/features/editor/models/garment_design_suggestion.dart';
+import 'package:lolipants/features/home/logic/ensure_design_gender.dart';
 import 'package:lolipants/features/editor/providers/designs_providers.dart';
 import 'package:lolipants/features/editor/providers/editor_provider.dart';
 import 'package:lolipants/features/orders/providers/orders_providers.dart';
+import 'package:lolipants/features/editor/utils/ai_colour_parse.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
 import 'package:lolipants/shared/widgets/lolipants_text_field.dart';
 
@@ -32,10 +36,13 @@ class AiPromptBar extends ConsumerStatefulWidget {
   ///
   /// When [embedInEditor] is true (editor bottom AI tab), "Apply" updates
   /// [editorProvider] live instead of creating a remote draft.
-  const AiPromptBar({super.key, this.embedInEditor = false});
+  const AiPromptBar({super.key, this.embedInEditor = false, this.initialGender});
 
   /// Embedded in design editor vs home modal (draft + navigate).
   final bool embedInEditor;
+
+  /// Gender lane resolved before opening the home sheet (`men` / `women` / `kids`).
+  final String? initialGender;
 
   @override
   ConsumerState<AiPromptBar> createState() => _AiPromptBarState();
@@ -47,24 +54,37 @@ class _AiPromptBarState extends ConsumerState<AiPromptBar> {
   String? _error;
   GarmentDesignSuggestion? _suggestion;
   String _garmentType = 'abaya';
+  String? _designGender;
 
-  static const _quickPrompts = <String>[
-    'Traditional Qatari Thobe with gold trim',
-    'Modern black Abaya with silver embroidery',
-    'Minimalist white Kandura',
-    "Colourful children's Jalabiya",
-  ];
+  List<(String label, String value)> get _garmentTypes {
+    final gender = _designGender ?? UserGenderPreference.women;
+    return garmentTypesForGender(gender);
+  }
 
-  static const _garmentTypes = <(String label, String value)>[
-    ('Abaya', 'abaya'),
-    ('Thobe', 'thobe'),
-    ('Dress', 'dress'),
-  ];
+  List<String> get _quickPrompts {
+    final gender = _designGender ?? UserGenderPreference.women;
+    return quickPromptsForGender(gender);
+  }
+
+  void _applyGenderDefaults(String gender) {
+    _designGender = gender;
+    _garmentType = defaultGarmentTypeForGender(gender);
+    final allowed = _garmentTypes.map((e) => e.$2).toSet();
+    if (!allowed.contains(_garmentType)) {
+      _garmentType = _garmentTypes.first.$2;
+    }
+  }
 
   @override
   void initState() {
     super.initState();
     _suggestion = ref.read(aiLastSuggestionProvider);
+    if (!widget.embedInEditor) {
+      final gender = widget.initialGender ?? ref.read(userGenderProvider);
+      if (gender != null && UserGenderPreference.all.contains(gender)) {
+        _applyGenderDefaults(gender);
+      }
+    }
   }
 
   @override
@@ -154,7 +174,7 @@ class _AiPromptBarState extends ConsumerState<AiPromptBar> {
             )
           else if (_error != null)
             Text(
-              AppStrings.aiCreateFailed,
+              _error!,
               style: AppTextStyles.bodySmall.copyWith(color: AppColors.rubyLight),
             )
           else if (_suggestion != null)
@@ -185,7 +205,9 @@ class _AiPromptBarState extends ConsumerState<AiPromptBar> {
         borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: AppColors.borderDefault),
       ),
-      child: content,
+      child: SingleChildScrollView(
+        child: content,
+      ),
     );
   }
 
@@ -220,12 +242,30 @@ class _AiPromptBarState extends ConsumerState<AiPromptBar> {
       _error = null;
       _suggestion = null;
     });
+
+    if (!widget.embedInEditor) {
+      final gender = _designGender ??
+          widget.initialGender ??
+          ref.read(userGenderProvider);
+      final resolved = gender != null &&
+              UserGenderPreference.all.contains(gender)
+          ? gender
+          : await ensureDesignGender(context, ref);
+      if (!mounted) return;
+      if (resolved == null) {
+        setState(() => _isLoading = false);
+        return;
+      }
+      setState(() => _applyGenderDefaults(resolved));
+    }
+
     final garmentType = _garmentType;
     final service = ref.read(aiDesignServiceProvider);
     final result = await service.generateDesign(
       prompt: prompt,
       garmentType: garmentType,
       currentStyle: 'classic',
+      gender: _designGender,
     );
     if (!mounted) return;
     result.fold(
@@ -256,11 +296,22 @@ class _AiPromptBarState extends ConsumerState<AiPromptBar> {
       return;
     }
 
+    final gender = _designGender ??
+        widget.initialGender ??
+        ref.read(userGenderProvider);
+    final resolved = gender != null && UserGenderPreference.all.contains(gender)
+        ? gender
+        : await ensureDesignGender(context, ref);
+    if (!mounted || resolved == null) return;
+    _applyGenderDefaults(resolved);
+
+    final mannequinId = mannequinIdForGender(resolved);
     final repo = ref.read(designsRepositoryProvider);
     final result = await repo.createDesign(
       payload: {
         'name': 'AI Draft',
         'garmentType': _garmentType,
+        'mannequinId': mannequinId,
         'primaryColour': suggestion.primaryColour,
         'accentColour': suggestion.accentColour,
         'fabricId': suggestion.fabricId,
@@ -279,13 +330,13 @@ class _AiPromptBarState extends ConsumerState<AiPromptBar> {
           ),
         ),
       ),
-      (_) async {
+      (design) async {
         ref.read(aiLastSuggestionProvider.notifier).state = null;
         await ref.read(myDesignsProvider.notifier).reload();
         if (!context.mounted) return;
         Navigator.of(context).pop();
         if (!context.mounted) return;
-        context.go('/profile/designs');
+        context.go('/editor', extra: design);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(AppStrings.aiDraftCreated),
@@ -357,7 +408,7 @@ class _ColorDot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = _fromHex(hex);
+    final color = parseAiColour(hex);
     return Container(
       width: 20,
       height: 20,
@@ -368,10 +419,4 @@ class _ColorDot extends StatelessWidget {
       ),
     );
   }
-}
-
-Color _fromHex(String hex) {
-  final value = hex.replaceAll('#', '');
-  final normalized = value.length == 6 ? 'FF$value' : value.padLeft(8, 'F');
-  return Color(int.parse(normalized, radix: 16));
 }

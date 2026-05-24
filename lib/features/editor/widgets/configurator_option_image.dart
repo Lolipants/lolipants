@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/features/editor/models/configurator_catalog.dart';
 import 'package:lolipants/features/editor/utils/layer_tint.dart';
+import 'package:lolipants/features/editor/widgets/bundled_mannequin_image.dart';
 import 'package:lolipants/shared/widgets/catalog_image.dart';
 
 /// Renders a configurator option from CDN or bundled asset at native colours
@@ -59,13 +60,9 @@ class EditorMannequinBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CatalogImage(
-      path: assetPath,
+    return BundledMannequinImage(
+      assetPath: assetPath,
       fit: BoxFit.fitHeight,
-      alignment: Alignment.bottomCenter,
-      errorWidget: const Center(
-        child: Icon(Icons.person_outlined, color: AppColors.fog, size: 48),
-      ),
     );
   }
 }

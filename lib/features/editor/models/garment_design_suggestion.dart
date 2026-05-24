@@ -1,3 +1,5 @@
+import 'package:lolipants/features/editor/utils/ai_colour_parse.dart';
+
 /// AI-generated design suggestion from `/ai/design`.
 class GarmentDesignSuggestion {
   /// Creates a design suggestion.
@@ -12,9 +14,14 @@ class GarmentDesignSuggestion {
 
   /// Parses API response payload.
   factory GarmentDesignSuggestion.fromApi(Map<String, dynamic> json) {
+    final accentRaw = json['accentColour']?.toString();
     return GarmentDesignSuggestion(
-      primaryColour: json['primaryColour']?.toString() ?? '#162F28',
-      accentColour: json['accentColour']?.toString(),
+      primaryColour: normalizeAiColourHex(
+        json['primaryColour']?.toString(),
+      ),
+      accentColour: accentRaw == null || accentRaw.trim().isEmpty
+          ? null
+          : normalizeAiColourHex(accentRaw),
       fabricId: json['fabricId']?.toString(),
       patternId: json['patternId']?.toString(),
       description: json['description']?.toString(),

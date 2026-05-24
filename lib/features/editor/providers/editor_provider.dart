@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:fpdart/fpdart.dart';
@@ -19,11 +20,15 @@ import 'package:lolipants/features/editor/providers/designs_providers.dart';
 import 'package:lolipants/features/editor/constants/ai_look_prompt_suffix.dart';
 import 'package:lolipants/features/editor/data/built_in_mannequin_assets.dart';
 import 'package:lolipants/features/editor/data/bundled_design_assets.dart';
+import 'package:lolipants/features/editor/logic/catalog_design_gender_filter.dart';
 import 'package:lolipants/features/editor/data/configurator_defaults.dart';
 import 'package:lolipants/features/editor/data/configurator_metadata.dart';
 import 'package:lolipants/features/editor/data/editor_design_restore.dart';
+import 'package:lolipants/features/editor/utils/ai_colour_parse.dart';
 import 'package:lolipants/features/editor/widgets/editor_resize_handle.dart';
+import 'package:lolipants/core/preferences/user_gender_provider.dart';
 import 'package:lolipants/features/editor/logic/configurator_compat.dart';
+import 'package:lolipants/features/editor/logic/configurator_gender.dart';
 import 'package:lolipants/features/editor/models/configurator_catalog.dart';
 import 'package:lolipants/features/wedding/models/wedding_dress.dart';
 
@@ -35,6 +40,9 @@ enum EditorTab { designs, build, wedding, ai }
 
 /// Hero preview: schematic compose vs Gemini-refined look.
 enum EditorHeroMode { compose, look }
+
+/// Build tab style source: modular configurator vs bundled flat-lay catalogue.
+enum EditorBuildStyleMode { configurator, catalog }
 
 /// Legacy alias for the canonical [DesignTextLayer] model. Kept so existing
 /// call sites keep compiling; new code should use [DesignTextLayer] directly.
@@ -100,9 +108,11 @@ class EditorState {
     required this.lookGenerating,
     required this.lookGenerationError,
     required this.hasUnsavedChanges,
+    required this.buildStyleMode,
     required this.configuratorTemplateId,
     required this.configuratorSelections,
     required this.configuratorSummary,
+    required this.configuratorAiLayerNotes,
     required this.activeConfiguratorSlotIndex,
     required this.selectedWeddingDressId,
     required this.weddingCategoryFilter,
@@ -161,8 +171,10 @@ class EditorState {
       lookGenerationError: null,
       hasUnsavedChanges: true,
       configuratorTemplateId: '',
+      buildStyleMode: EditorBuildStyleMode.configurator,
       configuratorSelections: const {},
       configuratorSummary: '',
+      configuratorAiLayerNotes: '',
       activeConfiguratorSlotIndex: 0,
       selectedWeddingDressId: null,
       weddingCategoryFilter: WeddingCategoryFilter.all,
@@ -223,6 +235,9 @@ class EditorState {
   /// following a successful save / [loadDesign] baseline.
   final bool hasUnsavedChanges;
 
+  /// Configurator templates vs bundled design catalogue.
+  final EditorBuildStyleMode buildStyleMode;
+
   /// Active modular configurator template id (`configurator_templates.id`).
   final String configuratorTemplateId;
 
@@ -231,6 +246,9 @@ class EditorState {
 
   /// Human-readable summary for save / quote (Build tab).
   final String configuratorSummary;
+
+  /// Explicit sleeve vs overlay semantics for AI look generation.
+  final String configuratorAiLayerNotes;
 
   /// Active slot chip index in the unified design panel.
   final int activeConfiguratorSlotIndex;
@@ -281,8 +299,10 @@ class EditorState {
     bool unsetLookError = false,
     bool? hasUnsavedChanges,
     String? configuratorTemplateId,
+    EditorBuildStyleMode? buildStyleMode,
     ConfiguratorSelections? configuratorSelections,
     String? configuratorSummary,
+    String? configuratorAiLayerNotes,
     int? activeConfiguratorSlotIndex,
     String? selectedWeddingDressId,
     bool unsetSelectedWeddingDressId = false,
@@ -333,9 +353,12 @@ class EditorState {
       hasUnsavedChanges: hasUnsavedChanges ?? this.hasUnsavedChanges,
       configuratorTemplateId:
           configuratorTemplateId ?? this.configuratorTemplateId,
+      buildStyleMode: buildStyleMode ?? this.buildStyleMode,
       configuratorSelections:
           configuratorSelections ?? this.configuratorSelections,
       configuratorSummary: configuratorSummary ?? this.configuratorSummary,
+      configuratorAiLayerNotes:
+          configuratorAiLayerNotes ?? this.configuratorAiLayerNotes,
       activeConfiguratorSlotIndex:
           activeConfiguratorSlotIndex ?? this.activeConfiguratorSlotIndex,
       selectedWeddingDressId: unsetSelectedWeddingDressId
@@ -369,6 +392,19 @@ class EditorNotifier extends StateNotifier<EditorState> {
   }
 
   void setMannequin(String id) {
+    if (state.buildStyleMode == EditorBuildStyleMode.catalog) {
+      final paths = catalogDesignPathsForMannequin(id);
+      var path = state.selectedCatalogDesignPath;
+      if (paths.isNotEmpty && !paths.contains(path)) {
+        path = paths.first;
+      }
+      state = state.copyWith(
+        mannequinId: id,
+        selectedCatalogDesignPath: path,
+        hasUnsavedChanges: true,
+      );
+      return;
+    }
     state = state.copyWith(mannequinId: id, hasUnsavedChanges: true);
   }
 
@@ -479,21 +515,59 @@ class EditorNotifier extends StateNotifier<EditorState> {
   /// Applies [kDefaultConfiguratorTemplateId] when build has no valid template.
   void ensureDefaultConfiguratorTemplate(List<ConfiguratorTemplate> templates) {
     if (templates.isEmpty) return;
+    if (state.buildStyleMode == EditorBuildStyleMode.catalog) return;
     final current = state.configuratorTemplateId.trim();
     if (current.isNotEmpty) {
       final stillValid = templates.any((t) => t.id == current);
-      if (stillValid && state.configuratorSelections.isNotEmpty) return;
+      if (stillValid && state.configuratorSelections.isNotEmpty) {
+        _refreshConfiguratorDerivedFields(templates, current);
+        return;
+      }
       if (stillValid && state.configuratorSelections.isEmpty) {
         setConfiguratorTemplate(current, templates);
         return;
       }
     }
-    final preferred = templates.any(
-      (t) => t.id == kDefaultConfiguratorTemplateId,
-    )
-        ? kDefaultConfiguratorTemplateId
-        : templates.first.id;
+    final gender = ref.read(userGenderProvider);
+    final pick = preferredConfiguratorTemplateForGender(templates, gender);
+    final preferred = pick?.id ??
+        (templates.any((t) => t.id == kDefaultConfiguratorTemplateId)
+            ? kDefaultConfiguratorTemplateId
+            : templates.first.id);
     setConfiguratorTemplate(preferred, templates);
+  }
+
+  void _refreshConfiguratorDerivedFields(
+    List<ConfiguratorTemplate> templates,
+    String templateId,
+  ) {
+    ConfiguratorTemplate? template;
+    for (final t in templates) {
+      if (t.id == templateId) {
+        template = t;
+        break;
+      }
+    }
+    if (template == null) return;
+
+    final selections = state.configuratorSelections;
+    final summary = configuratorSummaryText(
+      template: template,
+      selections: selections,
+      designName: state.designName,
+    );
+    final aiLayerNotes = configuratorAiLayerNotesText(
+      template: template,
+      selections: selections,
+    );
+    if (summary == state.configuratorSummary &&
+        aiLayerNotes == state.configuratorAiLayerNotes) {
+      return;
+    }
+    state = state.copyWith(
+      configuratorSummary: summary,
+      configuratorAiLayerNotes: aiLayerNotes,
+    );
   }
 
   /// Switches modular configurator template and resets slot picks.
@@ -525,11 +599,34 @@ class EditorNotifier extends StateNotifier<EditorState> {
       selections: selections,
       designName: state.designName,
     );
+    final aiLayerNotes = configuratorAiLayerNotesText(
+      template: template,
+      selections: selections,
+    );
     state = state.copyWith(
       configuratorTemplateId: templateId,
       configuratorSelections: selections,
       configuratorSummary: summary,
+      configuratorAiLayerNotes: aiLayerNotes,
       garmentType: template.garmentType,
+      buildStyleMode: EditorBuildStyleMode.configurator,
+      hasUnsavedChanges: true,
+    );
+  }
+
+  /// Switches to bundled flat-lay catalogue designs for [mannequinId].
+  void enterCatalogBuildMode(String mannequinId) {
+    final paths = catalogDesignPathsForMannequin(mannequinId);
+    var path = state.selectedCatalogDesignPath;
+    if (paths.isNotEmpty && !paths.contains(path)) {
+      path = paths.first;
+    }
+    state = state.copyWith(
+      buildStyleMode: EditorBuildStyleMode.catalog,
+      selectedCatalogDesignPath: path,
+      heroMode: EditorHeroMode.compose,
+      unsetRefinedLook: true,
+      lookGenerationError: null,
       hasUnsavedChanges: true,
     );
   }
@@ -540,6 +637,7 @@ class EditorNotifier extends StateNotifier<EditorState> {
       configuratorTemplateId: '',
       configuratorSelections: const {},
       configuratorSummary: '',
+      configuratorAiLayerNotes: '',
       activeConfiguratorSlotIndex: 0,
     );
   }
@@ -554,6 +652,7 @@ class EditorNotifier extends StateNotifier<EditorState> {
       heroMode: EditorHeroMode.compose,
       refinedLookUrl: null,
       lookGenerationError: null,
+      buildStyleMode: EditorBuildStyleMode.configurator,
       hasUnsavedChanges: true,
     );
     if (templates.isEmpty) {
@@ -561,14 +660,16 @@ class EditorNotifier extends StateNotifier<EditorState> {
         configuratorTemplateId: '',
         configuratorSelections: const {},
         configuratorSummary: '',
+        configuratorAiLayerNotes: '',
       );
       return;
     }
-    final preferred = templates.any(
-      (t) => t.id == kDefaultConfiguratorTemplateId,
-    )
-        ? kDefaultConfiguratorTemplateId
-        : templates.first.id;
+    final gender = ref.read(userGenderProvider);
+    final pick = preferredConfiguratorTemplateForGender(templates, gender);
+    final preferred = pick?.id ??
+        (templates.any((t) => t.id == kDefaultConfiguratorTemplateId)
+            ? kDefaultConfiguratorTemplateId
+            : templates.first.id);
     // Must apply defaults directly — [ensureDefaultConfiguratorTemplate] skips
     // when selections are already set.
     setConfiguratorTemplate(preferred, templates);
@@ -598,9 +699,14 @@ class EditorNotifier extends StateNotifier<EditorState> {
       selections: selections,
       designName: state.designName,
     );
+    final aiLayerNotes = configuratorAiLayerNotesText(
+      template: template,
+      selections: selections,
+    );
     state = state.copyWith(
       configuratorSelections: selections,
       configuratorSummary: summary,
+      configuratorAiLayerNotes: aiLayerNotes,
       activeConfiguratorSlotIndex: clampedIndex,
       hasUnsavedChanges: true,
     );
@@ -671,8 +777,10 @@ class EditorNotifier extends StateNotifier<EditorState> {
       lookGenerationError: null,
       hasUnsavedChanges: false,
       configuratorTemplateId: '',
+      buildStyleMode: EditorBuildStyleMode.configurator,
       configuratorSelections: const {},
       configuratorSummary: '',
+      configuratorAiLayerNotes: '',
       activeConfiguratorSlotIndex: 0,
       selectedWeddingDressId: initial.selectedWeddingDressId,
       weddingCategoryFilter: initial.weddingCategoryFilter,
@@ -731,6 +839,14 @@ class EditorNotifier extends StateNotifier<EditorState> {
     final configurator = parseConfiguratorFromRenderMetadata(
       design.renderMetadata,
     );
+    final refinedLookUrl = aiRefinedLookUrlFromRenderMetadata(
+      design.renderMetadata,
+    );
+    final buildStyleMode = _buildStyleModeFromRenderMetadata(
+      design.renderMetadata,
+    );
+    final hasRefinedLook =
+        refinedLookUrl != null && refinedLookUrl.isNotEmpty;
     state = state.copyWith(
       designName: design.name,
       garmentType: snapshot.garmentType,
@@ -758,8 +874,10 @@ class EditorNotifier extends StateNotifier<EditorState> {
       configuratorTemplateId: configurator.templateId ?? '',
       configuratorSelections: configurator.selections,
       configuratorSummary: configurator.summary ?? '',
-      unsetRefinedLook: true,
-      heroMode: EditorHeroMode.compose,
+      configuratorAiLayerNotes: configurator.aiLayerNotes ?? '',
+      buildStyleMode: buildStyleMode,
+      refinedLookUrl: refinedLookUrl,
+      heroMode: hasRefinedLook ? EditorHeroMode.look : EditorHeroMode.compose,
       isPrintOverlaySelected: false,
       unsetSelectedTextLayerId: true,
       hasUnsavedChanges: false,
@@ -885,14 +1003,7 @@ class EditorNotifier extends StateNotifier<EditorState> {
   }
 
   Color _parseHexColor(String hex) {
-    try {
-      final v = hex.replaceAll('#', '').trim();
-      if (v.isEmpty) return state.primaryColour;
-      final normalized = v.length == 6 ? 'FF$v' : v.padLeft(8, 'F');
-      return Color(int.parse(normalized, radix: 16));
-    } on Exception {
-      return state.primaryColour;
-    }
+    return parseAiColour(hex, fallback: state.primaryColour);
   }
 
   String? _normalizeToken(String? value) {
@@ -1342,6 +1453,7 @@ class EditorNotifier extends StateNotifier<EditorState> {
             .toList(growable: false),
         'exportTier': 'editor',
         'selectedCatalogDesignPath': state.selectedCatalogDesignPath,
+        'buildStyleMode': state.buildStyleMode.name,
         'aiLookUserPrompt': state.aiLookUserPrompt.trim(),
         'aiLookPromptSuffix': kAiLookPromptSuffix,
         if (editorMannequinUrl != null && editorMannequinUrl.isNotEmpty)
@@ -1353,7 +1465,9 @@ class EditorNotifier extends StateNotifier<EditorState> {
             templateId: state.configuratorTemplateId,
             selections: state.configuratorSelections,
             summary: state.configuratorSummary,
+            aiLayerNotes: state.configuratorAiLayerNotes,
           ),
+        'aiRefinedLookUrl': state.refinedLookUrl?.trim(),
       },
       'textLayers': state.textLayers
           .map(
@@ -1400,6 +1514,32 @@ class EditorNotifier extends StateNotifier<EditorState> {
     );
   }
 
+  /// Persists [aiRefinedLookUrl] on the saved design without re-uploading assets.
+  Future<void> _persistRefinedLookUrl(String url) async {
+    final id = state.remoteDesignId?.trim();
+    if (id == null || id.isEmpty) return;
+
+    final trimmed = url.trim();
+    if (trimmed.isEmpty) return;
+
+    final repo = ref.read(designsRepositoryProvider);
+    final name = state.designName.trim().isEmpty ? 'My look' : state.designName.trim();
+    final result = await repo.updateDesign(
+      id: id,
+      payload: {
+        'name': name,
+        'garmentType': _garmentTypeForSave(),
+        'renderMetadata': {'aiRefinedLookUrl': trimmed},
+      },
+    );
+    result.fold(
+      (_) {},
+      (_) {
+        state = state.copyWith(hasUnsavedChanges: false);
+      },
+    );
+  }
+
   /// Saves the current design, starts `/ai/design-render`, polls until complete.
   ///
   /// Pass [composePreviewBytes] (mannequin + configurator layers PNG) so Gemini
@@ -1423,6 +1563,7 @@ class EditorNotifier extends StateNotifier<EditorState> {
 
     final previewRepo = ref.read(renderPreviewRepositoryProvider);
     final start = await previewRepo.startRender(designId: saved.designId!);
+    ref.invalidate(aiRenderQuotaProvider);
     if (start.isLeft()) {
       final msg = designErrorMessage(
         start.fold((l) => l, (_) => throw StateError('right')),
@@ -1443,8 +1584,8 @@ class EditorNotifier extends StateNotifier<EditorState> {
       return const GenerateLookResult(success: false, message: msg);
     }
 
-    for (var attempt = 0; attempt < 90; attempt++) {
-      await Future<void>.delayed(const Duration(seconds: 1));
+    for (var attempt = 0; attempt < 180; attempt++) {
+      await Future<void>.delayed(const Duration(seconds: 2));
       final polled = await previewRepo.getRenderStatus(jobId: jobId);
       final exit = polled.fold(
         (e) {
@@ -1459,7 +1600,20 @@ class EditorNotifier extends StateNotifier<EditorState> {
         (j) {
           if (j.status == 'completed') {
             final url = j.artifacts['heroFrontUrl'];
+            final renderMode = j.artifacts['renderMode'] ?? '';
             if (url != null && url.isNotEmpty) {
+              if (renderMode == 'template_static_v1') {
+                const msg =
+                    'AI preview was unavailable. Showing your saved compose preview instead.';
+                state = state.copyWith(
+                  lookGenerating: false,
+                  refinedLookUrl: url,
+                  heroMode: EditorHeroMode.look,
+                  lookGenerationError: msg,
+                  hasUnsavedChanges: true,
+                );
+                return GenerateLookResult(success: false, message: msg);
+              }
               state = state.copyWith(
                 lookGenerating: false,
                 refinedLookUrl: url,
@@ -1467,6 +1621,7 @@ class EditorNotifier extends StateNotifier<EditorState> {
                 unsetLookError: true,
                 hasUnsavedChanges: true,
               );
+              unawaited(_persistRefinedLookUrl(url));
               return const GenerateLookResult(success: true);
             }
             const msg = 'No preview URL in response';
@@ -1504,19 +1659,8 @@ class EditorNotifier extends StateNotifier<EditorState> {
   }
 
   String? _normalizedMannequinIdForApi() {
-    const localFallbackIds = <String>{
-      'standard_female',
-      'curvy_female',
-      'petite_female',
-      'athletic_female',
-      'plus_female',
-      'standard_male',
-      'tall_male',
-      'child',
-      'custom_photo',
-    };
     final id = state.mannequinId.trim();
-    if (id.isEmpty || localFallbackIds.contains(id)) {
+    if (id.isEmpty || kLocalBundledMannequinIds.contains(id)) {
       return null;
     }
     return id;
@@ -1524,6 +1668,20 @@ class EditorNotifier extends StateNotifier<EditorState> {
 
   String _colorToHex(Color color) {
     return '#${color.toARGB32().toRadixString(16).substring(2).toUpperCase()}';
+  }
+
+  EditorBuildStyleMode _buildStyleModeFromRenderMetadata(
+    Map<String, dynamic>? meta,
+  ) {
+    if (meta == null) return EditorBuildStyleMode.configurator;
+    final raw = meta['buildStyleMode']?.toString().trim();
+    if (raw == EditorBuildStyleMode.catalog.name) {
+      return EditorBuildStyleMode.catalog;
+    }
+    if (meta['selectedStudioDesignId'] != null) {
+      return EditorBuildStyleMode.catalog;
+    }
+    return EditorBuildStyleMode.configurator;
   }
 
   String _resolveMannequinTemplateId() {
