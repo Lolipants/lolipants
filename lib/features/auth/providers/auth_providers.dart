@@ -75,11 +75,15 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   Future<AuthState> build() async {
     final repo = ref.read(authRepositoryProvider);
     final result = await repo.getSession();
-    return result.fold(
+    final authState = result.fold(
       (_) => const AuthUnauthenticated(),
       (user) =>
           user != null ? AuthAuthenticated(user) : const AuthUnauthenticated(),
     );
+    if (authState is AuthAuthenticated) {
+      await ref.read(userGenderProvider.notifier).syncFromApi();
+    }
+    return authState;
   }
 
   /// Re-runs the initial session restore (e.g. after token changes).
@@ -88,12 +92,16 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     state = await AsyncValue.guard(() async {
       final repo = ref.read(authRepositoryProvider);
       final result = await repo.getSession();
-      return result.fold(
+      final authState = result.fold(
         (_) => const AuthUnauthenticated(),
         (user) => user != null
             ? AuthAuthenticated(user)
             : const AuthUnauthenticated(),
       );
+      if (authState is AuthAuthenticated) {
+        await ref.read(userGenderProvider.notifier).syncFromApi();
+      }
+      return authState;
     });
   }
 
@@ -111,6 +119,9 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
         ref.read(authRecoveryMessageProvider.notifier).state = null;
       },
     );
+    if (result.isRight()) {
+      await ref.read(userGenderProvider.notifier).syncFromApi();
+    }
     return result;
   }
 
@@ -164,6 +175,9 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
           ref.read(authRecoveryMessageProvider.notifier).state = null;
         },
       );
+      if (result.isRight()) {
+        await ref.read(userGenderProvider.notifier).syncFromApi();
+      }
       return result;
     } finally {
       _googleOAuthInFlight = false;
@@ -190,6 +204,9 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
         ref.read(authRecoveryMessageProvider.notifier).state = null;
       },
     );
+    if (result.isRight()) {
+      await ref.read(userGenderProvider.notifier).syncFromApi();
+    }
     return result;
   }
 

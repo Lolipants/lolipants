@@ -174,7 +174,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         if (_selectedGender != null) {
           await ref
               .read(userGenderProvider.notifier)
-              .setGender(_selectedGender!);
+              .persistGender(_selectedGender!);
         }
         if (!mounted) return;
         final returnTo = ref.read(pendingAuthReturnToProvider);
