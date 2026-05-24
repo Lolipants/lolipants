@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { v4 as uuidv4 } from "uuid";
 import { apiError } from "../lib/http";
+import { buildR2PublicUrl } from "../lib/r2PublicUrl";
 import { requireAuth } from "../middleware/auth";
 import type { AppVariables, Env } from "../types";
 
@@ -29,6 +30,14 @@ uploadRoutes.post("/", async (c) => {
     httpMetadata: { contentType: file.type },
   });
 
-  const url = `${c.env.CLOUDFLARE_R2_BASE_URL}/${key}`;
+  const url = buildR2PublicUrl(c.env, key);
+  if (!url) {
+    return apiError(
+      c,
+      503,
+      "R2_PUBLIC_URL_NOT_CONFIGURED",
+      "File storage is not configured (CLOUDFLARE_R2_BASE_URL).",
+    );
+  }
   return c.json({ url, key }, 201);
 });

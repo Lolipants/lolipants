@@ -18,42 +18,78 @@ export type GarmentLookPromptInput = {
   userExtra?: string | null;
   /** Modular configurator summary (slot picks). */
   configuratorSummary?: string | null;
+  /** Explicit sleeve vs overlay semantics for AI (from client configurator). */
+  configuratorAiLayerNotes?: string | null;
   /** Consistent catalogue / brand suffix. */
   brandSuffix?: string | null;
+  /** When true, prompt targets refining the attached preview (not a new photoshoot). */
+  hasDesignPreviewReference?: boolean;
 };
 
 /** Server default when client omits `aiLookPromptSuffix` in render metadata. */
 export const DEFAULT_LOLIPANTS_LOOK_SUFFIX =
-  "Brand output rules (Lolipants): one modest adult model in full-length studio photograph, " +
-  "Gulf/MENA-appropriate formalwear, neutral soft studio background, even lighting, runway-catalog clarity. " +
-  "Honor the flat garment reference for silhouette, colour blocking, and trim; honor the body reference for pose and fit. " +
-  "No watermark, no readable text or logos. SynthID from the API is acceptable.";
+  "Lolipants refine rules: pure solid white background (#FFFFFF). " +
+  "Keep the EXACT same mannequin, pose, proportions, framing, colours, panels, trim, and slot layout as the primary design-preview reference — do not swap the model or redesign the garment. " +
+  "Only refine layered configurator graphics into ONE unified photorealistic sewn garment (natural fabric drape, subtle stitching, cohesive material). " +
+  "No studio set, scenery, props, watermarks, or readable text/logos. SynthID from the API is acceptable.";
+
+export const COMPOSE_PREVIEW_REF_CAPTION =
+  "PRIMARY design preview — refine this image. Keep the exact same mannequin, pose, scale, colours, and garment layout. " +
+  "Output on pure white background (#FFFFFF). Merge layered pieces into one realistic garment.";
 
 export function buildGarmentLookPrompt(input: GarmentLookPromptInput): string {
   const textExtra =
     input.textLayersSummary != null && input.textLayersSummary.trim().length > 0
-      ? `\nEmbroidery / text on garment (approximate): ${input.textLayersSummary.trim()}`
+      ? `\nEmbroidery / text on garment (preserve placement): ${input.textLayersSummary.trim()}`
       : "";
   const placement = input.printPlacement?.trim() || "chest";
 
   const userBlock =
     input.userExtra != null && input.userExtra.trim().length > 0
-      ? `\n\nUser direction:\n${input.userExtra.trim()}`
+      ? `\n\nSubtle refinement only (do not redesign):\n${input.userExtra.trim()}`
       : "";
   const configuratorBlock =
     input.configuratorSummary != null && input.configuratorSummary.trim().length > 0
-      ? `\n\nModular design (slot selections from configurator):\n${input.configuratorSummary.trim()}`
+      ? `\n\nModular design (slot selections — preserve exactly):\n${input.configuratorSummary.trim()}`
+      : "";
+  const aiLayerNotesBlock =
+    input.configuratorAiLayerNotes != null &&
+    input.configuratorAiLayerNotes.trim().length > 0
+      ? `\n\nLayer semantics (follow strictly — do not confuse overlays with sleeves):\n${input.configuratorAiLayerNotes.trim()}`
       : "";
   const suffixBlock =
     input.brandSuffix != null && input.brandSuffix.trim().length > 0
       ? `\n\n${input.brandSuffix.trim()}`
       : "";
 
+  if (input.hasDesignPreviewReference) {
+    return (
+      [
+        "Edit and refine the attached design preview image. This is a REFINE task — not a new photoshoot.",
+        "Background: pure solid white (#FFFFFF). No gradients, scenery, or studio props.",
+        "Mannequin: keep IDENTICAL — same silhouette, pose, proportions, and camera framing as the preview.",
+        "Garment design: preserve EXACT colours, cut lines, panels, trim placement, prints, and slot selections from the preview.",
+        "Refinement goal: turn stacked/layered configurator graphics into ONE cohesive, photorealistic sewn garment with natural fabric drape.",
+        "Do NOT invent new garment parts, change the colour palette, or replace the mannequin.",
+        "Do NOT misread chest/overlay panels as sleeves — overlay graphics stay on the front torso only.",
+        "",
+        `Garment type (reference): ${input.garmentType}`,
+        `Primary fabric colour: ${input.primaryColour}`,
+        `Accent / trim colour: ${input.accentColour}`,
+        `Fabric quality tier: ${input.fabricQuality}`,
+        textExtra,
+      ].join("\n") +
+      configuratorBlock +
+      aiLayerNotesBlock +
+      userBlock +
+      suffixBlock
+    );
+  }
+
   return (
     [
-      "Generate exactly ONE high-quality photorealistic fashion photograph.",
-      "Subject: a modest full-length studio shot of one adult model wearing the described custom garment.",
-      "Neutral soft studio background, even lighting, runway-catalog clarity.",
+      "Generate exactly ONE refined fashion preview on a pure white background (#FFFFFF).",
+      "One modest mannequin or model wearing the described custom garment, full-length, catalogue clarity.",
       "",
       `Garment type: ${input.garmentType}`,
       `Primary fabric colour (approximate hex reference): ${input.primaryColour}`,
@@ -62,11 +98,11 @@ export function buildGarmentLookPrompt(input: GarmentLookPromptInput): string {
       `Integrate the user's print artwork from the supplied reference image onto the garment (${placement} placement unless the sketch suggests otherwise).`,
       textExtra,
       "",
-      "If multiple reference images are provided: use the garment silhouette sketch or body-line reference for proportions when present; prioritize transferring printed artwork from the print reference.",
+      "If reference images are provided: honor the mannequin/body reference for pose; honor the garment reference for colours and layout.",
       "Output must be modest formalwear appropriate for Gulf / Middle Eastern contexts.",
-      "SynthID watermark from the API is acceptable.",
     ].join("\n") +
     configuratorBlock +
+    aiLayerNotesBlock +
     userBlock +
     suffixBlock
   );
@@ -153,7 +189,6 @@ export async function generateGarmentLookImage(input: {
 
   const url = `${GEMINI_GENERATE_BASE}/${encodeURIComponent(input.model)}:generateContent`;
 
-  // Full text prompt sent as the first `parts` entry (reference images follow).
   console.log(
     JSON.stringify({
       event: "gemini_image_prompt",
@@ -235,4 +270,8 @@ function base64ToBytes(b64: string): Uint8Array {
   const out = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) out[i] = binary.charCodeAt(i);
   return out;
+}
+
+export function inlinePartToBytes(part: GeminiInlinePart): Uint8Array {
+  return base64ToBytes(part.base64);
 }

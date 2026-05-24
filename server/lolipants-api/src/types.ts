@@ -8,6 +8,8 @@ export type Env = {
   GEMINI_API_KEY?: string;
   /** Defaults to gemini-2.5-flash-image when GEMINI_API_KEY is set. */
   GEMINI_IMAGE_MODEL?: string;
+  /** OpenAI Images model for design-render fallback (defaults to gpt-image-1). */
+  OPENAI_IMAGE_MODEL?: string;
   TAP_SECRET_KEY: string;
   ONESIGNAL_API_KEY: string;
   ONESIGNAL_APP_ID: string;
