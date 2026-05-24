@@ -14,8 +14,7 @@ class StyleGrid extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final pool =
-        ref.watch(presetCatalogProvider).valueOrNull ?? regionPresetsForHomeGrid();
+    final pool = ref.watch(genderFilteredPresetsProvider);
     final shown = regionPresetsForHomeShowcase(pool);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,

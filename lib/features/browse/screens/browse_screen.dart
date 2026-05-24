@@ -24,9 +24,9 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final presetCatalog = ref.watch(presetCatalogProvider).valueOrNull;
-    final source = presetCatalog ?? regionPresetsForHomeGrid();
-    if (!_pillSyncedToCatalog && presetCatalog != null) {
+    final presetCatalog = ref.watch(genderFilteredPresetsProvider);
+    final source = presetCatalog;
+    if (!_pillSyncedToCatalog && presetCatalog.isNotEmpty) {
       _pill = defaultBrowseCatalogPill(source);
       _pillSyncedToCatalog = true;
     }

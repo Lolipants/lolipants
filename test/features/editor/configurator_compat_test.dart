@@ -203,5 +203,68 @@ void main() {
       );
       expect(shouldRenderConfiguratorLayer(opt), isFalse);
     });
+
+    test('ai layer notes warn when sleeveless and describe overlay panels', () {
+      final overlayTemplate = ConfiguratorTemplate(
+        id: 'modest',
+        nameEn: 'Modest',
+        nameAr: 'Modest',
+        garmentType: 'abaya',
+        regionTag: 'gulf',
+        sortOrder: 0,
+        requiredSlotKeys: const ['sleeve_length', 'overlay_panel'],
+        slots: [
+          ConfiguratorSlot(
+            id: 'slot_sleeve',
+            slotKey: 'sleeve_length',
+            titleEn: 'Sleeves',
+            titleAr: 'Sleeves',
+            sortOrder: 0,
+            options: [
+              ConfiguratorOption(
+                id: 'opt_none',
+                optionKey: 'sleeveless',
+                labelEn: 'No sleeves',
+                labelAr: 'No sleeves',
+                assetUrl: null,
+                metadata: const {'skipLayerRender': true},
+                sortOrder: 0,
+              ),
+            ],
+          ),
+          ConfiguratorSlot(
+            id: 'slot_overlay',
+            slotKey: 'overlay_panel',
+            titleEn: 'Overlay',
+            titleAr: 'Overlay',
+            sortOrder: 1,
+            options: [
+              ConfiguratorOption(
+                id: 'opt_chest',
+                optionKey: 'chest_maroon',
+                labelEn: 'Chest panel',
+                labelAr: 'Chest panel',
+                assetUrl: null,
+                metadata: const {},
+                sortOrder: 0,
+              ),
+            ],
+          ),
+        ],
+      );
+
+      final notes = configuratorAiLayerNotesText(
+        template: overlayTemplate,
+        selections: const {
+          'slot_sleeve': 'opt_none',
+          'slot_overlay': 'opt_chest',
+        },
+      );
+
+      expect(notes, contains('NO SLEEVES'));
+      expect(notes, contains('Chest panel'));
+      expect(notes, contains('NOT sleeves'));
+      expect(notes, contains('front-torso'));
+    });
   });
 }

@@ -312,3 +312,106 @@ String? configuratorRequiredSlotsMessage({
   }
   return 'Please choose: ${missing.join(', ')}';
 }
+
+const _sleeveSlotKeys = {'sleeve', 'sleeve_length'};
+const _overlaySlotKeys = {'overlay_panel', 'chest_panel', 'overlay'};
+
+ConfiguratorOption? _selectedOptionForSlot({
+  required ConfiguratorSlot slot,
+  required ConfiguratorSelections selections,
+}) {
+  final optId = selections[slot.id];
+  if (optId == null) return null;
+  for (final o in slot.options) {
+    if (o.id == optId) return o;
+  }
+  return null;
+}
+
+bool _isOverlaySlot(ConfiguratorSlot slot) {
+  if (_overlaySlotKeys.contains(slot.slotKey)) return true;
+  return slot.slotKey.contains('overlay') || slot.slotKey.contains('chest');
+}
+
+/// Explicit layer semantics for AI look generation (sleeves vs chest overlays).
+String configuratorAiLayerNotesText({
+  required ConfiguratorTemplate template,
+  required ConfiguratorSelections selections,
+}) {
+  final lines = <String>[
+    'AI layer interpretation (critical — do not misread preview overlays):',
+    '- Preview PNG layers are flat composited graphics, not separate physical parts.',
+    '- CHEST / OVERLAY panels are front-torso decorations ONLY — never extend them down the arms as sleeves.',
+  ];
+
+  final suppressed = suppressedSlotKeysFor(
+    template: template,
+    selections: selections,
+  );
+
+  var anySleeveSlot = false;
+  for (final slot in template.slots) {
+    if (!_sleeveSlotKeys.contains(slot.slotKey)) continue;
+    anySleeveSlot = true;
+
+    if (suppressed.contains(slot.slotKey)) {
+      lines.add(
+        '- ${slot.titleEn} (${slot.slotKey}): NOT USED — slot suppressed; arms must have NO sleeve fabric.',
+      );
+      continue;
+    }
+
+    if (!isConfiguratorSlotActive(
+      template: template,
+      selections: selections,
+      slot: slot,
+    )) {
+      continue;
+    }
+
+    final chosen = _selectedOptionForSlot(slot: slot, selections: selections);
+    if (chosen == null) {
+      lines.add(
+        '- ${slot.titleEn}: no selection — treat as no dedicated sleeve layer.',
+      );
+      continue;
+    }
+
+    if (!shouldRenderConfiguratorLayer(chosen)) {
+      lines.add(
+        '- ${slot.titleEn}: "${chosen.labelEn}" — NO SLEEVES on this design. '
+        'Arms stay bare / show base bodice only. Do NOT add or infer sleeve fabric.',
+      );
+    } else {
+      lines.add(
+        '- ${slot.titleEn}: "${chosen.labelEn}" — active sleeve layer; apply fabric ONLY to arms, not chest overlay.',
+      );
+    }
+  }
+
+  if (!anySleeveSlot) {
+    lines.add(
+      '- This template has no sleeve slot — do not add sleeves unless explicitly shown in the preview.',
+    );
+  }
+
+  for (final slot in template.slots) {
+    if (!_isOverlaySlot(slot)) continue;
+    if (suppressed.contains(slot.slotKey)) continue;
+    if (!isConfiguratorSlotActive(
+      template: template,
+      selections: selections,
+      slot: slot,
+    )) {
+      continue;
+    }
+
+    final chosen = _selectedOptionForSlot(slot: slot, selections: selections);
+    if (chosen == null || !shouldRenderConfiguratorLayer(chosen)) continue;
+    lines.add(
+      '- ${slot.titleEn}: "${chosen.labelEn}" — chest/front overlay panel only; NOT sleeves, NOT arm extensions.',
+    );
+  }
+
+  return lines.join('\n');
+}

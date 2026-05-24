@@ -6,6 +6,7 @@ import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/features/browse/data/preset_gender_filter.dart';
 import 'package:lolipants/features/browse/data/region_presets.dart';
 import 'package:lolipants/features/browse/providers/preset_providers.dart';
 import 'package:lolipants/features/browse/widgets/region_style_button.dart';
@@ -23,17 +24,6 @@ class CategoryDetailScreen extends ConsumerWidget {
 
   /// Category slug passed in from the router.
   final String category;
-
-  /// Maps a category slug to the garment types considered part of it. The
-  /// mapping is intentionally generous so "men" matches thobes, bishts, etc.
-  static const Map<String, List<String>> _categoryGarments = {
-    'all': <String>[],
-    'men': ['thobe', 'bisht', 'kandura', 'dishdasha', 'jubbah', 'suit', 'coat'],
-    'women': ['abaya', 'kaftan', 'dress', 'jalabiya'],
-    'kids': ['dishdasha', 'kandura', 'thobe', 'dress'],
-    'wedding': ['dress'],
-    'accessories': <String>[],
-  };
 
   static const Map<String, String> _categoryTitles = {
     'all': 'All designs',
@@ -59,14 +49,13 @@ class CategoryDetailScreen extends ConsumerWidget {
     String key,
     List<RegionStylePreset> catalog,
   ) {
-    if (key == 'casual') {
-      return catalog.where((p) => p.isCasualStyle).toList(growable: false);
+    if (key == 'wedding') {
+      return catalog
+          .where((p) => p.garmentType == 'dress')
+          .toList(growable: false);
     }
-    final garments = _categoryGarments[key] ?? const <String>[];
-    if (garments.isEmpty) return catalog;
-    return catalog
-        .where((p) => garments.contains(p.garmentType))
-        .toList(growable: false);
+    if (key == 'accessories' || key == 'all') return catalog;
+    return presetsForBrowseCategorySlug(key, catalog);
   }
 
   @override

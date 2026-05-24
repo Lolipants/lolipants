@@ -1,36 +1,45 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lolipants/core/config/app_features.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/preferences/user_gender_provider.dart';
 
 /// Compact Male / Female / Kids row plus traditional, accessories, and casual.
-class HomeCategoryShortcuts extends StatelessWidget {
+class HomeCategoryShortcuts extends ConsumerWidget {
   const HomeCategoryShortcuts({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final userGender = ref.watch(userGenderProvider);
+
     final genders = <_GenderShortcut>[
       if (kFeatureMens)
         _GenderShortcut(
-          slug: 'men',
+          slug: UserGenderPreference.men,
           label: AppStrings.homeCategoryMen,
           icon: Icons.man_outlined,
         ),
       _GenderShortcut(
-        slug: 'women',
+        slug: UserGenderPreference.women,
         label: AppStrings.homeCategoryWomen,
         icon: Icons.woman_outlined,
       ),
       if (kFeatureMens)
         _GenderShortcut(
-          slug: 'kids',
+          slug: UserGenderPreference.kids,
           label: AppStrings.homeCategoryKids,
           icon: Icons.child_care_outlined,
         ),
-    ];
+    ]..sort((a, b) {
+        if (userGender == null) return 0;
+        if (a.slug == userGender) return -1;
+        if (b.slug == userGender) return 1;
+        return 0;
+      });
 
     final lanes = <_LaneShortcut>[
       _LaneShortcut(
@@ -66,6 +75,7 @@ class HomeCategoryShortcuts extends StatelessWidget {
               Expanded(
                 child: _GenderTile(
                   shortcut: genders[i],
+                  highlighted: userGender == genders[i].slug,
                   onTap: () => context.push('/browse/c/${genders[i].slug}'),
                 ),
               ),
@@ -116,10 +126,12 @@ class _LaneShortcut {
 class _GenderTile extends StatelessWidget {
   const _GenderTile({
     required this.shortcut,
+    required this.highlighted,
     required this.onTap,
   });
 
   final _GenderShortcut shortcut;
+  final bool highlighted;
   final VoidCallback onTap;
 
   @override
@@ -137,16 +149,24 @@ class _GenderTile extends StatelessWidget {
           ),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(AppRadius.md),
-            border: Border.all(color: AppColors.borderSubtle),
+            border: Border.all(
+              color: highlighted ? AppColors.gold : AppColors.borderSubtle,
+              width: highlighted ? 1.5 : 1,
+            ),
           ),
           child: Column(
             children: [
-              Icon(shortcut.icon, color: AppColors.gold, size: 26),
+              Icon(
+                shortcut.icon,
+                color: highlighted ? AppColors.gold : AppColors.fog,
+                size: 26,
+              ),
               const SizedBox(height: AppSpacing.xs),
               Text(
                 shortcut.label,
                 style: AppTextStyles.bodySmall.copyWith(
-                  fontWeight: FontWeight.w600,
+                  fontWeight: highlighted ? FontWeight.w700 : FontWeight.w600,
+                  color: highlighted ? AppColors.gold : null,
                 ),
                 textAlign: TextAlign.center,
                 maxLines: 1,

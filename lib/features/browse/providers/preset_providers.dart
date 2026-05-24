@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lolipants/core/preferences/user_gender_provider.dart';
 import 'package:lolipants/features/browse/data/preset_catalog_repository.dart';
+import 'package:lolipants/features/browse/data/preset_gender_filter.dart';
 import 'package:lolipants/features/browse/data/region_presets.dart';
 import 'package:lolipants/features/orders/providers/orders_providers.dart';
 
@@ -17,4 +19,12 @@ final presetCatalogProvider = FutureProvider<List<RegionStylePreset>>((ref) asyn
       return filtered.isEmpty ? regionPresetsForHomeGrid() : filtered;
     },
   );
+});
+
+/// Home / browse preset pool filtered by the signed-in shopper's gender lane.
+final genderFilteredPresetsProvider = Provider<List<RegionStylePreset>>((ref) {
+  final gender = ref.watch(userGenderProvider);
+  final raw =
+      ref.watch(presetCatalogProvider).valueOrNull ?? regionPresetsForHomeGrid();
+  return filterPresetsForUserGender(raw, gender);
 });
