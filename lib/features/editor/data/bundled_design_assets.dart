@@ -1,5 +1,7 @@
 // Bundled flat-lay design PNGs under `assets/images/designs` (Gemini pipeline).
 
+import 'package:lolipants/features/editor/models/catalog_design_pick.dart';
+
 /// Default design when opening the editor from the mannequin flow.
 const String kDefaultCatalogDesignPath =
     'assets/images/designs/design_gulf_abaya_black_closed.png';
@@ -229,7 +231,7 @@ String garmentTypeFromCatalogDesignPath(String assetPath) {
   return kDefaultCasualGarmentType;
 }
 
-/// Returns bundled catalogue asset path from API `render_metadata`, or null.
+/// Returns bundled catalogue asset path or CMS ref from API `render_metadata`.
 String? catalogDesignAssetFromRenderMetadata(
   Map<String, dynamic>? renderMetadata,
 ) {
@@ -238,6 +240,7 @@ String? catalogDesignAssetFromRenderMetadata(
   if (raw is! String) return null;
   final p = raw.trim();
   if (p.isEmpty) return null;
+  if (isCmsDesignCatalogRef(p)) return p;
   if (!p.startsWith('assets/images/designs/')) return null;
   return p;
 }

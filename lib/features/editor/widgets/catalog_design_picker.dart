@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
-import 'package:lolipants/features/editor/data/bundled_design_assets.dart';
+import 'package:lolipants/features/editor/models/catalog_design_pick.dart';
 import 'package:lolipants/features/editor/widgets/editor_asset_thumb_card.dart';
 import 'package:lolipants/shared/widgets/catalog_image.dart';
 
@@ -10,13 +10,13 @@ import 'package:lolipants/shared/widgets/catalog_image.dart';
 class CatalogDesignPicker extends StatelessWidget {
   const CatalogDesignPicker({
     required this.sections,
-    required this.selectedPath,
+    required this.selectedRef,
     required this.onSelected,
     super.key,
   });
 
-  final List<(String sectionTitle, List<String> paths)> sections;
-  final String selectedPath;
+  final List<CatalogDesignSection> sections;
+  final String selectedRef;
   final ValueChanged<String> onSelected;
 
   static const double _cardWidth = 92;
@@ -55,18 +55,18 @@ class CatalogDesignPicker extends StatelessWidget {
                   separatorBuilder: (_, __) =>
                       const SizedBox(width: AppSpacing.sm),
                   itemBuilder: (context, i) {
-                    final path = section.$2[i];
-                    final selected = path == selectedPath;
+                    final pick = section.$2[i];
+                    final selected = pick.ref == selectedRef;
                     return EditorAssetThumbCard(
                       width: _cardWidth,
                       height: _cardHeight,
                       imageScale: 1.35,
                       imageAlignment: Alignment.bottomCenter,
-                      label: catalogDesignLabel(path),
+                      label: pick.label,
                       selected: selected,
-                      onTap: () => onSelected(path),
+                      onTap: () => onSelected(pick.ref),
                       image: CatalogImage(
-                        path: path,
+                        path: pick.imageSource,
                         fit: BoxFit.fitHeight,
                         alignment: Alignment.bottomCenter,
                         errorWidget: const Icon(

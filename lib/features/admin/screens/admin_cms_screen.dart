@@ -2,11 +2,14 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:lolipants/core/permissions/device_permission_prompt.dart';
+import 'package:lolipants/core/config/app_features.dart';
+import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
+import 'package:lolipants/core/permissions/device_permission_prompt.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/features/admin/providers/admin_providers.dart';
 import 'package:lolipants/features/admin/screens/admin_configurator_cms_tab.dart';
+import 'package:lolipants/features/editor/providers/design_catalog_providers.dart';
 import 'package:lolipants/features/editor/providers/designs_providers.dart';
 
 /// CMS for catalogue assets (mannequins, fabrics, patterns, presets) and the
@@ -21,7 +24,13 @@ class AdminCmsScreen extends ConsumerStatefulWidget {
 
 class _AdminCmsScreenState extends ConsumerState<AdminCmsScreen>
     with TickerProviderStateMixin {
-  static const _assetResources = ['mannequins', 'fabrics', 'patterns', 'presets'];
+  static const _assetResources = [
+    'design-catalog',
+    'mannequins',
+    'fabrics',
+    'patterns',
+    'presets',
+  ];
   late final TabController _sectionTabs = TabController(length: 3, vsync: this);
   late final TabController _assetTabs =
       TabController(length: _assetResources.length, vsync: this);
@@ -77,6 +86,56 @@ class _AdminCmsScreenState extends ConsumerState<AdminCmsScreen>
   }
 }
 
+bool _isMannequinCmsReadOnly(String resource) =>
+    resource == 'mannequins' && !kFeatureAdminMannequinCms;
+
+String? _cmsResourceHelp(String resource) {
+  switch (resource) {
+    case 'design-catalog':
+      return 'Editor flat-lay designs shown in Design catalog mode. Upload PNGs '
+          'to catalog/designs on R2, or use Upload (general) for a one-off URL. '
+          'Bundled assets in the app are merged automatically.';
+    case 'mannequins':
+      return 'Mannequin uploads are disabled in v1. The app ships four bundled '
+          'mannequins (assets/images/mannequins). Deploy PNGs with '
+          'pnpm upload:catalog-assets in server/lolipants-api.';
+    case 'presets':
+      return 'Browse/home style shortcuts. Upload to catalog for CDN-backed images.';
+    case 'patterns':
+      return 'Pattern presets for browse. Upload a pattern image when creating '
+          'or editing a row.';
+    case 'fabrics':
+      return 'Fabric catalogue metadata for the editor fabric picker.';
+    default:
+      return null;
+  }
+}
+
+class _CmsHelpBanner extends StatelessWidget {
+  const _CmsHelpBanner({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.smoke,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.md,
+          AppSpacing.sm,
+          AppSpacing.md,
+          AppSpacing.xs,
+        ),
+        child: Text(
+          message,
+          style: AppTextStyles.bodySmall.copyWith(color: AppColors.fog),
+        ),
+      ),
+    );
+  }
+}
+
 class _ResourceList extends ConsumerWidget {
   const _ResourceList({required this.resource});
   final String resource;
@@ -84,8 +143,15 @@ class _ResourceList extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(adminCmsListProvider(resource));
+    final readOnly = _isMannequinCmsReadOnly(resource);
+    final help = _cmsResourceHelp(resource);
     return Scaffold(
-      body: RefreshIndicator(
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (help != null) _CmsHelpBanner(message: help),
+          Expanded(
+            child: RefreshIndicator(
         onRefresh: () async => ref.invalidate(adminCmsListProvider(resource)),
         child: async.when(
           loading: () => const Center(child: CircularProgressIndicator()),
@@ -118,14 +184,20 @@ class _ResourceList extends ConsumerWidget {
               itemBuilder: (context, i) => _ResourceRow(
                 resource: resource,
                 data: rows[i],
+                readOnly: readOnly,
                 onChanged: () =>
                     ref.invalidate(adminCmsListProvider(resource)),
               ),
             );
           },
         ),
+            ),
+          ),
+        ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: readOnly
+          ? null
+          : FloatingActionButton.extended(
         heroTag: 'cms-add-$resource',
         onPressed: () => _openForm(context, ref, null),
         icon: const Icon(Icons.add),
@@ -157,6 +229,9 @@ class _ResourceList extends ConsumerWidget {
       (_) {
         _snack(context, existing == null ? 'Created' : 'Updated');
         ref.invalidate(adminCmsListProvider(resource));
+        if (resource == 'design-catalog') {
+          ref.invalidate(designCatalogItemsProvider);
+        }
       },
     );
   }
@@ -173,10 +248,12 @@ class _ResourceRow extends ConsumerWidget {
     required this.resource,
     required this.data,
     required this.onChanged,
+    this.readOnly = false,
   });
   final String resource;
   final Map<String, dynamic> data;
   final VoidCallback onChanged;
+  final bool readOnly;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -205,7 +282,9 @@ class _ResourceRow extends ConsumerWidget {
               : id,
           style: AppTextStyles.bodySmall,
         ),
-        trailing: Row(
+        trailing: readOnly
+            ? null
+            : Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             IconButton(
@@ -224,6 +303,13 @@ class _ResourceRow extends ConsumerWidget {
   }
 
   String _displayName() {
+    if (resource == 'design-catalog') {
+      final section = data['section_title']?.toString();
+      final label = data['label_en']?.toString();
+      if (label != null && label.isNotEmpty) {
+        return section != null && section.isNotEmpty ? '$label · $section' : label;
+      }
+    }
     final candidates = [
       data['label_en'],
       data['name'],
@@ -289,6 +375,21 @@ class _CmsFormDialogState extends ConsumerState<_CmsFormDialog> {
 
   List<_FieldSpec> get _fields {
     switch (widget.resource) {
+      case 'design-catalog':
+        return const [
+          _FieldSpec('section_title', 'Section (e.g. Modern, Traditional — Gulf)'),
+          _FieldSpec('label_en', 'Label (EN)'),
+          _FieldSpec('label_ar', 'Label (AR)'),
+          _FieldSpec('garment_type', 'Garment type (abaya, thobe, dress…)'),
+          _FieldSpec(
+            'gender_lane',
+            'Gender lane (women, men, kids — optional)',
+            optional: true,
+          ),
+          _FieldSpec('sort_order', 'Sort order', isNumber: true),
+          _FieldSpec('is_active', 'Active', isBool: true),
+          _FieldSpec('image_url', 'Flat-lay image', isImage: true),
+        ];
       case 'mannequins':
         return const [
           _FieldSpec('label_en', 'Label (EN)'),
@@ -437,10 +538,17 @@ class _CmsFormDialogState extends ConsumerState<_CmsFormDialog> {
             ),
           Row(
             children: [
+              if (_supportsCatalogUpload)
+                OutlinedButton.icon(
+                  onPressed: _uploading ? null : () => _pickImage(toCatalog: true),
+                  icon: const Icon(Icons.cloud_upload_outlined),
+                  label: Text(_uploading ? 'Uploading...' : 'Upload to catalog'),
+                ),
+              if (_supportsCatalogUpload) const SizedBox(width: 8),
               OutlinedButton.icon(
-                onPressed: _uploading ? null : _pickImage,
+                onPressed: _uploading ? null : () => _pickImage(toCatalog: false),
                 icon: const Icon(Icons.upload),
-                label: Text(_uploading ? 'Uploading...' : 'Upload image'),
+                label: Text(_uploading ? 'Uploading...' : 'Upload (general)'),
               ),
               if (_imageUrl != null && _imageUrl!.isNotEmpty)
                 TextButton.icon(
@@ -463,7 +571,31 @@ class _CmsFormDialogState extends ConsumerState<_CmsFormDialog> {
     );
   }
 
-  Future<void> _pickImage() async {
+  bool get _supportsCatalogUpload {
+    switch (widget.resource) {
+      case 'design-catalog':
+      case 'patterns':
+      case 'presets':
+      case 'wedding-dresses':
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  String get _catalogUploadCategory {
+    switch (widget.resource) {
+      case 'design-catalog':
+      case 'patterns':
+      case 'presets':
+      case 'wedding-dresses':
+        return 'designs';
+      default:
+        return 'designs';
+    }
+  }
+
+  Future<void> _pickImage({required bool toCatalog}) async {
     final granted = await DevicePermissionPrompt.ensureForImageSource(
       context,
       ImageSource.gallery,
@@ -478,15 +610,31 @@ class _CmsFormDialogState extends ConsumerState<_CmsFormDialog> {
     if (file == null) return;
     setState(() => _uploading = true);
     try {
-      final repo = ref.read(designsRepositoryProvider);
-      final res = await repo.uploadPrintImage(filePath: file.path);
-      if (!mounted) return;
-      res.fold(
-        (err) => ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Upload failed: ${err.runtimeType}')),
-        ),
-        (url) => setState(() => _imageUrl = url),
-      );
+      if (toCatalog) {
+        final adminRepo = ref.read(adminRepositoryProvider);
+        final res = await adminRepo.uploadCatalogAsset(
+          filePath: file.path,
+          category: _catalogUploadCategory,
+          filename: file.name,
+        );
+        if (!mounted) return;
+        res.fold(
+          (err) => ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Upload failed: ${err.runtimeType}')),
+          ),
+          (url) => setState(() => _imageUrl = url),
+        );
+      } else {
+        final repo = ref.read(designsRepositoryProvider);
+        final res = await repo.uploadPrintImage(filePath: file.path);
+        if (!mounted) return;
+        res.fold(
+          (err) => ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Upload failed: ${err.runtimeType}')),
+          ),
+          (url) => setState(() => _imageUrl = url),
+        );
+      }
     } finally {
       if (mounted) setState(() => _uploading = false);
     }
@@ -524,10 +672,12 @@ class _FieldSpec {
     this.isBool = false,
     this.isNumber = false,
     this.isImage = false,
+    this.optional = false,
   });
   final String key;
   final String label;
   final bool isBool;
   final bool isNumber;
   final bool isImage;
+  final bool optional;
 }

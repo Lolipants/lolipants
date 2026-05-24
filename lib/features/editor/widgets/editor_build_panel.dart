@@ -13,6 +13,7 @@ import 'package:lolipants/features/editor/providers/editor_provider.dart';
 import 'package:lolipants/features/editor/utils/layer_tint.dart';
 import 'package:lolipants/features/editor/widgets/configurator_option_image.dart';
 import 'package:lolipants/features/editor/logic/catalog_design_gender_filter.dart';
+import 'package:lolipants/features/editor/providers/design_catalog_providers.dart';
 import 'package:lolipants/features/editor/widgets/catalog_design_picker.dart';
 import 'package:lolipants/features/editor/widgets/editor_asset_thumb_card.dart';
 import 'package:lolipants/features/editor/widgets/editor_style_dropdown.dart';
@@ -99,7 +100,8 @@ class _EditorBuildPanelState extends ConsumerState<EditorBuildPanel> {
             final activeTemplate = template;
 
             if (editor.buildStyleMode == EditorBuildStyleMode.catalog) {
-              final sections = catalogSectionsForMannequin(editor.mannequinId);
+              final sections =
+                  ref.watch(mergedCatalogSectionsProvider(editor.mannequinId));
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -149,7 +151,7 @@ class _EditorBuildPanelState extends ConsumerState<EditorBuildPanel> {
                   Expanded(
                     child: CatalogDesignPicker(
                       sections: sections,
-                      selectedPath: editor.selectedCatalogDesignPath,
+                      selectedRef: editor.selectedCatalogDesignPath,
                       onSelected: ref
                           .read(editorProvider.notifier)
                           .setCatalogDesignPath,

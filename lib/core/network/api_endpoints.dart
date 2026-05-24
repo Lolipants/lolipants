@@ -119,6 +119,12 @@ abstract final class ApiEndpoints {
   /// Partner role (tailor / delivery) intake requests.
   static const String roleRequests = '/role-requests';
 
+  /// Editor flat-lay design catalog (CMS-managed items).
+  static const String catalogDesigns = '/catalog/designs';
+
   /// Admin dashboard root.
   static const String admin = '/admin';
+
+  /// Admin upload into R2 catalog/{designs|configurator}/ (under [admin]).
+  static const String adminUploadCatalogAsset = '/upload/catalog-asset';
 }

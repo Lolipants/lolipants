@@ -10,11 +10,11 @@ import 'package:lolipants/features/editor/logic/configurator_compat.dart';
 import 'package:lolipants/features/editor/logic/configurator_gender.dart';
 import 'package:lolipants/features/editor/models/configurator_catalog.dart';
 import 'package:lolipants/features/editor/providers/configurator_providers.dart';
+import 'package:lolipants/features/editor/providers/design_catalog_providers.dart';
 import 'package:lolipants/features/editor/providers/editor_provider.dart';
 import 'package:lolipants/features/editor/utils/layer_tint.dart';
 import 'package:lolipants/features/editor/widgets/configurator_option_image.dart';
 import 'package:lolipants/features/editor/widgets/editor_asset_thumb_card.dart';
-import 'package:lolipants/features/editor/logic/catalog_design_gender_filter.dart';
 import 'package:lolipants/features/editor/widgets/catalog_design_picker.dart';
 import 'package:lolipants/features/editor/widgets/editor_studio_prompt_card.dart';
 import 'package:lolipants/features/editor/widgets/editor_style_dropdown.dart';
@@ -83,7 +83,8 @@ class _EditorDesignPanelState extends ConsumerState<EditorDesignPanel> {
         final template = _resolveTemplate(templates, editor);
 
         if (editor.buildStyleMode == EditorBuildStyleMode.catalog) {
-          final sections = catalogSectionsForMannequin(editor.mannequinId);
+          final sections =
+              ref.watch(mergedCatalogSectionsProvider(editor.mannequinId));
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -121,7 +122,7 @@ class _EditorDesignPanelState extends ConsumerState<EditorDesignPanel> {
               Expanded(
                 child: CatalogDesignPicker(
                   sections: sections,
-                  selectedPath: editor.selectedCatalogDesignPath,
+                  selectedRef: editor.selectedCatalogDesignPath,
                   onSelected: notifier.setCatalogDesignPath,
                 ),
               ),

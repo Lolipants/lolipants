@@ -20,7 +20,8 @@ import 'package:lolipants/features/editor/providers/designs_providers.dart';
 import 'package:lolipants/features/editor/constants/ai_look_prompt_suffix.dart';
 import 'package:lolipants/features/editor/data/built_in_mannequin_assets.dart';
 import 'package:lolipants/features/editor/data/bundled_design_assets.dart';
-import 'package:lolipants/features/editor/logic/catalog_design_gender_filter.dart';
+import 'package:lolipants/features/editor/models/catalog_design_pick.dart';
+import 'package:lolipants/features/editor/providers/design_catalog_providers.dart';
 import 'package:lolipants/features/editor/data/configurator_defaults.dart';
 import 'package:lolipants/features/editor/data/configurator_metadata.dart';
 import 'package:lolipants/features/editor/data/editor_design_restore.dart';
@@ -393,7 +394,9 @@ class EditorNotifier extends StateNotifier<EditorState> {
 
   void setMannequin(String id) {
     if (state.buildStyleMode == EditorBuildStyleMode.catalog) {
-      final paths = catalogDesignPathsForMannequin(id);
+      final sections = ref.read(mergedCatalogSectionsProvider(id));
+      final paths =
+          sections.expand((s) => s.$2.map((p) => p.ref)).toList(growable: false);
       var path = state.selectedCatalogDesignPath;
       if (paths.isNotEmpty && !paths.contains(path)) {
         path = paths.first;
@@ -416,12 +419,20 @@ class EditorNotifier extends StateNotifier<EditorState> {
   }
 
   void setCatalogDesignPath(String assetPath) {
-    final isCasual = isCasualCatalogDesignPath(assetPath);
+    final lookup = ref.read(designCatalogLookupProvider);
+    final cmsId = cmsDesignCatalogId(assetPath);
+    final cmsGarment =
+        cmsId != null ? lookup[cmsId]?.garmentType?.trim() : null;
+    final isCasual = isCasualCatalogDesignPath(assetPath) ||
+        (cmsGarment != null && kCasualGarmentTypes.contains(cmsGarment));
+    final resolvedGarment = (cmsGarment != null && cmsGarment.isNotEmpty)
+        ? cmsGarment
+        : isCasual
+            ? garmentTypeFromCatalogDesignPath(assetPath)
+            : null;
     state = state.copyWith(
       selectedCatalogDesignPath: assetPath,
-      garmentType: isCasual
-          ? garmentTypeFromCatalogDesignPath(assetPath)
-          : state.garmentType,
+      garmentType: resolvedGarment ?? state.garmentType,
       hasUnsavedChanges: true,
     );
     if (isCasual) {
@@ -616,7 +627,9 @@ class EditorNotifier extends StateNotifier<EditorState> {
 
   /// Switches to bundled flat-lay catalogue designs for [mannequinId].
   void enterCatalogBuildMode(String mannequinId) {
-    final paths = catalogDesignPathsForMannequin(mannequinId);
+    final sections = ref.read(mergedCatalogSectionsProvider(mannequinId));
+    final paths =
+        sections.expand((s) => s.$2.map((p) => p.ref)).toList(growable: false);
     var path = state.selectedCatalogDesignPath;
     if (paths.isNotEmpty && !paths.contains(path)) {
       path = paths.first;
@@ -1259,6 +1272,12 @@ class EditorNotifier extends StateNotifier<EditorState> {
 
   String _garmentTypeForSave() {
     final path = state.selectedCatalogDesignPath.trim();
+    final lookup = ref.read(designCatalogLookupProvider);
+    final cmsId = cmsDesignCatalogId(path);
+    if (cmsId != null) {
+      final garment = lookup[cmsId]?.garmentType?.trim();
+      if (garment != null && garment.isNotEmpty) return garment;
+    }
     if (isCasualCatalogDesignPath(path) ||
         state.catalogFilter == DesignCatalogFilter.casual) {
       return garmentTypeFromCatalogDesignPath(path);
@@ -1294,15 +1313,24 @@ class EditorNotifier extends StateNotifier<EditorState> {
     String? catalogFlatUrl;
     final catalogPath = state.selectedCatalogDesignPath.trim();
     if (catalogPath.isNotEmpty) {
-      final raw = await loadBundle(catalogPath);
-      if (raw != null && raw.isNotEmpty) {
-        catalogFlatUrl = await uploadBytes(raw, 'catalog-flat.png');
-        if (catalogFlatUrl == null) {
-          state = state.copyWith(isSaving: false);
-          return const SaveDesignResult(
-            success: false,
-            message: 'Could not upload catalogue design image.',
-          );
+      if (isCmsDesignCatalogRef(catalogPath)) {
+        final lookup = ref.read(designCatalogLookupProvider);
+        final cmsId = cmsDesignCatalogId(catalogPath);
+        final url = cmsId != null ? lookup[cmsId]?.imageUrl.trim() : null;
+        if (url != null && url.isNotEmpty) {
+          catalogFlatUrl = url;
+        }
+      } else {
+        final raw = await loadBundle(catalogPath);
+        if (raw != null && raw.isNotEmpty) {
+          catalogFlatUrl = await uploadBytes(raw, 'catalog-flat.png');
+          if (catalogFlatUrl == null) {
+            state = state.copyWith(isSaving: false);
+            return const SaveDesignResult(
+              success: false,
+              message: 'Could not upload catalogue design image.',
+            );
+          }
         }
       }
     }

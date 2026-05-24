@@ -9,6 +9,7 @@ import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/features/editor/data/built_in_mannequin_assets.dart';
 import 'package:lolipants/features/editor/models/configurator_catalog.dart';
 import 'package:lolipants/features/editor/providers/configurator_providers.dart';
+import 'package:lolipants/features/editor/providers/design_catalog_providers.dart';
 import 'package:lolipants/features/editor/providers/editor_provider.dart';
 import 'package:lolipants/features/editor/utils/layer_tint.dart';
 import 'package:lolipants/features/editor/widgets/configurator_option_image.dart';
@@ -116,7 +117,7 @@ class _WeddingHeroBody extends ConsumerWidget {
   }
 }
 
-class _BuildComposeBody extends StatelessWidget {
+class _BuildComposeBody extends ConsumerWidget {
   const _BuildComposeBody({
     required this.state,
     required this.template,
@@ -126,7 +127,7 @@ class _BuildComposeBody extends StatelessWidget {
   final ConfiguratorTemplate? template;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final custom = state.customMannequinImagePath?.trim();
     final bundledPath = builtInMannequinAssetPath(state.mannequinId);
     final mannequinPath = (custom != null && custom.isNotEmpty)
@@ -136,6 +137,8 @@ class _BuildComposeBody extends StatelessWidget {
     if (state.buildStyleMode == EditorBuildStyleMode.catalog) {
       final designPath = state.selectedCatalogDesignPath.trim();
       if (designPath.isNotEmpty) {
+        final lookup = ref.watch(designCatalogLookupProvider);
+        final imageSource = resolveCatalogDesignImageSource(designPath, lookup);
         return InteractiveViewer(
           minScale: 0.85,
           maxScale: 3,
@@ -144,7 +147,7 @@ class _BuildComposeBody extends StatelessWidget {
             width: double.infinity,
             height: double.infinity,
             child: CatalogImage(
-              path: designPath,
+              path: imageSource.isNotEmpty ? imageSource : designPath,
               fit: BoxFit.contain,
               alignment: Alignment.bottomCenter,
               errorWidget: Center(

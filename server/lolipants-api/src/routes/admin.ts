@@ -1,6 +1,11 @@
 import { Hono } from "hono";
 import { v4 as uuidv4 } from "uuid";
+import {
+  MANNEQUIN_CMS_DISABLED_MESSAGE,
+  MANNEQUIN_CMS_MUTATIONS_DISABLED,
+} from "../lib/cmsPolicy";
 import { apiError } from "../lib/http";
+import { buildR2PublicUrl } from "../lib/r2PublicUrl";
 import { hmacSha256Hex, syncRoleWithAuthWorker } from "../lib/roleSync";
 import { requireAdmin, requireAuth } from "../middleware/auth";
 import type { AppVariables, Env } from "../types";
@@ -571,6 +576,20 @@ const CMS_TABLES: Record<string, CmsTableConfig> = {
     ],
     required: ["type", "name", "name_ar"],
   },
+  "design-catalog": {
+    table: "design_catalog_items",
+    columns: [
+      "section_title",
+      "label_en",
+      "label_ar",
+      "image_url",
+      "garment_type",
+      "gender_lane",
+      "sort_order",
+      "is_active",
+    ],
+    required: ["section_title", "label_en", "label_ar", "image_url"],
+  },
   "wedding-dresses": {
     table: "wedding_dresses",
     columns: [
@@ -600,14 +619,90 @@ adminRoutes.get("/cms/:resource", requireAdmin(AdminScopes.cms), async (c) => {
     return c.json(results);
   }
   if (!cfg) return apiError(c, 404, "UNKNOWN_RESOURCE", "Unknown CMS resource");
+  const orderBy =
+    resource === "design-catalog"
+      ? "section_title ASC, sort_order ASC, label_en ASC"
+      : "created_at DESC";
   const { results } = await c.env.DB.prepare(
-    `SELECT * FROM ${cfg.table} ORDER BY created_at DESC LIMIT 200`,
+    `SELECT * FROM ${cfg.table} ORDER BY ${orderBy} LIMIT 200`,
   ).all();
   return c.json(results);
 });
 
+function sanitizeCatalogFilename(name: string): string {
+  const trimmed = name.trim();
+  const base = trimmed.replace(/[^a-zA-Z0-9._-]+/g, "_").replace(/^_+/, "");
+  if (base.length === 0) return `${crypto.randomUUID()}.png`;
+  return base.slice(0, 120);
+}
+
+adminRoutes.post(
+  "/upload/catalog-asset",
+  requireAdmin(AdminScopes.cms),
+  async (c) => {
+    const formData = await c.req.formData();
+    const file = formData.get("file") as File | null;
+    if (!file) return apiError(c, 400, "FILE_REQUIRED", "No file provided");
+
+    const category = (formData.get("category")?.toString() ?? "designs").trim().toLowerCase();
+    if (category === "mannequins" && MANNEQUIN_CMS_MUTATIONS_DISABLED) {
+      return apiError(c, 403, "MANNEQUIN_CMS_DISABLED", MANNEQUIN_CMS_DISABLED_MESSAGE);
+    }
+    if (category !== "designs" && category !== "configurator") {
+      return apiError(
+        c,
+        400,
+        "INVALID_CATALOG_CATEGORY",
+        "category must be designs or configurator",
+      );
+    }
+
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+    if (!allowedTypes.includes(file.type)) {
+      return apiError(c, 400, "UNSUPPORTED_FILE_TYPE", "Unsupported file type");
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      return apiError(c, 400, "FILE_TOO_LARGE", "File exceeds 8MB limit");
+    }
+
+    const ext = file.type.split("/")[1] ?? "png";
+    const requestedName = formData.get("filename")?.toString().trim() ?? file.name;
+    const safeName = sanitizeCatalogFilename(
+      requestedName.includes(".") ? requestedName : `${requestedName}.${ext}`,
+    );
+    const key = `catalog/${category}/${safeName}`;
+
+    await c.env.R2.put(key, await file.arrayBuffer(), {
+      httpMetadata: { contentType: file.type },
+    });
+
+    const url = buildR2PublicUrl(c.env, key);
+    if (!url) {
+      return apiError(
+        c,
+        503,
+        "R2_PUBLIC_URL_NOT_CONFIGURED",
+        "File storage is not configured (CLOUDFLARE_R2_BASE_URL).",
+      );
+    }
+
+    return c.json(
+      {
+        url,
+        key,
+        assetPath: `assets/images/${category}/${safeName}`,
+        category,
+      },
+      201,
+    );
+  },
+);
+
 adminRoutes.post("/cms/:resource", requireAdmin(AdminScopes.cms), async (c) => {
   const resource = c.req.param("resource");
+  if (resource === "mannequins" && MANNEQUIN_CMS_MUTATIONS_DISABLED) {
+    return apiError(c, 403, "MANNEQUIN_CMS_DISABLED", MANNEQUIN_CMS_DISABLED_MESSAGE);
+  }
   let cfg = CMS_TABLES[resource];
   if (resource === "patterns") {
     cfg = {
@@ -653,6 +748,9 @@ adminRoutes.post("/cms/:resource", requireAdmin(AdminScopes.cms), async (c) => {
 
 adminRoutes.patch("/cms/:resource/:id", requireAdmin(AdminScopes.cms), async (c) => {
   const resource = c.req.param("resource");
+  if (resource === "mannequins" && MANNEQUIN_CMS_MUTATIONS_DISABLED) {
+    return apiError(c, 403, "MANNEQUIN_CMS_DISABLED", MANNEQUIN_CMS_DISABLED_MESSAGE);
+  }
   let cfg = CMS_TABLES[resource];
   if (resource === "patterns") {
     cfg = {
@@ -852,6 +950,9 @@ adminRoutes.delete(
 
 adminRoutes.delete("/cms/:resource/:id", requireAdmin(AdminScopes.cms), async (c) => {
   const resource = c.req.param("resource");
+  if (resource === "mannequins" && MANNEQUIN_CMS_MUTATIONS_DISABLED) {
+    return apiError(c, 403, "MANNEQUIN_CMS_DISABLED", MANNEQUIN_CMS_DISABLED_MESSAGE);
+  }
   let cfg = CMS_TABLES[resource];
   if (resource === "patterns") {
     cfg = {

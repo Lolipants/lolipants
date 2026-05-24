@@ -65,6 +65,12 @@ const bool kFeatureCustomPhotoMannequin = bool.fromEnvironment(
   defaultValue: false,
 );
 
+/// Admin CMS create/edit/upload for mannequins (v1 uses bundled catalog only).
+const bool kFeatureAdminMannequinCms = bool.fromEnvironment(
+  'FEATURE_ADMIN_MANNEQUIN_CMS',
+  defaultValue: false,
+);
+
 /// Payment mode switch for internal review builds.
 ///
 /// When enabled, checkout uses a mock/sandbox confirmation path and shows

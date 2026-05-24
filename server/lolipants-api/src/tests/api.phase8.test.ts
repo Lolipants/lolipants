@@ -612,4 +612,16 @@ describe("phase 8 / admin RBAC", () => {
     expect(body.failuresByCategory.provider_5xx).toBe(1);
     expect(body.retries.jobsWithRetry).toBe(1);
   });
+
+  it("blocks mannequin CMS create in v1", async () => {
+    const response = await apiRequest("POST", "/admin/cms/mannequins", {
+      token: "admin-super",
+      body: { label_en: "Test", label_ar: "اختبار" },
+    });
+    expect(response.status).toBe(403);
+    const body = (await response.json()) as {
+      error: { code: string; message: string };
+    };
+    expect(body.error.code).toBe("MANNEQUIN_CMS_DISABLED");
+  });
 });

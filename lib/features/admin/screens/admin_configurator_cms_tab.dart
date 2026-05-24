@@ -50,6 +50,23 @@ class _AdminConfiguratorCmsTabState extends ConsumerState<AdminConfiguratorCmsTa
     final resource = _resources[_tabs.index];
     return Column(
       children: [
+        Material(
+          color: AppColors.smoke,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.sm,
+              AppSpacing.md,
+              AppSpacing.xs,
+            ),
+            child: Text(
+              'Configurator layers: add templates, slots, then options. '
+              'Upload option PNGs here or set metadata_json.assetPath to '
+              'assets/images/configurator/… and run pnpm upload:catalog-assets.',
+              style: AppTextStyles.bodySmall.copyWith(color: AppColors.fog),
+            ),
+          ),
+        ),
         TabBar(
           controller: _tabs,
           isScrollable: true,
@@ -467,16 +484,41 @@ class _ConfiguratorFormDialogState
                           height: 80,
                           fit: BoxFit.contain,
                         ),
-                      TextButton.icon(
-                        onPressed: _uploading ? null : _pickImage,
-                        icon: _uploading
-                            ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : const Icon(Icons.upload),
-                        label: const Text('Upload image'),
+                      Row(
+                        children: [
+                          if (widget.resource == 'configurator_options')
+                            OutlinedButton.icon(
+                              onPressed: _uploading
+                                  ? null
+                                  : () => _pickImage(toCatalog: true),
+                              icon: const Icon(Icons.cloud_upload_outlined),
+                              label: Text(
+                                _uploading ? 'Uploading...' : 'Upload to catalog',
+                              ),
+                            ),
+                          if (widget.resource == 'configurator_options')
+                            const SizedBox(width: 8),
+                          TextButton.icon(
+                            onPressed: _uploading
+                                ? null
+                                : () => _pickImage(toCatalog: false),
+                            icon: _uploading
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child:
+                                        CircularProgressIndicator(strokeWidth: 2),
+                                  )
+                                : const Icon(Icons.upload),
+                            label: Text(
+                              widget.resource == 'configurator_options'
+                                  ? (_uploading
+                                      ? 'Uploading...'
+                                      : 'Upload (general)')
+                                  : 'Upload image',
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   )
@@ -522,7 +564,7 @@ class _ConfiguratorFormDialogState
     );
   }
 
-  Future<void> _pickImage() async {
+  Future<void> _pickImage({required bool toCatalog}) async {
     final granted = await DevicePermissionPrompt.ensureForImageSource(
       context,
       ImageSource.gallery,
@@ -532,11 +574,21 @@ class _ConfiguratorFormDialogState
     if (file == null) return;
     setState(() => _uploading = true);
     try {
-      final res = await ref
-          .read(designsRepositoryProvider)
-          .uploadPrintImage(filePath: file.path);
-      if (!mounted) return;
-      res.fold((_) {}, (url) => setState(() => _imageUrl = url));
+      if (toCatalog) {
+        final res = await ref.read(adminRepositoryProvider).uploadCatalogAsset(
+              filePath: file.path,
+              category: 'configurator',
+              filename: file.name,
+            );
+        if (!mounted) return;
+        res.fold((_) {}, (url) => setState(() => _imageUrl = url));
+      } else {
+        final res = await ref
+            .read(designsRepositoryProvider)
+            .uploadPrintImage(filePath: file.path);
+        if (!mounted) return;
+        res.fold((_) {}, (url) => setState(() => _imageUrl = url));
+      }
     } finally {
       if (mounted) setState(() => _uploading = false);
     }
