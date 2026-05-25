@@ -80,6 +80,9 @@ jobs:
       - name: Install Flutter dependencies
         run: flutter pub get
 
+      - name: Patch camera_avfoundation for Xcode 16
+        run: bash scripts/ci/patch_camera_avfoundation_ios18.sh
+
       - name: Install CocoaPods
         run: |
           cd ios
@@ -87,6 +90,7 @@ jobs:
 
       - name: Build IPA
         run: |
+          bash scripts/ci/patch_camera_avfoundation_ios18.sh
           bash scripts/ci/unlock_signing_keychain.sh
           flutter build ipa --release \
             --build-name="${BUILD_NAME}" \
