@@ -71,6 +71,9 @@ jobs:
           IOS_PROVISIONING_PROFILE_NAME: ${{ env.IOS_PROVISIONING_PROFILE_NAME }}
         run: bash scripts/ci/generate_export_options_plist.sh
 
+      - name: Install Flutter dependencies
+        run: flutter pub get
+
       - name: Install CocoaPods
         run: |
           cd ios
