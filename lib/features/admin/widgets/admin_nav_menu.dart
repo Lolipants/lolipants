@@ -254,11 +254,14 @@ class AdminNavMenu extends StatelessWidget {
                         color: AppColors.goldLight,
                       ),
                       const SizedBox(width: AppSpacing.xs),
-                      Text(
-                        'Super administrator',
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.goldLight,
-                          fontWeight: FontWeight.w600,
+                      Expanded(
+                        child: Text(
+                          'Super administrator',
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.goldLight,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],

@@ -93,3 +93,13 @@ Hit `GET /admin/stats` with the freshly promoted account's bearer token.
 It should return `{ usersByRole, ordersByStatus, commissionsByStatus,
 openComplaints }`. Any 403 response means the better-auth mirror didn't
 update — re-run step 4, then sign out + back in on the app.
+
+## Showcase commissions (moderation)
+
+- Designers publish via `PATCH /designs/:id/publish` (sets `is_public = 1`).
+- Commissions accrue at `pending` when another user orders a public design;
+  move to `approved` when the order is delivered, then `paid` via
+  `PATCH /admin/payouts/:id`.
+- Hide abusive listings: `PATCH /admin/moderation/designs/:id/hide` sets
+  `is_public = 0` (existing commissions unchanged).
+- Optional env: `DESIGNER_COMMISSION_PCT` (default `10`).

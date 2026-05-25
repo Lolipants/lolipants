@@ -40,6 +40,11 @@ class TailorShell extends ConsumerWidget {
             label: 'Incoming',
           ),
           NavigationDestination(
+            icon: Icon(Icons.price_change_outlined),
+            selectedIcon: Icon(Icons.price_change),
+            label: 'Offers',
+          ),
+          NavigationDestination(
             icon: Icon(Icons.construction_outlined),
             selectedIcon: Icon(Icons.construction),
             label: 'Active',

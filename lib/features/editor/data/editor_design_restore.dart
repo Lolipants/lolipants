@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:lolipants/features/editor/data/bundled_design_assets.dart';
 import 'package:lolipants/features/editor/data/editor_text_fonts.dart';
+import 'package:lolipants/features/editor/models/catalog_design_pick.dart';
+import 'package:lolipants/features/editor/models/design_catalog_item.dart';
 import 'package:lolipants/features/editor/models/design_text_layer.dart';
 import 'package:lolipants/features/editor/models/garment_design.dart';
 import 'package:lolipants/features/editor/models/print_placement.dart';
@@ -134,6 +136,93 @@ String? _nonEmpty(dynamic value) {
 String? aiRefinedLookUrlFromRenderMetadata(Map<String, dynamic>? meta) {
   if (meta == null) return null;
   return _nonEmpty(meta['aiRefinedLookUrl']);
+}
+
+/// Bundled or CMS mannequin id stored in render metadata (survives v1 bundled saves).
+String? editorMannequinIdFromRenderMetadata(Map<String, dynamic>? meta) {
+  if (meta == null) return null;
+  return _nonEmpty(meta['editorMannequinId']) ?? _nonEmpty(meta['mannequinId']);
+}
+
+/// Optional custom mannequin photo path/URL from render metadata.
+String? editorCustomMannequinFromRenderMetadata(Map<String, dynamic>? meta) {
+  if (meta == null) return null;
+  return _nonEmpty(meta['customMannequinImagePath']);
+}
+
+/// True when opened from home AI designer and still needs first look render.
+bool isAiHomeDraftFromRenderMetadata(Map<String, dynamic>? meta) {
+  if (meta == null) return false;
+  final raw = meta['aiHomeDraft'];
+  return raw == true || raw == 1;
+}
+
+/// Resolves mannequin id for editor restore (metadata first, then API column).
+String? editorMannequinIdFromDesign(GarmentDesign design) {
+  final fromMeta = editorMannequinIdFromRenderMetadata(design.renderMetadata);
+  if (fromMeta != null) return fromMeta;
+  return _nonEmpty(design.mannequinId);
+}
+
+/// Best image path or URL for My Designs / list thumbnails.
+class DesignPreviewImage {
+  const DesignPreviewImage({
+    required this.source,
+    this.contain = false,
+  });
+
+  final String source;
+  final bool contain;
+}
+
+/// Picks the most representative preview for [design] (AI look → compose → flat-lay).
+DesignPreviewImage? designPreviewImageSource(
+  GarmentDesign design, {
+  Map<String, DesignCatalogItem>? cmsLookup,
+}) {
+  final meta = design.renderMetadata ?? const <String, dynamic>{};
+
+  String? httpMeta(String key) {
+    final s = _nonEmpty(meta[key]);
+    if (s != null && s.startsWith('http')) return s;
+    return null;
+  }
+
+  for (final key in [
+    'aiRefinedLookUrl',
+    'configuratorComposeImageUrl',
+    'catalogFlatImageUrl',
+    'editorMannequinImageUrl',
+  ]) {
+    final url = httpMeta(key);
+    if (url != null) {
+      return DesignPreviewImage(
+        source: url,
+        contain: key != 'catalogFlatImageUrl',
+      );
+    }
+  }
+
+  final catalogPath = catalogDesignAssetFromRenderMetadata(meta);
+  if (catalogPath != null) {
+    if (isCmsDesignCatalogRef(catalogPath) && cmsLookup != null) {
+      final id = cmsDesignCatalogId(catalogPath);
+      final cmsUrl = id != null ? cmsLookup[id]?.imageUrl.trim() : null;
+      if (cmsUrl != null && cmsUrl.isNotEmpty) {
+        return DesignPreviewImage(source: cmsUrl, contain: true);
+      }
+    }
+    return DesignPreviewImage(source: catalogPath, contain: true);
+  }
+
+  for (final url in [design.printImageUrl, design.sketchImageUrl]) {
+    final s = url?.trim();
+    if (s != null && s.isNotEmpty && s.startsWith('http')) {
+      return DesignPreviewImage(source: s);
+    }
+  }
+
+  return null;
 }
 
 double _num(dynamic value, double fallback) {

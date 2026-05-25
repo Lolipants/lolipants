@@ -8,6 +8,7 @@ import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/features/auth/models/user.dart';
 import 'package:lolipants/features/auth/providers/auth_providers.dart';
+import 'package:lolipants/features/community/utils/community_navigation.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
 import 'package:lolipants/shared/widgets/gold_divider.dart';
 
@@ -83,6 +84,12 @@ class ProfileScreen extends ConsumerWidget {
                   icon: Icons.straighten,
                   onTap: () => context.push('/profile/measurements'),
                 ),
+                _ProfileTile(
+                  labelEn: 'Price negotiations',
+                  labelAr: 'تفاوض الأسعار',
+                  icon: Icons.price_change_outlined,
+                  onTap: () => context.push('/profile/price-negotiations'),
+                ),
                 if (kFeatureCommunity) ...[
                   _ProfileTile(
                     labelEn: 'Designer earnings',
@@ -94,7 +101,11 @@ class ProfileScreen extends ConsumerWidget {
                     labelEn: 'My consultations',
                     labelAr: 'استشاراتي',
                     icon: Icons.forum_outlined,
-                    onTap: () => context.push('/community/consultations'),
+                    onTap: () => openCommunityHubTab(
+                      ref,
+                      GoRouter.of(context),
+                      tabIndex: kCommunityConsultTab,
+                    ),
                   ),
                 ],
                 _ProfileTile(

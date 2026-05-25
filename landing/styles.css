@@ -1,6 +1,5 @@
 /* ------------------------------------------------------------------
-   Lolipants marketing site. Visual identity mirrors the Flutter app:
-   ink background, gold accents, Poppins Latin + Noto Naskh Arabic.
+   Lolipants marketing site — mirrors the Flutter app identity.
    ------------------------------------------------------------------ */
 
 :root {
@@ -77,11 +76,18 @@ a {
   font-weight: 500;
 }
 
-.brand__mark {
-  font-family: "Noto Naskh Arabic", serif;
-  font-size: 28px;
-  color: var(--gold);
-  letter-spacing: 0.02em;
+.brand__logo {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  display: block;
+}
+
+.brand__logo--sm {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
 }
 
 .brand__word {
@@ -147,6 +153,43 @@ a {
   color: var(--gold-light);
 }
 
+/* ---------------- Phone frame ---------------- */
+.phone-frame {
+  position: relative;
+  width: min(100%, 280px);
+  margin: 0 auto;
+  border-radius: 32px;
+  padding: 10px;
+  background: linear-gradient(160deg, var(--smoke), var(--ember));
+  border: 1px solid var(--border-default);
+  box-shadow: var(--shadow-lg);
+}
+
+.phone-frame::before {
+  content: "";
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 28%;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 2;
+}
+
+.phone-frame img {
+  width: 100%;
+  height: auto;
+  border-radius: 24px;
+  object-fit: cover;
+  aspect-ratio: 390 / 844;
+}
+
+.phone-frame--hero {
+  width: min(100%, 320px);
+}
+
 /* ---------------- Hero ---------------- */
 .hero {
   max-width: var(--max);
@@ -156,7 +199,7 @@ a {
 
 .hero__grid {
   display: grid;
-  grid-template-columns: 1fr 0.9fr;
+  grid-template-columns: 1fr 0.95fr;
   gap: 64px;
   align-items: center;
 }
@@ -217,73 +260,17 @@ a {
 
 .hero__art {
   position: relative;
-  aspect-ratio: 0.85;
-  display: grid;
-  place-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
 }
 
-.hero__card {
-  position: absolute;
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-}
-
-.hero__card--gold {
-  inset: 10% 15% 10% 15%;
-  background: radial-gradient(
-      120% 100% at 20% 0%,
-      rgba(201, 168, 76, 0.45),
-      transparent 60%
-    ),
-    linear-gradient(160deg, var(--ember), var(--stone));
-  border: 1px solid var(--border-default);
-  overflow: hidden;
-}
-
-.hero__ornament {
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(circle at 50% 20%, rgba(226, 192, 106, 0.25), transparent 40%),
-    repeating-linear-gradient(
-      45deg,
-      rgba(201, 168, 76, 0.05) 0 2px,
-      transparent 2px 18px
-    );
-}
-
-.hero__silhouette {
-  position: absolute;
-  left: 50%;
-  bottom: 6%;
-  width: 55%;
-  height: 75%;
-  transform: translateX(-50%);
-  background: linear-gradient(180deg, rgba(201, 168, 76, 0.22), rgba(201, 168, 76, 0.04));
-  clip-path: polygon(
-    50% 0%,
-    60% 12%,
-    85% 50%,
-    78% 58%,
-    82% 96%,
-    18% 96%,
-    22% 58%,
-    15% 50%,
-    40% 12%
-  );
-  border: 1px solid var(--border-strong);
-}
-
-.hero__card--stone {
-  bottom: 4%;
-  right: 4%;
-  padding: 18px 20px;
-  background: var(--smoke);
-  border: 1px solid var(--border-default);
+.hero__badge {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
-  max-width: 70%;
+  justify-content: center;
 }
 
 .hero__chip {
@@ -310,6 +297,7 @@ section h2 {
 }
 
 .features,
+.onboarding,
 .how,
 .showcase,
 .cta {
@@ -356,6 +344,56 @@ section h2 {
   margin: 0;
 }
 
+/* ---------------- Onboarding / app preview ---------------- */
+.onboarding__header {
+  margin-bottom: 40px;
+}
+
+.onboarding__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 28px;
+}
+
+.onboarding__card {
+  background: var(--stone);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 24px 20px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.onboarding__step {
+  margin: 0 0 6px;
+  font-size: 12px;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.onboarding__copy h3 {
+  margin: 0 0 8px;
+  font-size: 20px;
+  font-weight: 500;
+}
+
+.onboarding__ar {
+  display: block;
+  font-family: "Noto Naskh Arabic", serif;
+  color: var(--gold-light);
+  font-size: 0.85em;
+  margin-top: 4px;
+  font-weight: 400;
+}
+
+.onboarding__copy p:last-child {
+  margin: 0;
+  color: var(--dust);
+  font-size: 14px;
+}
+
 /* ---------------- How ---------------- */
 .how__steps {
   list-style: none;
@@ -397,7 +435,7 @@ section h2 {
   font-size: 14px;
 }
 
-/* ---------------- Showcase (placeholder tiles) ---------------- */
+/* ---------------- Showcase ---------------- */
 .showcase__grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -406,54 +444,16 @@ section h2 {
 
 .showcase__tile {
   margin: 0;
-  aspect-ratio: 3 / 4;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-subtle);
-  background: linear-gradient(135deg, var(--ember), var(--stone));
-  position: relative;
   overflow: hidden;
+  background: var(--stone);
 }
 
-.showcase__tile::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(
-      100% 60% at 50% 0%,
-      rgba(201, 168, 76, 0.25),
-      transparent 55%
-    ),
-    repeating-linear-gradient(
-      45deg,
-      rgba(201, 168, 76, 0.04) 0 2px,
-      transparent 2px 16px
-    );
-}
-
-.showcase__tile--two::before {
-  transform: scaleX(-1);
-}
-
-.showcase__tile--three::before {
-  filter: hue-rotate(20deg);
-}
-
-.showcase__tile--four::before {
-  transform: rotate(180deg);
-}
-
-.showcase__tile--five::before {
-  filter: saturate(0.7);
-}
-
-.showcase__tile--six::before {
-  transform: scale(1.1);
-}
-
-@media (max-width: 720px) {
-  .showcase__grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
+.showcase__tile img {
+  width: 100%;
+  height: auto;
+  display: block;
 }
 
 /* ---------------- CTA ---------------- */
@@ -474,30 +474,19 @@ section h2 {
   text-align: center;
 }
 
-.cta__form {
+.cta__ar {
+  font-family: "Noto Naskh Arabic", serif;
+  color: var(--gold);
+  font-size: 22px;
+  margin: 0 0 16px;
+}
+
+.cta__actions {
   display: flex;
   gap: 12px;
   justify-content: center;
   flex-wrap: wrap;
-  margin: 24px auto 16px;
-  max-width: 520px;
-}
-
-.cta__form input {
-  flex: 1 1 240px;
-  background: var(--ink);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-sm);
-  padding: 14px 16px;
-  color: var(--sand);
-  font-family: inherit;
-  font-size: 15px;
-}
-
-.cta__form input:focus {
-  outline: none;
-  border-color: var(--gold);
-  box-shadow: 0 0 0 3px rgba(201, 168, 76, 0.15);
+  margin: 28px auto 16px;
 }
 
 .cta__stores {
@@ -509,6 +498,27 @@ section h2 {
   gap: 20px;
   justify-content: center;
   flex-wrap: wrap;
+}
+
+/* ---------------- Legal pages ---------------- */
+.legal h1 {
+  font-size: clamp(32px, 4vw, 48px);
+  margin-top: 0;
+}
+
+.legal h2 {
+  margin-top: 32px;
+}
+
+.legal p,
+.legal li {
+  color: var(--dust);
+}
+
+.legal hr {
+  border: none;
+  border-top: 1px solid var(--border-subtle);
+  margin: 32px 0;
 }
 
 /* ---------------- Footer ---------------- */
@@ -544,7 +554,8 @@ section h2 {
   font-size: 12px;
 }
 
-.footer__links a:hover {
+.footer__links a:hover,
+.footer__fine a:hover {
   color: var(--gold-light);
 }
 
@@ -553,14 +564,27 @@ section h2 {
   color: var(--fog);
 }
 
+.footer__fine a {
+  color: var(--dust);
+}
+
 /* ---------------- Responsive ---------------- */
+@media (max-width: 960px) {
+  .onboarding__grid {
+    grid-template-columns: 1fr;
+    max-width: 360px;
+    margin: 0 auto;
+  }
+
+  .showcase__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 900px) {
   .hero__grid {
     grid-template-columns: 1fr;
     gap: 40px;
-  }
-  .hero__art {
-    aspect-ratio: 1.3;
   }
 }
 
@@ -568,7 +592,9 @@ section h2 {
   .nav__links a:not(.btn) {
     display: none;
   }
+
   .features,
+  .onboarding,
   .how,
   .showcase,
   .cta {

@@ -47,6 +47,29 @@ Future<void> initOneSignal() async {
   }
 }
 
+/// Links this device to an internal Lolipants user id so server-side
+/// `include_external_user_ids` delivery works.
+Future<void> linkOneSignalUser(String userId) async {
+  if (!isOneSignalAppConfigured()) return;
+  final id = userId.trim();
+  if (id.isEmpty) return;
+  try {
+    await OneSignal.login(id);
+  } on Object catch (err, stack) {
+    _log.warning('OneSignal login failed', err, stack);
+  }
+}
+
+/// Clears the OneSignal external user id on sign-out.
+Future<void> unlinkOneSignalUser() async {
+  if (!isOneSignalAppConfigured()) return;
+  try {
+    await OneSignal.logout();
+  } on Object catch (err, stack) {
+    _log.warning('OneSignal logout failed', err, stack);
+  }
+}
+
 /// Subscribes or unsubscribes this device on OneSignal (no-op if not configured).
 Future<void> setOneSignalPushOptIn({required bool want}) async {
   if (!isOneSignalAppConfigured()) return;

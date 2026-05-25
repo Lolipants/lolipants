@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:lolipants/core/errors/app_exception.dart';
 import 'package:lolipants/core/network/api_endpoints.dart';
 import 'package:lolipants/features/auth/data/auth_local_storage.dart';
@@ -224,7 +225,7 @@ class AuthRepository {
         return left(const AuthException('missing_google_id_token'));
       }
       final response = await _dio.post<Map<String, dynamic>>(
-        ApiEndpoints.authSignInGoogle,
+        ApiEndpoints.authSignInSocial,
         data: {
           'provider': 'google',
           'idToken': {
@@ -252,6 +253,59 @@ class AuthRepository {
       } on Exception {
         // ignore
       }
+      return left(const UnknownException());
+    }
+  }
+
+  /// Native Sign in with Apple, then Better Auth `signIn.social` with an ID token.
+  Future<Either<AppException, User>> signInWithApple() async {
+    try {
+      final credential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+      );
+      final idToken = credential.identityToken;
+      if (idToken == null || idToken.isEmpty) {
+        return left(const AuthException('missing_apple_id_token'));
+      }
+      final response = await _dio.post<Map<String, dynamic>>(
+        ApiEndpoints.authSignInSocial,
+        data: {
+          'provider': 'apple',
+          'idToken': {
+            'token': idToken,
+            if (credential.authorizationCode.isNotEmpty)
+              'accessToken': credential.authorizationCode,
+          },
+        },
+      );
+      final result = await _persistSessionFromResponse(response.data);
+      return result.fold(
+        left,
+        (user) async {
+          final given = credential.givenName?.trim();
+          final family = credential.familyName?.trim();
+          final parts = [given, family]
+              .whereType<String>()
+              .where((s) => s.isNotEmpty)
+              .toList();
+          if (parts.isNotEmpty && user.name.trim().isEmpty) {
+            final patched = await updateProfile(name: parts.join(' '));
+            return patched.fold((_) => right(user), right);
+          }
+          return right(user);
+        },
+      );
+    } on SignInWithAppleAuthorizationException catch (e) {
+      if (e.code == AuthorizationErrorCode.canceled) {
+        return left(const AuthException('apple_sign_in_canceled'));
+      }
+      return left(const AuthException('apple_sign_in_failed'));
+    } on DioException catch (e) {
+      return left(_mapDio(e));
+    } on Exception {
       return left(const UnknownException());
     }
   }

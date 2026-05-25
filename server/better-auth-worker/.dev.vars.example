@@ -2,3 +2,14 @@ BETTER_AUTH_SECRET=replace-with-a-long-random-secret-at-least-32-chars
 AWS_ACCESS_KEY_ID=AKIAxxxxxxxxxxxxxxxx
 AWS_SECRET_ACCESS_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 AWS_SESSION_TOKEN=
+
+# Optional — Google Sign-In (see GOOGLE_OAUTH_SETUP.md)
+# GOOGLE_CLIENT_ID=
+# GOOGLE_CLIENT_SECRET=
+
+# Optional — Sign in with Apple (see APPLE_SIGNIN_SETUP.md)
+# APPLE_CLIENT_ID=com.lolipants.lolipants.auth
+# APPLE_TEAM_ID=8NDNQMAZZG
+# APPLE_KEY_ID=4CB88LHK6N
+# APPLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
+# APPLE_APP_BUNDLE_IDENTIFIER=com.lolipants.lolipants

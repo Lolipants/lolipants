@@ -1,11 +1,17 @@
 # Lolipants landing site
 
-Static marketing site that mirrors the app's visual identity (ink background,
-gold accents, Latin + Noto Naskh Arabic typography). Ships as two files:
+Static marketing site at **`landing/`** — mirrors the app (ink + gold, Poppins +
+Noto Naskh Arabic). Uses real onboarding screenshots from the Flutter app.
 
-- `index.html` — semantic single-page structure: hero, features,
-  how-it-works, showcase tiles, CTA, footer.
-- `styles.css` — brand tokens + responsive layout.
+## Contents
+
+| Path | Purpose |
+|------|---------|
+| `index.html` | Home: hero, features, app preview, how-it-works, showcase, CTA |
+| `styles.css` | Brand tokens + layout |
+| `images/` | `onboarding_screen{1,2,3}.jpg`, studio render, brand pattern |
+| `privacy.html` / `terms.html` | Legal pages |
+| `_redirects` | Cloudflare Pages: `/privacy` and `/terms` pretty URLs |
 
 ## Local preview
 
@@ -15,54 +21,46 @@ python -m http.server 4321
 # open http://localhost:4321
 ```
 
-No build step is required; the site is fully static and the fonts are
-fetched from Google Fonts at load time.
+## Deploy to Cloudflare Pages (`loli-pants.com`)
 
-## Deploying to Cloudflare Pages
+Your domain is on Cloudflare — use **Pages** for the static site.
 
-### Option 1: direct upload (fastest for pre-launch)
+### Option A: direct upload (fastest)
 
-1. Go to **Cloudflare dashboard → Workers & Pages → Create application
-   → Pages → Upload assets**.
-2. Name the project `lolipants-landing` and drop the `landing/` folder.
-3. Set the custom domain to `lolipants.com` once DNS is configured.
+1. **Workers & Pages → Create → Pages → Upload assets**
+2. Project name: `lolipants-landing`
+3. Upload the entire **`landing/`** folder (include `images/` and `_redirects`)
+4. **Custom domains → Set up a custom domain** → `loli-pants.com`
+5. Add **`www.loli-pants.com`** → redirect to apex (Cloudflare dashboard → **Rules → Redirect Rules**, or Pages www alias)
 
-### Option 2: Git integration (recommended for iteration)
+### Option B: Git (recommended)
 
-1. Push this repository to GitHub/GitLab.
-2. Cloudflare dashboard → Pages → **Create a project → Connect to Git**.
-3. Select the repo and use these build settings:
-   - **Build command:** *leave empty*
+1. Connect this repo to Cloudflare Pages
+2. Build settings:
+   - **Build command:** *(empty)*
    - **Build output directory:** `landing`
-   - **Root directory:** *leave empty*
-4. Preview deployments will be produced for every branch.
+3. Attach custom domain `loli-pants.com`
 
-### Custom domains
+### DNS (if not automatic)
 
-- Primary: `lolipants.com` (A/AAAA records managed by Cloudflare).
-- Alias: `www.lolipants.com` → redirect to apex via a Cloudflare Page Rule.
+With the domain on Cloudflare, Pages usually provisions records when you attach the custom domain. Confirm:
 
-### Analytics
+- `loli-pants.com` → CNAME to `<project>.pages.dev` (proxied)
+- `www` → redirect to apex
 
-Enable **Cloudflare Web Analytics** on the Pages project (cookie-less). No
-code changes are required.
+### After deploy
 
-## Replacing the placeholder art
+- Open `https://loli-pants.com` and check `/privacy`, `/terms`
+- Enable **Web Analytics** on the Pages project (optional, no code change)
+- Point App Store / in-app legal URLs to `https://loli-pants.com/privacy` and `/terms`
 
-The showcase tiles use CSS gradients so the site is production-quality even
-without imagery. When real renders are available:
+## Refreshing images
 
-1. Drop exports into `landing/images/` (JPEG or WebP, ~1080×1440).
-2. Replace each `.showcase__tile--n` background rule in `styles.css` with:
+Onboarding art lives in the Flutter repo at `assets/images/onboarding_screen*.jpg`.
+When those change, copy into `landing/images/`:
 
-```css
-.showcase__tile--one {
-  background: url("./images/showcase-1.webp") center / cover;
-}
+```bash
+cp assets/images/onboarding_screen*.jpg landing/images/
 ```
 
-## Legal pages
-
-The app links to the canonical routes `/privacy` and `/terms`. The landing
-site keeps those routes in sync with the detailed documents in
-`landing/privacy.html` and `landing/terms.html`.
+Then redeploy Pages.

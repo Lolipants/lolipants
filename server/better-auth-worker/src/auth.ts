@@ -15,6 +15,12 @@ type SocialProviderConfig = {
   clientSecret?: string;
 };
 
+type AppleProviderConfig = {
+  clientId: string;
+  clientSecret: string;
+  appBundleIdentifier: string;
+};
+
 type CreateAuthArgs = {
   db: DrizzleD1Database<typeof schema>;
   secret: string;
@@ -27,6 +33,7 @@ type CreateAuthArgs = {
   resetFromEmail: string;
   appName?: string;
   google?: SocialProviderConfig;
+  apple?: AppleProviderConfig;
 };
 
 /** Creates a Better Auth instance for a single request. */
@@ -42,6 +49,7 @@ export function createAuth({
   resetFromEmail,
   appName,
   google,
+  apple,
 }: CreateAuthArgs) {
   const socialProviders: Record<string, unknown> = {};
   if (google?.clientId && google.clientSecret) {
@@ -50,12 +58,24 @@ export function createAuth({
       clientSecret: google.clientSecret,
     };
   }
+  if (apple?.clientId && apple.clientSecret && apple.appBundleIdentifier) {
+    socialProviders.apple = {
+      clientId: apple.clientId,
+      clientSecret: apple.clientSecret,
+      appBundleIdentifier: apple.appBundleIdentifier,
+    };
+  }
+
+  const trusted = [...trustedOrigins];
+  if (apple && !trusted.includes("https://appleid.apple.com")) {
+    trusted.push("https://appleid.apple.com");
+  }
 
   return betterAuth({
     secret,
     baseURL,
     basePath: "/auth",
-    trustedOrigins,
+    trustedOrigins: trusted,
     database: drizzleAdapter(db, {
       provider: "sqlite",
       schema,

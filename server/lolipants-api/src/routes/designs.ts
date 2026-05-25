@@ -2,6 +2,11 @@ import { Hono } from "hono";
 import { v4 as uuidv4 } from "uuid";
 import { apiError } from "../lib/http";
 import { requireAuth } from "../middleware/auth";
+import { designerCommissionPct } from "../lib/commissionConfig";
+import {
+  designHasRenderablePreview,
+  designPreviewImageUrl,
+} from "../lib/designPreview";
 import type { AppVariables, Env } from "../types";
 
 export const designRoutes = new Hono<{ Bindings: Env; Variables: AppVariables }>();
@@ -231,6 +236,11 @@ function _buildRenderMetadata(
   return {
     ...existing,
     ...clientMeta,
+    editorMannequinId:
+      clientMeta.editorMannequinId?.toString() ??
+      existing.editorMannequinId?.toString() ??
+      mannequinId ??
+      null,
     mannequinTemplateId:
       body.mannequinTemplateId?.toString() ??
       clientMeta.mannequinTemplateId?.toString() ??
@@ -306,3 +316,101 @@ designRoutes.delete("/:id", async (c) => {
   }
   return c.json({ success: true });
 });
+
+designRoutes.patch("/:id/publish", async (c) => {
+  const userId = c.get("userId") as string;
+  const id = c.req.param("id");
+  const existing = await c.env.DB.prepare(
+    "SELECT * FROM designs WHERE id = ? AND user_id = ?",
+  )
+    .bind(id, userId)
+    .first<Record<string, unknown>>();
+  if (!existing) return apiError(c, 404, "DESIGN_NOT_FOUND", "Design not found");
+  if (!designHasRenderablePreview(existing)) {
+    return apiError(
+      c,
+      400,
+      "PREVIEW_REQUIRED",
+      "Save a design preview before publishing to the showcase",
+    );
+  }
+  const wasPublic = Boolean(existing.is_public);
+  const pct = designerCommissionPct(c.env);
+  await c.env.DB.prepare(
+    `UPDATE designs SET is_public = 1, published_at = datetime('now'),
+      commission_terms_version = 'v1', updated_at = datetime('now')
+     WHERE id = ? AND user_id = ?`,
+  )
+    .bind(id, userId)
+    .run();
+  const updated = await c.env.DB.prepare("SELECT * FROM designs WHERE id = ?")
+    .bind(id)
+    .first<Record<string, unknown>>();
+  if (updated && !wasPublic) {
+    await _announceDesignToFeed(c.env.DB, userId, updated);
+  }
+  return c.json({ design: updated, commissionPct: pct, termsVersion: "v1" });
+});
+
+designRoutes.patch("/:id/unpublish", async (c) => {
+  const userId = c.get("userId") as string;
+  const id = c.req.param("id");
+  const existing = await c.env.DB.prepare(
+    "SELECT id FROM designs WHERE id = ? AND user_id = ?",
+  )
+    .bind(id, userId)
+    .first<{ id: string }>();
+  if (!existing) return apiError(c, 404, "DESIGN_NOT_FOUND", "Design not found");
+  await c.env.DB.prepare(
+    `UPDATE designs SET is_public = 0, updated_at = datetime('now')
+     WHERE id = ? AND user_id = ?`,
+  )
+    .bind(id, userId)
+    .run();
+  const updated = await c.env.DB.prepare("SELECT * FROM designs WHERE id = ?")
+    .bind(id)
+    .first();
+  return c.json(updated);
+});
+
+designRoutes.get("/me/public", async (c) => {
+  const userId = c.get("userId") as string;
+  const { results } = await c.env.DB.prepare(
+    "SELECT * FROM designs WHERE user_id = ? AND is_public = 1 ORDER BY published_at DESC, updated_at DESC",
+  )
+    .bind(userId)
+    .all();
+  return c.json(results);
+});
+
+async function _announceDesignToFeed(
+  db: Env["DB"],
+  userId: string,
+  design: Record<string, unknown>,
+): Promise<void> {
+  const name = String(design.name ?? "My design").trim() || "My design";
+  const garment = String(design.garment_type ?? "design")
+    .trim()
+    .toLowerCase();
+  const preview = designPreviewImageUrl({
+    print_image_url: design.print_image_url as string | null | undefined,
+    sketch_image_url: design.sketch_image_url as string | null | undefined,
+    render_metadata: design.render_metadata as string | null | undefined,
+  });
+  const imageUrls = preview ? [preview] : [];
+  const tags = garment === "showcase" ? ["showcase"] : [garment, "showcase"];
+  const body = `${name} is on Showcase — order it to support my design!`;
+  const postId = uuidv4();
+  await db
+    .prepare(
+      "INSERT INTO posts (id, author_id, body, image_urls, tags) VALUES (?, ?, ?, ?, ?)",
+    )
+    .bind(
+      postId,
+      userId,
+      body,
+      JSON.stringify(imageUrls),
+      JSON.stringify(tags),
+    )
+    .run();
+}

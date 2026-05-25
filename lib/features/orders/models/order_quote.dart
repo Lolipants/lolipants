@@ -21,6 +21,8 @@ class OrderQuote {
     this.deliveryLat,
     this.deliveryLng,
     this.garmentType,
+    this.quoteLockToken,
+    this.negotiationId,
   });
 
   /// Design this quote covers.
@@ -72,6 +74,12 @@ class OrderQuote {
   /// Garment type priced.
   final String? garmentType;
 
+  /// Short-lived token from an accepted negotiation checkout lock.
+  final String? quoteLockToken;
+
+  /// Source negotiation id when paying an agreed price.
+  final String? negotiationId;
+
   /// Parses a quote payload from `GET /orders/quote`.
   factory OrderQuote.fromApi(Map<String, dynamic> json) {
     int asInt(Object? v) =>
@@ -99,6 +107,10 @@ class OrderQuote {
       deliveryLat: asDouble(json['deliveryLat']),
       deliveryLng: asDouble(json['deliveryLng']),
       garmentType: json['garmentType']?.toString(),
+      quoteLockToken: json['quoteLockToken']?.toString() ??
+          json['quote_lock_token']?.toString(),
+      negotiationId: json['negotiationId']?.toString() ??
+          json['negotiation_id']?.toString(),
     );
   }
 }

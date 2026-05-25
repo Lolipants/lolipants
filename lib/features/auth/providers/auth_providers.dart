@@ -4,9 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:lolipants/core/errors/app_exception.dart';
 import 'package:lolipants/core/preferences/user_gender_provider.dart';
+import 'package:lolipants/core/push/onesignal_bootstrap.dart';
 import 'package:lolipants/features/auth/data/auth_local_storage.dart';
 import 'package:lolipants/features/auth/data/auth_repository.dart';
 import 'package:lolipants/features/auth/models/user.dart';
+import 'package:lolipants/features/settings/data/push_repository.dart';
+import 'package:lolipants/features/settings/providers/settings_provider.dart';
 
 /// Secure storage for auth material.
 final authLocalStorageProvider = Provider<AuthLocalStorage>(
@@ -67,9 +70,8 @@ final authRecoveryMessageProvider = StateProvider<String?>((ref) => null);
 
 /// Riverpod notifier coordinating session restore and sign-in/out.
 class AuthNotifier extends AsyncNotifier<AuthState> {
-  /// Prevents overlapping Google OAuth; a second call would replace the
-  /// native plugin callback and open another browser session.
-  bool _googleOAuthInFlight = false;
+  /// Prevents overlapping native social sign-in attempts.
+  bool _socialSignInInFlight = false;
 
   @override
   Future<AuthState> build() async {
@@ -81,9 +83,25 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
           user != null ? AuthAuthenticated(user) : const AuthUnauthenticated(),
     );
     if (authState is AuthAuthenticated) {
-      await ref.read(userGenderProvider.notifier).syncFromApi();
+      await _afterAuthenticated(authState.user);
     }
     return authState;
+  }
+
+  Future<void> _afterAuthenticated(User user) async {
+    await linkOneSignalUser(user.id);
+    await ref.read(userGenderProvider.notifier).syncFromApi();
+    if (ref.read(settingsProvider).pushEnabled) {
+      final playerId = await currentPlayerId();
+      if (playerId != null && playerId.isNotEmpty) {
+        await ref.read(pushRepositoryProvider).registerPlayerId(playerId);
+      }
+    }
+  }
+
+  Future<void> _afterSignedOut() async {
+    await unlinkOneSignalUser();
+    await ref.read(userGenderProvider.notifier).clear();
   }
 
   /// Re-runs the initial session restore (e.g. after token changes).
@@ -99,7 +117,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
             : const AuthUnauthenticated(),
       );
       if (authState is AuthAuthenticated) {
-        await ref.read(userGenderProvider.notifier).syncFromApi();
+        await _afterAuthenticated(authState.user);
       }
       return authState;
     });
@@ -119,8 +137,8 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
         ref.read(authRecoveryMessageProvider.notifier).state = null;
       },
     );
-    if (result.isRight()) {
-      await ref.read(userGenderProvider.notifier).syncFromApi();
+    if (result case Right(value: final user)) {
+      await _afterAuthenticated(user);
     }
     return result;
   }
@@ -153,6 +171,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
         }
         state = AsyncValue.data(AuthAuthenticated(current));
         ref.read(authRecoveryMessageProvider.notifier).state = null;
+        await _afterAuthenticated(current);
         return right(current);
       },
     );
@@ -161,10 +180,10 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   /// Starts Google OAuth against better-auth and updates [authProvider] on
   /// success.
   Future<Either<AppException, User>> signInWithGoogle() async {
-    if (_googleOAuthInFlight) {
+    if (_socialSignInInFlight) {
       return left(const AuthException('oauth_in_progress'));
     }
-    _googleOAuthInFlight = true;
+    _socialSignInInFlight = true;
     try {
       final repo = ref.read(authRepositoryProvider);
       final result = await repo.signInWithGoogle();
@@ -175,12 +194,37 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
           ref.read(authRecoveryMessageProvider.notifier).state = null;
         },
       );
-      if (result.isRight()) {
-        await ref.read(userGenderProvider.notifier).syncFromApi();
+      if (result case Right(value: final user)) {
+        await _afterAuthenticated(user);
       }
       return result;
     } finally {
-      _googleOAuthInFlight = false;
+      _socialSignInInFlight = false;
+    }
+  }
+
+  /// Native Sign in with Apple via better-auth ID token exchange.
+  Future<Either<AppException, User>> signInWithApple() async {
+    if (_socialSignInInFlight) {
+      return left(const AuthException('oauth_in_progress'));
+    }
+    _socialSignInInFlight = true;
+    try {
+      final repo = ref.read(authRepositoryProvider);
+      final result = await repo.signInWithApple();
+      result.fold(
+        (_) {},
+        (user) {
+          state = AsyncValue.data(AuthAuthenticated(user));
+          ref.read(authRecoveryMessageProvider.notifier).state = null;
+        },
+      );
+      if (result case Right(value: final user)) {
+        await _afterAuthenticated(user);
+      }
+      return result;
+    } finally {
+      _socialSignInInFlight = false;
     }
   }
 
@@ -204,8 +248,8 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
         ref.read(authRecoveryMessageProvider.notifier).state = null;
       },
     );
-    if (result.isRight()) {
-      await ref.read(userGenderProvider.notifier).syncFromApi();
+    if (result case Right(value: final user)) {
+      await _afterAuthenticated(user);
     }
     return result;
   }
@@ -214,7 +258,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   Future<Either<AppException, void>> signOutEverywhere() async {
     final repo = ref.read(authRepositoryProvider);
     final result = await repo.signOut();
-    await ref.read(userGenderProvider.notifier).clear();
+    await _afterSignedOut();
     state = const AsyncValue.data(AuthUnauthenticated());
     return result;
   }
@@ -223,7 +267,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   Future<Either<AppException, void>> deleteAccount() async {
     final repo = ref.read(authRepositoryProvider);
     final result = await repo.deleteAccount();
-    await ref.read(userGenderProvider.notifier).clear();
+    await _afterSignedOut();
     state = const AsyncValue.data(AuthUnauthenticated());
     return result;
   }
@@ -246,6 +290,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   Future<void> forceSignOutLocal() async {
     final storage = ref.read(authLocalStorageProvider);
     await storage.clearAll();
+    await unlinkOneSignalUser();
     state = const AsyncValue.data(AuthUnauthenticated());
   }
 

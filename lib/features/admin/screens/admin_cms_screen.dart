@@ -9,7 +9,7 @@ import 'package:lolipants/core/permissions/device_permission_prompt.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/features/admin/providers/admin_providers.dart';
 import 'package:lolipants/features/admin/screens/admin_configurator_cms_tab.dart';
-import 'package:lolipants/features/editor/providers/design_catalog_providers.dart';
+import 'package:lolipants/features/admin/utils/admin_cms_helpers.dart';
 import 'package:lolipants/features/editor/providers/designs_providers.dart';
 
 /// CMS for catalogue assets (mannequins, fabrics, patterns, presets) and the
@@ -225,12 +225,13 @@ class _ResourceList extends ConsumerWidget {
             saved,
           );
     res.fold(
-      (err) => _snack(context, 'Failed: ${err.runtimeType}'),
+      (err) => _snack(context, formatAdminCmsError(err)),
       (_) {
         _snack(context, existing == null ? 'Created' : 'Updated');
         ref.invalidate(adminCmsListProvider(resource));
-        if (resource == 'design-catalog') {
-          ref.invalidate(designCatalogItemsProvider);
+        invalidatePublicCmsCache(ref, resource);
+        if (resource == 'patterns') {
+          ref.invalidate(adminCmsListProvider('presets'));
         }
       },
     );
@@ -270,7 +271,12 @@ class _ResourceRow extends ConsumerWidget {
                 height: 48,
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(6),
-                  child: CachedNetworkImage(imageUrl: preview, fit: BoxFit.cover),
+                  child: CachedNetworkImage(
+                    imageUrl: preview,
+                    fit: BoxFit.cover,
+                    errorWidget: (_, __, ___) =>
+                        const Icon(Icons.broken_image_outlined),
+                  ),
                 ),
               )
             : const Icon(Icons.image_outlined),
@@ -343,10 +349,14 @@ class _ResourceRow extends ConsumerWidget {
     final res =
         await ref.read(adminRepositoryProvider).deleteCms(resource, id);
     res.fold(
-      (err) => _snack(context, 'Failed: ${err.runtimeType}'),
+      (err) => _snack(context, formatAdminCmsError(err)),
       (_) {
         _snack(context, 'Deleted');
         onChanged();
+        invalidatePublicCmsCache(ref, resource);
+        if (resource == 'patterns') {
+          ref.invalidate(adminCmsListProvider('presets'));
+        }
       },
     );
   }
@@ -534,6 +544,10 @@ class _CmsFormDialogState extends ConsumerState<_CmsFormDialog> {
                 imageUrl: _imageUrl!,
                 height: 120,
                 fit: BoxFit.cover,
+                errorWidget: (_, __, ___) => const SizedBox(
+                  height: 120,
+                  child: Center(child: Icon(Icons.broken_image_outlined)),
+                ),
               ),
             ),
           Row(
@@ -620,7 +634,7 @@ class _CmsFormDialogState extends ConsumerState<_CmsFormDialog> {
         if (!mounted) return;
         res.fold(
           (err) => ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Upload failed: ${err.runtimeType}')),
+            SnackBar(content: Text(formatAdminCmsError(err))),
           ),
           (url) => setState(() => _imageUrl = url),
         );
@@ -630,7 +644,7 @@ class _CmsFormDialogState extends ConsumerState<_CmsFormDialog> {
         if (!mounted) return;
         res.fold(
           (err) => ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Upload failed: ${err.runtimeType}')),
+            SnackBar(content: Text(formatAdminCmsError(err))),
           ),
           (url) => setState(() => _imageUrl = url),
         );

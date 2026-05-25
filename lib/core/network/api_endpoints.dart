@@ -25,7 +25,11 @@ abstract final class ApiEndpoints {
   static const String authResetPassword = '/auth/reset-password';
 
   /// Better Auth social OAuth entry point (set `provider: "google"` in body).
-  static const String authSignInGoogle = '/auth/sign-in/social';
+  /// Social sign-in (Google, Apple, …).
+  static const String authSignInSocial = '/auth/sign-in/social';
+
+  /// @deprecated Use [authSignInSocial].
+  static const String authSignInGoogle = authSignInSocial;
 
   /// Better Auth email-OTP send endpoint (sign-in or sign-up via code).
   static const String authSendOtp = '/auth/email-otp/send-verification-otp';
@@ -112,6 +116,9 @@ abstract final class ApiEndpoints {
 
   /// Compare tailor quotes for checkout.
   static const String ordersQuotesCompare = '/orders/quotes/compare';
+
+  /// Quote negotiation endpoints (under /orders).
+  static const String ordersQuoteNegotiations = '/orders/quote-negotiations';
 
   /// Complaints collection path.
   static const String complaints = '/complaints';

@@ -33,6 +33,9 @@ String _mapAuthMessage(String message) {
     'missing_google_id_token' => AppStrings.errorAuthGeneric,
     'google_sign_in_canceled' => 'Sign in was canceled.',
     'google_sign_in_failed' => AppStrings.errorAuthGeneric,
+    'apple_sign_in_canceled' => 'Sign in was canceled.',
+    'apple_sign_in_failed' => AppStrings.errorAuthGeneric,
+    'missing_apple_id_token' => AppStrings.errorAuthGeneric,
     'invalid_session' => AppStrings.errorAuthGeneric,
     _ => trimmed,
   };

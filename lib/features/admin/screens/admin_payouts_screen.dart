@@ -16,7 +16,7 @@ class AdminPayoutsScreen extends ConsumerStatefulWidget {
 }
 
 class _AdminPayoutsScreenState extends ConsumerState<AdminPayoutsScreen> {
-  String? _status = 'payable';
+  String? _status = 'approved';
 
   @override
   Widget build(BuildContext context) {
@@ -34,8 +34,8 @@ class _AdminPayoutsScreenState extends ConsumerState<AdminPayoutsScreen> {
                 hint: const Text('any'),
                 items: const [
                   DropdownMenuItem(value: null, child: Text('any')),
-                  DropdownMenuItem(value: 'accrued', child: Text('accrued')),
-                  DropdownMenuItem(value: 'payable', child: Text('payable')),
+                  DropdownMenuItem(value: 'pending', child: Text('pending')),
+                  DropdownMenuItem(value: 'approved', child: Text('approved')),
                   DropdownMenuItem(value: 'paid', child: Text('paid')),
                   DropdownMenuItem(value: 'void', child: Text('void')),
                 ],
@@ -107,7 +107,7 @@ class _PayoutRow extends ConsumerWidget {
     final orderId = data['orderId']?.toString() ??
         data['order_id']?.toString() ?? '';
 
-    final canPay = status == 'payable' || status == 'accrued';
+    final canPay = status == 'approved' || status == 'pending';
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.md),

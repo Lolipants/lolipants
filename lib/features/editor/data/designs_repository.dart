@@ -120,6 +120,50 @@ class DesignsRepository {
     }
   }
 
+  /// Publishes a design to the public showcase (requires preview).
+  Future<Either<AppException, ({GarmentDesign design, int commissionPct})>>
+      publishDesign(String id) async {
+    try {
+      final response = await _dio.patch<Map<String, dynamic>>(
+        '${ApiEndpoints.designs}/$id/publish',
+        options: await _authOptions(),
+      );
+      final data = response.data;
+      if (data == null) {
+        return left(const ServerException(500, 'Missing publish payload'));
+      }
+      final designRaw = data['design'];
+      final designMap = designRaw is Map<String, dynamic> ? designRaw : data;
+      final pct = (data['commissionPct'] is num)
+          ? (data['commissionPct'] as num).round()
+          : int.tryParse(data['commissionPct']?.toString() ?? '') ?? 10;
+      return right((design: GarmentDesign.fromApi(designMap), commissionPct: pct));
+    } on DioException catch (e) {
+      return left(_mapDio(e));
+    } on Exception {
+      return left(const UnknownException());
+    }
+  }
+
+  /// Removes a design from the public showcase.
+  Future<Either<AppException, GarmentDesign>> unpublishDesign(String id) async {
+    try {
+      final response = await _dio.patch<Map<String, dynamic>>(
+        '${ApiEndpoints.designs}/$id/unpublish',
+        options: await _authOptions(),
+      );
+      final data = response.data;
+      if (data == null) {
+        return left(const ServerException(500, 'Missing design payload'));
+      }
+      return right(GarmentDesign.fromApi(data));
+    } on DioException catch (e) {
+      return left(_mapDio(e));
+    } on Exception {
+      return left(const UnknownException());
+    }
+  }
+
   /// Deletes a design owned by the current user.
   Future<Either<AppException, Unit>> deleteDesign(String id) async {
     try {

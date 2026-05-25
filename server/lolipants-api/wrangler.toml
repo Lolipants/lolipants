@@ -9,6 +9,7 @@ compatibility_flags = ["nodejs_compat"]
 binding = "DB"
 database_name = "lolipants-db"
 database_id = "c6e58a76-68b0-4f0b-a49c-233fafd9a1e2"
+migrations_dir = "migrations"
 
 [[r2_buckets]]
 binding = "R2"
@@ -21,9 +22,7 @@ service = "lolipants-better-auth"
 [vars]
 ENVIRONMENT = "development"
 BETTER_AUTH_BASE_URL = "https://lolipants-better-auth.loli-pants.workers.dev"
-# Shared HMAC secrets set via `wrangler secret put`:
-#   ADMIN_HMAC_SECRET     - signs external /admin/commissions/:id calls
-#   INTERNAL_SYNC_SECRET  - signs /internal/user/:id/role sync calls to the better-auth worker
+DESIGNER_COMMISSION_PCT = "10"
 
 [env.production]
 
@@ -31,6 +30,7 @@ BETTER_AUTH_BASE_URL = "https://lolipants-better-auth.loli-pants.workers.dev"
 binding = "DB"
 database_name = "lolipants-db"
 database_id = "c6e58a76-68b0-4f0b-a49c-233fafd9a1e2"
+migrations_dir = "migrations"
 
 [[env.production.r2_buckets]]
 binding = "R2"
@@ -43,3 +43,4 @@ service = "lolipants-better-auth"
 [env.production.vars]
 ENVIRONMENT = "production"
 BETTER_AUTH_BASE_URL = "https://lolipants-better-auth.loli-pants.workers.dev"
+DESIGNER_COMMISSION_PCT = "10"

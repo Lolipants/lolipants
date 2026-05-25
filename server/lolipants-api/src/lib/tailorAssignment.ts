@@ -308,3 +308,69 @@ export async function compareTailorsForDelivery(input: {
     assignmentMethod: method,
   }));
 }
+
+export type TailorQuoteResult = {
+  tailorId: string;
+  tailorName: string;
+  shopName: string | null;
+  distanceKm: number;
+  pricePlanId: string;
+  assignmentMethod: TailorAssignmentMethod;
+  basePrice: number;
+  fabricFee: number;
+  deliveryFee: number;
+  total: number;
+  currency: string;
+  fabricQuality: string;
+  garmentType: string;
+};
+
+/** Quote for a specific tailor (compare checkout + order validation). */
+export async function quoteForTailorId(input: {
+  db: D1Database;
+  tailorId: string;
+  deliveryLat: number;
+  deliveryLng: number;
+  city: string;
+  design: DesignForAssignment;
+}): Promise<TailorQuoteResult | null> {
+  const base = {
+    db: input.db,
+    deliveryLat: input.deliveryLat,
+    deliveryLng: input.deliveryLng,
+    city: input.city,
+    design: input.design,
+  };
+
+  const inRadius = await collectTailorCandidates(base, {
+    withinServiceRadius: true,
+  });
+  const fallback = await collectTailorCandidates(base, {
+    withinServiceRadius: false,
+  });
+  const pool = inRadius.length > 0 ? inRadius : fallback;
+  const match = pool.find((c) => c.tailorId === input.tailorId);
+  if (!match) return null;
+
+  const assignmentMethod: TailorAssignmentMethod = inRadius.some(
+    (c) => c.tailorId === input.tailorId,
+  )
+    ? "proximity"
+    : "fallback";
+
+  return {
+    tailorId: match.tailorId,
+    tailorName: match.tailorName,
+    shopName: match.shopName,
+    distanceKm: Math.round(match.distanceKm * 10) / 10,
+    pricePlanId: match.plan.planId,
+    assignmentMethod,
+    basePrice: match.quote.basePrice,
+    fabricFee: match.quote.fabricFee,
+    deliveryFee: match.quote.deliveryFee,
+    total: match.quote.total,
+    currency: match.quote.currency,
+    fabricQuality: match.quote.fabricQuality,
+    garmentType: match.quote.garmentType,
+  };
+}

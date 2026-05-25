@@ -5,15 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta
       name="description"
-      content="Lolipants — the Middle Eastern design atelier in your pocket. Sketch your dream garment, let AI tailors bring it to life, and wear it the same week."
+      content="Lolipants — design bespoke Middle Eastern fashion on a live mannequin, publish to Showcase, negotiate with tailors, and track delivery to your door."
+    />
+    <meta property="og:title" content="Lolipants — design, tailor, wear." />
+    <meta
+      property="og:description"
+      content="Your atelier in your pocket. AI-assisted design, vetted tailors, community Showcase, and secure checkout."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://loli-pants.com/" />
+    <meta
+      property="og:image"
+      content="https://loli-pants.com/images/onboarding_screen1.jpg"
     />
     <title>Lolipants — design, tailor, wear.</title>
+    <link rel="canonical" href="https://loli-pants.com/" />
+    <link rel="icon" href="./images/logo.png" type="image/png" sizes="72x72" />
+    <link rel="apple-touch-icon" href="./images/logo.png" />
     <link rel="stylesheet" href="./styles.css" />
-    <link
-      rel="preconnect"
-      href="https://fonts.gstatic.com"
-      crossorigin
-    />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&family=Noto+Naskh+Arabic:wght@400;500&display=swap"
       rel="stylesheet"
@@ -22,13 +32,19 @@
   <body>
     <header class="nav">
       <a class="brand" href="#top" aria-label="Lolipants home">
-        <span class="brand__mark">لُلي</span>
+        <img
+          class="brand__logo"
+          src="./images/logo.png"
+          alt=""
+          width="44"
+          height="44"
+        />
         <span class="brand__word">Lolipants</span>
       </a>
       <nav class="nav__links">
         <a href="#features">Features</a>
+        <a href="#app">The app</a>
         <a href="#how">How it works</a>
-        <a href="#showcase">Showcase</a>
         <a class="btn btn--sm btn--primary" href="#download">Get the app</a>
       </nav>
     </header>
@@ -43,26 +59,31 @@
               <span class="hero__ar" dir="rtl">أتيلييه في جيبك.</span>
             </h1>
             <p class="lede">
-              Sketch, generate, and order bespoke garments in minutes. Lolipants
-              pairs AI-powered design with vetted tailors across the region —
-              so you can go from idea to delivered in a week.
+              Sketch on a realistic mannequin, refine with AI, share to
+              Showcase, agree a price with your tailor, and follow every stitch
+              to your door — in Arabic or English.
             </p>
             <div class="hero__cta">
-              <a class="btn btn--primary" href="#download">Download the app</a>
-              <a class="btn btn--ghost" href="#how">See how it works</a>
+              <a class="btn btn--primary" href="#download">Get the app</a>
+              <a class="btn btn--ghost" href="#app">See the app</a>
             </div>
             <ul class="hero__meta" role="list">
               <li><span>AR + EN</span>, RTL-first</li>
-              <li>Tap Payments</li>
-              <li>Arabic mannequin fits</li>
+              <li>Sign in with Apple & Google</li>
+              <li>Push order updates</li>
             </ul>
           </div>
-          <div class="hero__art" aria-hidden="true">
-            <div class="hero__card hero__card--gold">
-              <div class="hero__ornament"></div>
-              <div class="hero__silhouette"></div>
+          <div class="hero__art">
+            <div class="phone-frame phone-frame--hero">
+              <img
+                src="./images/onboarding_screen1.jpg"
+                alt="Lolipants design studio with mannequin and fabric options"
+                width="390"
+                height="844"
+                loading="eager"
+              />
             </div>
-            <div class="hero__card hero__card--stone">
+            <div class="hero__badge">
               <span class="hero__chip">Abaya · عباية</span>
               <span class="hero__chip">Thobe · ثوب</span>
               <span class="hero__chip">Kaftan · قفطان</span>
@@ -72,118 +93,210 @@
       </section>
 
       <section id="features" class="features">
-        <h2>Made for the way the region dresses.</h2>
+        <h2>Everything in one atelier app.</h2>
         <p class="section__lede">
-          Every pixel in Lolipants — from the gold gradient to the Arabic
-          numerals — was tuned with Middle Eastern designers and tailors.
+          Lolipants is live on iOS with the full design-to-delivery loop — not
+          a mockup. Gold gradients, Arabic typography, and regional presets
+          tuned with Gulf designers.
         </p>
         <div class="features__grid">
           <article class="feature">
             <div class="feature__icon">✶</div>
-            <h3>Regional presets</h3>
+            <h3>Design studio</h3>
             <p>
-              Dozens of curated fits: Khaleeji, Levantine, North African, and
-              more. Tap a region to remix its signatures.
+              Pick a mannequin, layer fabrics and prints, prompt AI looks, and
+              save designs to your profile.
             </p>
           </article>
           <article class="feature">
             <div class="feature__icon">◇</div>
-            <h3>AI-assisted design</h3>
+            <h3>Showcase & feed</h3>
             <p>
-              Describe a dream garment in Arabic or English. Lolipants drafts
-              the silhouette, the fabric play, and the embroidery.
+              Publish commission-ready designs to Showcase and the community
+              feed. Discover pro designers and remix looks.
             </p>
           </article>
           <article class="feature">
             <div class="feature__icon">☾</div>
-            <h3>Vetted tailors</h3>
+            <h3>Tailor quotes & negotiation</h3>
             <p>
-              Hand-picked ateliers from Riyadh to Cairo receive your design,
-              confirm fit, and send it to your door.
+              Compare tailor quotes, negotiate price in-app, and checkout with
+              the agreed quote locked in.
             </p>
           </article>
           <article class="feature">
             <div class="feature__icon">✺</div>
-            <h3>Built-in community</h3>
+            <h3>Secure checkout & tracking</h3>
             <p>
-              Share your designs, follow pro designers, and remix looks from
-              the feed — a souq of ideas, always on.
+              Pay with Tap (cards & regional methods). Live push updates on
+              orders, delivery, and negotiation messages.
             </p>
           </article>
         </div>
       </section>
 
+      <section id="app" class="onboarding">
+        <div class="onboarding__header">
+          <h2>Three screens to your first outfit.</h2>
+          <p class="section__lede">
+            The same journey you see when you open the app — from blank
+            mannequin to master tailor.
+          </p>
+        </div>
+        <div class="onboarding__grid">
+          <article class="onboarding__card">
+            <div class="phone-frame">
+              <img
+                src="./images/onboarding_screen1.jpg"
+                alt="Design your fashion — custom garments on a mannequin"
+                width="390"
+                height="844"
+                loading="lazy"
+              />
+            </div>
+            <div class="onboarding__copy">
+              <p class="onboarding__step">01</p>
+              <h3>
+                Design your fashion
+                <span class="onboarding__ar" dir="rtl">صمم أزياءك</span>
+              </h3>
+              <p>Create custom garments on a realistic mannequin.</p>
+            </div>
+          </article>
+          <article class="onboarding__card">
+            <div class="phone-frame">
+              <img
+                src="./images/onboarding_screen2.jpg"
+                alt="Traditional Gulf styles in the design editor"
+                width="390"
+                height="844"
+                loading="lazy"
+              />
+            </div>
+            <div class="onboarding__copy">
+              <p class="onboarding__step">02</p>
+              <h3>
+                Rooted in heritage
+                <span class="onboarding__ar" dir="rtl">مستوحى من تراثك</span>
+              </h3>
+              <p>Traditional Gulf styles, reimagined.</p>
+            </div>
+          </article>
+          <article class="onboarding__card">
+            <div class="phone-frame">
+              <img
+                src="./images/onboarding_screen3.jpg"
+                alt="Order tracking from tailor to delivery"
+                width="390"
+                height="844"
+                loading="lazy"
+              />
+            </div>
+            <div class="onboarding__copy">
+              <p class="onboarding__step">03</p>
+              <h3>
+                Made by master tailors
+                <span class="onboarding__ar" dir="rtl">مصنوع بأيدي محترفين</span>
+              </h3>
+              <p>Order and track your garment from stitch to door.</p>
+            </div>
+          </article>
+        </div>
+      </section>
+
       <section id="how" class="how">
-        <h2>Four steps from idea to delivered.</h2>
+        <h2>From idea to delivered.</h2>
         <ol class="how__steps">
           <li>
             <span class="how__num">01</span>
-            <h3>Pick a mannequin</h3>
-            <p>Choose a body, skin tone, and region preset that suits you.</p>
+            <h3>Choose your fit</h3>
+            <p>
+              Select a mannequin, sizing method, and regional preset that
+              matches you.
+            </p>
           </li>
           <li>
             <span class="how__num">02</span>
-            <h3>Design in minutes</h3>
+            <h3>Design & publish</h3>
             <p>
-              Use sliders, prompts, and fabrics, or let the AI draft a look you
-              can tweak.
+              Build in the editor, optionally publish to Showcase, and request
+              quotes from tailors.
             </p>
           </li>
           <li>
             <span class="how__num">03</span>
-            <h3>Pay securely</h3>
+            <h3>Agree & pay</h3>
             <p>
-              Tap Payments handles the checkout with Mada, Apple Pay, and cards.
+              Negotiate if you need to, then checkout securely with Tap
+              Payments.
             </p>
           </li>
           <li>
             <span class="how__num">04</span>
-            <h3>Wear it proudly</h3>
+            <h3>Track & wear</h3>
             <p>
-              Your tailor confirms, stitches, and ships. Live delivery updates
-              from pickup to doorbell.
+              Push notifications keep you updated from tailor queue to
+              doorstep.
             </p>
           </li>
         </ol>
       </section>
 
       <section id="showcase" class="showcase">
-        <h2>Looks made with Lolipants.</h2>
+        <h2>Crafted in Lolipants.</h2>
         <p class="section__lede">
-          Handpicked from the in-app community feed. Tap a tile to see the
-          process reel.
+          Design, heritage embroidery, and final tailoring — the craft behind
+          every Lolipants order.
         </p>
         <div class="showcase__grid">
-          <figure class="showcase__tile showcase__tile--one"></figure>
-          <figure class="showcase__tile showcase__tile--two"></figure>
-          <figure class="showcase__tile showcase__tile--three"></figure>
-          <figure class="showcase__tile showcase__tile--four"></figure>
-          <figure class="showcase__tile showcase__tile--five"></figure>
-          <figure class="showcase__tile showcase__tile--six"></figure>
+          <figure class="showcase__tile">
+            <img
+              src="./images/onboarding_screen1.jpg"
+              alt="Digital design and fabric selection in Lolipants"
+              width="2816"
+              height="1536"
+              loading="lazy"
+            />
+          </figure>
+          <figure class="showcase__tile">
+            <img
+              src="./images/onboarding_screen2.jpg"
+              alt="Gold embroidery and regional textile detail"
+              width="2760"
+              height="1504"
+              loading="lazy"
+            />
+          </figure>
+          <figure class="showcase__tile">
+            <img
+              src="./images/onboarding_screen3.jpg"
+              alt="Final pressing, quality check, and delivery"
+              width="2760"
+              height="1504"
+              loading="lazy"
+            />
+          </figure>
         </div>
       </section>
 
       <section id="download" class="cta">
         <div class="cta__inner">
-          <h2>Ready to design your next entrance?</h2>
+          <h2>Wear your heritage.</h2>
+          <p class="cta__ar" dir="rtl">ارتدِ إرثك</p>
           <p>
-            Lolipants launches on iOS and Android this season. Leave your email
-            for an invite to the beta.
+            Lolipants is rolling out on the App Store now. Android follows.
+            Questions? We read every note.
           </p>
-          <form class="cta__form" action="#" method="post" novalidate>
-            <label class="sr-only" for="email">Email</label>
-            <input
-              id="email"
-              type="email"
-              name="email"
-              placeholder="you@elegant.ae"
-              autocomplete="email"
-              required
-            />
-            <button class="btn btn--primary" type="submit">Request invite</button>
-          </form>
-          <div class="cta__stores" aria-hidden="true">
-            <span>App Store · coming soon</span>
+          <div class="cta__actions">
+            <a
+              class="btn btn--primary"
+              href="mailto:hello@loli-pants.com?subject=Lolipants%20app"
+              >Contact us</a
+            >
+            <a class="btn btn--ghost" href="./privacy.html">Privacy policy</a>
+          </div>
+          <div class="cta__stores">
+            <span>App Store · launching</span>
             <span>Google Play · coming soon</span>
           </div>
         </div>
@@ -193,18 +306,24 @@
     <footer class="footer">
       <div class="footer__row">
         <div class="footer__brand">
-          <span class="brand__mark">لُلي</span>
+          <img
+            class="brand__logo brand__logo--sm"
+            src="./images/logo.png"
+            alt=""
+            width="36"
+            height="36"
+          />
           <span class="brand__word">Lolipants</span>
         </div>
         <nav class="footer__links" aria-label="Legal">
-          <a href="/privacy">Privacy</a>
-          <a href="/terms">Terms</a>
-          <a href="mailto:hello@lolipants.com">Contact</a>
+          <a href="./privacy.html">Privacy</a>
+          <a href="./terms.html">Terms</a>
+          <a href="mailto:hello@loli-pants.com">hello@loli-pants.com</a>
         </nav>
       </div>
       <p class="footer__fine">
-        © <span id="yr"></span> Lolipants. Made between Riyadh, Cairo, and
-        Dubai.
+        © <span id="yr"></span> Lolipants ·
+        <a href="https://loli-pants.com">loli-pants.com</a>
       </p>
     </footer>
 

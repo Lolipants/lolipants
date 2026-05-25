@@ -317,6 +317,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
       deliveryNotes: draft.notes,
       idempotencyKey: draft.idempotencyKey,
       designerId: draft.design.designerId,
+      quoteLockToken: quote.quoteLockToken,
     );
     final orderOrError = orderResult.fold<String>(
       (e) => orderErrorMessage(e, fallback: 'Could not create order.'),

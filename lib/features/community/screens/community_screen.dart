@@ -34,7 +34,12 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen>
   @override
   void initState() {
     super.initState();
-    _controller = TabController(length: _tabs.length, vsync: this);
+    final initialTab = 0;
+    _controller = TabController(
+      length: _tabs.length,
+      vsync: this,
+      initialIndex: initialTab,
+    );
   }
 
   @override
@@ -43,7 +48,10 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen>
     if (!_tabListenerAttached) {
       _controller.addListener(_syncHubTabIndex);
       _tabListenerAttached = true;
-      ref.read(communityHubTabIndexProvider.notifier).state = _controller.index;
+    }
+    final hubTab = ref.read(communityHubTabIndexProvider);
+    if (_controller.index != hubTab) {
+      _controller.index = hubTab;
     }
   }
 
@@ -62,6 +70,12 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen>
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<int>(communityHubTabIndexProvider, (previous, next) {
+      if (_controller.index != next) {
+        _controller.animateTo(next);
+      }
+    });
+
     return Scaffold(
       backgroundColor: AppColors.ink,
       body: SafeArea(

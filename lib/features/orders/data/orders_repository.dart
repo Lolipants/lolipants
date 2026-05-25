@@ -7,6 +7,7 @@ import 'package:lolipants/features/orders/models/order.dart';
 import 'package:lolipants/features/orders/models/order_estimate.dart';
 import 'package:lolipants/features/orders/models/order_quote.dart';
 import 'package:lolipants/features/orders/models/tailor_quote_option.dart';
+import 'package:lolipants/features/orders/models/quote_negotiation.dart';
 import 'package:lolipants/features/orders/models/wedding_order_quote.dart';
 
 /// API-backed repository for customer orders.
@@ -118,6 +119,7 @@ class OrdersRepository {
           'deliveryLng': deliveryLng,
           'limit': limit,
         },
+        options: await _authOptions(),
       );
       final data = response.data;
       if (data == null) {
@@ -282,6 +284,7 @@ class OrdersRepository {
     String? deliveryNotes,
     String? idempotencyKey,
     String? designerId,
+    String? quoteLockToken,
   }) async {
     try {
       final key = idempotencyKey ??
@@ -304,6 +307,8 @@ class OrdersRepository {
           'deliveryNotes': deliveryNotes,
           if (designerId != null && designerId.isNotEmpty)
             'designerId': designerId,
+          if (quoteLockToken != null && quoteLockToken.isNotEmpty)
+            'quoteLockToken': quoteLockToken,
         },
         options: authOptions.copyWith(
           headers: {
@@ -368,5 +373,198 @@ class OrdersRepository {
       return ServerException(status, message, code: code);
     }
     return NetworkException(message);
+  }
+
+  /// Lists the customer's open quote negotiations.
+  Future<Either<AppException, List<QuoteNegotiation>>> listMyNegotiations({
+    String? status,
+  }) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        ApiEndpoints.ordersQuoteNegotiations,
+        queryParameters: status != null ? {'status': status} : null,
+        options: await _authOptions(),
+      );
+      final raw = response.data?['negotiations'];
+      final items = raw is List
+          ? raw
+              .whereType<Map<String, dynamic>>()
+              .map(QuoteNegotiation.fromApi)
+              .toList(growable: false)
+          : const <QuoteNegotiation>[];
+      return right(items);
+    } on DioException catch (e) {
+      return left(_mapDio(e));
+    } on Exception {
+      return left(const UnknownException());
+    }
+  }
+
+  /// Tailor inbound price-request queue.
+  Future<Either<AppException, List<QuoteNegotiation>>> listTailorNegotiations({
+    String? status,
+  }) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        '${ApiEndpoints.ordersQuoteNegotiations}/tailor',
+        queryParameters: status != null ? {'status': status} : null,
+        options: await _authOptions(),
+      );
+      final raw = response.data?['negotiations'];
+      final items = raw is List
+          ? raw
+              .whereType<Map<String, dynamic>>()
+              .map(QuoteNegotiation.fromApi)
+              .toList(growable: false)
+          : const <QuoteNegotiation>[];
+      return right(items);
+    } on DioException catch (e) {
+      return left(_mapDio(e));
+    } on Exception {
+      return left(const UnknownException());
+    }
+  }
+
+  Future<Either<AppException, QuoteNegotiationDetail>> getNegotiation(
+    String id,
+  ) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        '${ApiEndpoints.ordersQuoteNegotiations}/$id',
+        options: await _authOptions(),
+      );
+      final data = response.data;
+      if (data == null) {
+        return left(const ServerException(500, 'Missing negotiation payload'));
+      }
+      return right(QuoteNegotiationDetail.fromApi(data));
+    } on DioException catch (e) {
+      return left(_mapDio(e));
+    } on Exception {
+      return left(const UnknownException());
+    }
+  }
+
+  Future<Either<AppException, QuoteNegotiationDetail>> createNegotiation({
+    required String designId,
+    required String tailorId,
+    required int offeredTotal,
+    required String deliveryAddress,
+    required String deliveryCity,
+    required String deliveryPhone,
+    required double deliveryLat,
+    required double deliveryLng,
+    String? customerNote,
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        ApiEndpoints.ordersQuoteNegotiations,
+        data: {
+          'designId': designId,
+          'tailorId': tailorId,
+          'offeredTotal': offeredTotal,
+          'deliveryAddress': deliveryAddress,
+          'deliveryCity': deliveryCity,
+          'deliveryPhone': deliveryPhone,
+          'deliveryLat': deliveryLat,
+          'deliveryLng': deliveryLng,
+          if (customerNote != null && customerNote.isNotEmpty)
+            'customerNote': customerNote,
+        },
+        options: await _authOptions(),
+      );
+      final data = response.data;
+      if (data == null) {
+        return left(const ServerException(500, 'Missing negotiation payload'));
+      }
+      return right(QuoteNegotiationDetail.fromApi(data));
+    } on DioException catch (e) {
+      return left(_mapDio(e));
+    } on Exception {
+      return left(const UnknownException());
+    }
+  }
+
+  Future<Either<AppException, QuoteNegotiationDetail>> sendNegotiationMessage({
+    required String negotiationId,
+    required String body,
+  }) async {
+    try {
+      await _dio.post<Map<String, dynamic>>(
+        '${ApiEndpoints.ordersQuoteNegotiations}/$negotiationId/messages',
+        data: {'body': body},
+        options: await _authOptions(),
+      );
+      return getNegotiation(negotiationId);
+    } on DioException catch (e) {
+      return left(_mapDio(e));
+    } on Exception {
+      return left(const UnknownException());
+    }
+  }
+
+  Future<Either<AppException, QuoteNegotiationDetail>> acceptNegotiation(
+    String id,
+  ) async {
+    return _negotiationAction(id, 'accept');
+  }
+
+  Future<Either<AppException, QuoteNegotiationDetail>> declineNegotiation(
+    String id,
+  ) async {
+    return _negotiationAction(id, 'decline');
+  }
+
+  Future<Either<AppException, QuoteNegotiationDetail>> cancelNegotiation(
+    String id,
+  ) async {
+    return _negotiationAction(id, 'cancel');
+  }
+
+  Future<Either<AppException, QuoteNegotiationDetail>> counterNegotiation({
+    required String id,
+    required int offeredTotal,
+    String? note,
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '${ApiEndpoints.ordersQuoteNegotiations}/$id/counter',
+        data: {
+          'offeredTotal': offeredTotal,
+          if (note != null && note.isNotEmpty) 'note': note,
+        },
+        options: await _authOptions(),
+      );
+      final data = response.data;
+      if (data == null) {
+        return left(const ServerException(500, 'Missing negotiation payload'));
+      }
+      return right(QuoteNegotiationDetail.fromApi(data));
+    } on DioException catch (e) {
+      return left(_mapDio(e));
+    } on Exception {
+      return left(const UnknownException());
+    }
+  }
+
+  Future<Either<AppException, QuoteNegotiationDetail>> _negotiationAction(
+    String id,
+    String action,
+  ) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '${ApiEndpoints.ordersQuoteNegotiations}/$id/$action',
+        options: await _authOptions(),
+      );
+      final data = response.data;
+      if (data == null) {
+        return left(const ServerException(500, 'Missing negotiation payload'));
+      }
+      return right(QuoteNegotiationDetail.fromApi(data));
+    } on DioException catch (e) {
+      return left(_mapDio(e));
+    } on Exception {
+      return left(const UnknownException());
+    }
   }
 }

@@ -13,10 +13,15 @@ import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/features/community/screens/create_post_screen.dart';
+import 'package:lolipants/features/community/utils/publish_showcase_feedback.dart';
+import 'package:lolipants/features/community/widgets/publish_showcase_dialog.dart';
+import 'package:lolipants/features/editor/providers/designs_providers.dart';
 import 'package:lolipants/features/editor/models/editor_preset_args.dart';
 import 'package:lolipants/features/editor/models/garment_design.dart';
 import 'package:lolipants/features/community/providers/community_providers.dart';
 import 'package:lolipants/features/editor/data/bundled_design_assets.dart';
+import 'package:lolipants/features/editor/data/editor_design_restore.dart';
+import 'package:lolipants/features/editor/models/configurator_catalog.dart';
 import 'package:lolipants/features/editor/providers/designs_providers.dart';
 import 'package:lolipants/features/editor/providers/editor_provider.dart';
 import 'package:lolipants/core/config/app_features.dart';
@@ -59,6 +64,8 @@ class EditorScreen extends ConsumerStatefulWidget {
 class _EditorScreenState extends ConsumerState<EditorScreen> {
   bool _seededSession = false;
   bool _sharing = false;
+  bool _pendingAiHomeDraft = false;
+  bool _aiHomeDraftRunning = false;
   final GlobalKey _heroCaptureKey = GlobalKey();
   late final EditorNotifier _editorNotifier;
 
@@ -88,6 +95,12 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
     final notifier = _editorNotifier;
     if (widget.design != null) {
       notifier.loadDesign(widget.design!);
+      if (isAiHomeDraftFromRenderMetadata(widget.design!.renderMetadata)) {
+        _pendingAiHomeDraft = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _runAiHomeDraftIfReady();
+        });
+      }
     } else {
       final initialMannequin =
           widget.bootstrap?.mannequinId ?? widget.initialMannequinId;
@@ -114,6 +127,40 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
     }
   }
 
+  /// After home AI "Apply", builds configurator defaults and runs look render.
+  Future<void> _runAiHomeDraftIfReady() async {
+    if (!_pendingAiHomeDraft || _aiHomeDraftRunning || !mounted) return;
+    final catalogAsync = ref.read(configuratorCatalogProvider);
+    if (!catalogAsync.hasValue) return;
+
+    _aiHomeDraftRunning = true;
+    _pendingAiHomeDraft = false;
+
+    final notifier = _editorNotifier;
+    final templates = ref.read(genderOrderedConfiguratorTemplatesProvider);
+    if (templates.isNotEmpty) {
+      notifier.ensureDefaultConfiguratorTemplate(templates);
+    }
+
+    await WidgetsBinding.instance.endOfFrame;
+    await Future<void>.delayed(const Duration(milliseconds: 400));
+    if (!mounted) return;
+
+    final composeBytes = await _captureHeroPng();
+    final result = await notifier.generateRefinedLook(
+      composePreviewBytes: composeBytes,
+    );
+    if (!mounted) return;
+    _aiHomeDraftRunning = false;
+    if (!result.success &&
+        result.message != null &&
+        result.message!.trim().isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result.message!)),
+      );
+    }
+  }
+
   @override
   void dispose() {
     // Riverpod forbids mutating providers during dispose; defer until after
@@ -125,6 +172,17 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<AsyncValue<ConfiguratorCatalog>>(configuratorCatalogProvider,
+        (previous, next) {
+      next.whenData((_) {
+        if (_pendingAiHomeDraft && !_aiHomeDraftRunning) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _runAiHomeDraftIfReady();
+          });
+        }
+      });
+    });
+
     final editor = ref.watch(editorProvider);
     final notifier = ref.read(editorProvider.notifier);
     final quotaAsync = ref.watch(aiRenderQuotaProvider);
@@ -507,7 +565,13 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
   Future<void> _confirmExit(BuildContext context) async {
     final editor = ref.read(editorProvider);
     if (!editor.hasUnsavedChanges) {
-      if (mounted) context.pop();
+      if (mounted) {
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go('/home');
+        }
+      }
       return;
     }
     final leave = await showDialog<bool>(
@@ -536,7 +600,11 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
       ),
     );
     if (leave == true && mounted) {
-      context.pop();
+      if (context.canPop()) {
+        context.pop();
+      } else {
+        context.go('/home');
+      }
     }
   }
 
@@ -660,7 +728,10 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
         message: 'Design name is required.',
       );
     }
-    return notifier.saveDesign(forceName: name.trim());
+    return notifier.saveDesign(
+      forceName: name.trim(),
+      composePreviewBytes: await _captureHeroPng(),
+    );
   }
 
   String _toHex(Color color) {
@@ -703,6 +774,17 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                   _shareToCommunity(context);
                 },
               ),
+              if (ref.read(editorProvider).remoteDesignId?.trim().isNotEmpty ==
+                  true)
+                ListTile(
+                  leading: const Icon(Icons.storefront_outlined),
+                  title: const Text('Publish & earn'),
+                  subtitle: const Text('List on orderable Showcase'),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _publishToShowcase(context);
+                  },
+                ),
             ],
           ),
         );
@@ -751,6 +833,59 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Saved to ${file.path}')),
+      );
+    } finally {
+      if (mounted) _sharing = false;
+    }
+  }
+
+  Future<void> _publishToShowcase(BuildContext context) async {
+    if (_sharing) return;
+    _sharing = true;
+    try {
+      var editor = ref.read(editorProvider);
+      var designId = editor.remoteDesignId?.trim();
+      if (designId == null || designId.isEmpty) {
+        final saved = await _persistCurrentDesign(context);
+        if (!mounted || !saved.success) return;
+        editor = ref.read(editorProvider);
+        designId = editor.remoteDesignId?.trim();
+      }
+      if (!mounted) return;
+      if (designId == null || designId.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Save the design before publishing.')),
+        );
+        return;
+      }
+      final design = GarmentDesign(
+        id: designId,
+        name: editor.designName,
+        garmentType: editor.garmentType.toString().split('.').last,
+        primaryColour: _toHex(editor.primaryColour),
+      );
+      final confirmed = await showPublishShowcaseDialog(
+        context,
+        design: design,
+        commissionPct: 10,
+      );
+      if (confirmed != true || !mounted) return;
+      final result =
+          await ref.read(designsRepositoryProvider).publishDesign(designId);
+      if (!mounted) return;
+      result.fold(
+        (e) => ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              designErrorMessage(e, fallback: 'Could not publish design.'),
+            ),
+          ),
+        ),
+        (payload) => notifyShowcasePublishSuccess(
+          ref,
+          context,
+          commissionPct: payload.commissionPct,
+        ),
       );
     } finally {
       if (mounted) _sharing = false;

@@ -18,6 +18,8 @@ export type Env = {
   APP_ALLOWED_ORIGINS?: string;
   ADMIN_HMAC_SECRET?: string;
   INTERNAL_SYNC_SECRET?: string;
+  /** Percentage paid to designers on showcase orders (default 10). */
+  DESIGNER_COMMISSION_PCT?: string;
 };
 
 export type AppVariables = {

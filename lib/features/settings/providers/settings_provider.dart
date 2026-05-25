@@ -134,6 +134,11 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
       await _persistPush(enabled: true);
       state = state.copyWith(pushEnabled: true);
 
+      final auth = _ref.read(authProvider);
+      if (auth case AsyncData(:final value) when value is AuthAuthenticated) {
+        await linkOneSignalUser(value.user.id);
+      }
+
       final playerId = await currentPlayerId();
       if (playerId != null && playerId.isNotEmpty) {
         final auth = _ref.read(authProvider);

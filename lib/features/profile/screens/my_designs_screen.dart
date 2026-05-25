@@ -6,10 +6,14 @@ import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
-import 'package:lolipants/features/editor/data/bundled_design_assets.dart';
+import 'package:lolipants/features/community/utils/publish_showcase_feedback.dart';
+import 'package:lolipants/features/community/widgets/publish_showcase_dialog.dart';
+import 'package:lolipants/features/editor/providers/designs_providers.dart';
 import 'package:lolipants/features/editor/data/editor_design_restore.dart';
 import 'package:lolipants/features/editor/models/garment_design.dart';
+import 'package:lolipants/features/editor/providers/design_catalog_providers.dart';
 import 'package:lolipants/features/editor/providers/designs_providers.dart';
+import 'package:lolipants/features/editor/utils/ai_colour_parse.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
 import 'package:lolipants/shared/widgets/catalog_image.dart';
 import 'package:lolipants/shared/widgets/loading_overlay.dart';
@@ -76,6 +80,8 @@ class _MyDesignsScreenState extends ConsumerState<MyDesignsScreen> {
                         deleting: _deletingDesignId == design.id,
                         onTap: () => _openDesign(design),
                         onDelete: () => _confirmDelete(design),
+                        onPublish: () => _publishDesign(design),
+                        onUnpublish: () => _unpublishDesign(design),
                       );
                     },
                   ),
@@ -129,6 +135,60 @@ class _MyDesignsScreenState extends ConsumerState<MyDesignsScreen> {
         ref.read(myDesignsProvider.notifier).reload();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Design deleted')),
+        );
+      },
+    );
+  }
+
+  Future<void> _publishDesign(GarmentDesign design) async {
+    final preview = designPreviewImageSource(design);
+    final confirmed = await showPublishShowcaseDialog(
+      context,
+      design: design,
+      commissionPct: 10,
+      previewImageUrl: preview?.source.startsWith('http') == true
+          ? preview!.source
+          : null,
+    );
+    if (confirmed != true || !mounted) return;
+    final repo = ref.read(designsRepositoryProvider);
+    final result = await repo.publishDesign(design.id);
+    if (!mounted) return;
+    result.fold(
+      (e) => ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            designErrorMessage(e, fallback: 'Could not publish design.'),
+          ),
+        ),
+      ),
+      (payload) {
+        ref.read(myDesignsProvider.notifier).reload();
+        notifyShowcasePublishSuccess(
+          ref,
+          context,
+          commissionPct: payload.commissionPct,
+        );
+      },
+    );
+  }
+
+  Future<void> _unpublishDesign(GarmentDesign design) async {
+    final repo = ref.read(designsRepositoryProvider);
+    final result = await repo.unpublishDesign(design.id);
+    if (!mounted) return;
+    result.fold(
+      (e) => ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            designErrorMessage(e, fallback: 'Could not unpublish design.'),
+          ),
+        ),
+      ),
+      (_) {
+        ref.read(myDesignsProvider.notifier).reload();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Removed from Showcase')),
         );
       },
     );
@@ -246,12 +306,16 @@ class _DesignTile extends StatelessWidget {
     required this.design,
     required this.onTap,
     required this.onDelete,
+    required this.onPublish,
+    required this.onUnpublish,
     this.deleting = false,
   });
 
   final GarmentDesign design;
   final VoidCallback onTap;
   final VoidCallback onDelete;
+  final VoidCallback onPublish;
+  final VoidCallback onUnpublish;
   final bool deleting;
 
   @override
@@ -312,9 +376,21 @@ class _DesignTile extends StatelessWidget {
                       padding: EdgeInsets.zero,
                       onSelected: (value) {
                         if (value == 'delete') onDelete();
+                        if (value == 'publish') onPublish();
+                        if (value == 'unpublish') onUnpublish();
                       },
-                      itemBuilder: (context) => const [
-                        PopupMenuItem<String>(
+                      itemBuilder: (context) => [
+                        if (!design.isPublic)
+                          const PopupMenuItem<String>(
+                            value: 'publish',
+                            child: Text('Publish to Showcase'),
+                          ),
+                        if (design.isPublic)
+                          const PopupMenuItem<String>(
+                            value: 'unpublish',
+                            child: Text('Unpublish'),
+                          ),
+                        const PopupMenuItem<String>(
                           value: 'delete',
                           child: Text('Delete'),
                         ),
@@ -334,70 +410,79 @@ class _DesignTile extends StatelessWidget {
   }
 }
 
-/// Prefer remote print/sketch URLs, then bundled flat from [GarmentDesign.renderMetadata].
-class _DesignThumbnail extends StatelessWidget {
+/// Prefer AI look, compose capture, flat-lay, or catalogue asset for the tile.
+class _DesignThumbnail extends ConsumerWidget {
   const _DesignThumbnail({required this.design});
 
   final GarmentDesign design;
 
-  static String? _firstHttpUrl(String? a, String? b, [String? c]) {
-    for (final u in [a, b, c]) {
-      final s = u?.trim();
-      if (s != null && s.isNotEmpty && s.startsWith('http')) return s;
-    }
-    return null;
-  }
-
   @override
-  Widget build(BuildContext context) {
-    final refined = aiRefinedLookUrlFromRenderMetadata(design.renderMetadata);
-    final remote = _firstHttpUrl(
-      refined,
-      design.printImageUrl,
-      design.sketchImageUrl,
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cmsLookup = ref.watch(designCatalogLookupProvider);
+    final preview = designPreviewImageSource(
+      design,
+      cmsLookup: cmsLookup,
     );
-    if (remote != null) {
-      return CachedNetworkImage(
-        imageUrl: remote,
-        fit: BoxFit.cover,
-        width: double.infinity,
-        height: double.infinity,
-        placeholder: (_, __) => const Center(
-          child: SizedBox(
-            width: 24,
-            height: 24,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          ),
-        ),
-        errorWidget: (_, __, ___) => const _ThumbnailPlaceholder(),
-      );
+    final fit = preview?.contain == true ? BoxFit.contain : BoxFit.cover;
+
+    if (preview != null) {
+      final source = preview.source;
+      final image = source.startsWith('http')
+          ? CachedNetworkImage(
+              imageUrl: source,
+              fit: fit,
+              width: double.infinity,
+              height: double.infinity,
+              placeholder: (_, __) => const Center(
+                child: SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+              errorWidget: (_, __, ___) => _ThumbnailPlaceholder(
+                primaryColour: design.primaryColour,
+              ),
+            )
+          : CatalogImage(
+              path: source,
+              fit: fit,
+              width: double.infinity,
+              height: double.infinity,
+              alignment: Alignment.bottomCenter,
+              errorWidget: _ThumbnailPlaceholder(
+                primaryColour: design.primaryColour,
+              ),
+            );
+      if (preview.contain) {
+        return ColoredBox(
+          color: Colors.white,
+          child: image,
+        );
+      }
+      return image;
     }
 
-    final assetPath =
-        catalogDesignAssetFromRenderMetadata(design.renderMetadata);
-    if (assetPath != null) {
-      return CatalogImage(
-        path: assetPath,
-        fit: BoxFit.cover,
-        width: double.infinity,
-        height: double.infinity,
-        errorWidget: const _ThumbnailPlaceholder(),
-      );
-    }
-
-    return const _ThumbnailPlaceholder();
+    return _ThumbnailPlaceholder(primaryColour: design.primaryColour);
   }
 }
 
 class _ThumbnailPlaceholder extends StatelessWidget {
-  const _ThumbnailPlaceholder();
+  const _ThumbnailPlaceholder({required this.primaryColour});
+
+  final String primaryColour;
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: Icon(
-        Icons.design_services_outlined,
-        color: AppColors.gold,
+    final tint = parseAiColour(primaryColour, fallback: AppColors.teal);
+    return ColoredBox(
+      color: tint.withValues(alpha: 0.35),
+      child: Center(
+        child: Icon(
+          Icons.checkroom_outlined,
+          color: tint,
+          size: 32,
+        ),
       ),
     );
   }

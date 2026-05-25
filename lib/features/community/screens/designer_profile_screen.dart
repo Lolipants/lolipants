@@ -8,6 +8,7 @@ import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/features/community/models/designer_profile.dart';
 import 'package:lolipants/features/community/models/showcase_item.dart';
 import 'package:lolipants/features/community/providers/community_providers.dart';
+import 'package:lolipants/features/community/utils/showcase_order.dart';
 import 'package:lolipants/features/community/widgets/showcase_card.dart';
 import 'package:lolipants/features/community/widgets/user_avatar.dart';
 import 'package:lolipants/features/orders/models/order_design_draft.dart';
@@ -224,7 +225,7 @@ class _Body extends ConsumerWidget {
                   crossAxisCount: crossCount,
                   mainAxisSpacing: AppSpacing.md,
                   crossAxisSpacing: AppSpacing.md,
-                  childAspectRatio: 0.62,
+                  childAspectRatio: kShowcaseGridAspectRatio,
                 ),
                 delegate: SliverChildBuilderDelegate(
                   (context, index) {

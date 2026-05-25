@@ -1,3 +1,6 @@
+import 'dart:io' show Platform;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -8,6 +11,7 @@ import 'package:lolipants/core/router/role_routing.dart';
 import 'package:lolipants/features/auth/providers/auth_providers.dart';
 import 'package:lolipants/features/auth/utils/auth_env.dart';
 import 'package:lolipants/features/auth/utils/auth_error_mapper.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 /// Row of social login / email-OTP buttons shown above the email/password
 /// form on both the login and signup screens.
@@ -27,10 +31,66 @@ class SocialAuthRow extends ConsumerStatefulWidget {
 
 class _SocialAuthRowState extends ConsumerState<SocialAuthRow> {
   bool _busy = false;
+  bool _appleAvailable = false;
 
   /// Synchronous guard: two taps before the first [setState] can both pass
   /// `if (_busy)` and start two sign-in attempts.
   bool _googleFlowEntered = false;
+  bool _appleFlowEntered = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _probeAppleAvailability();
+  }
+
+  Future<void> _probeAppleAvailability() async {
+    if (kIsWeb) {
+      return;
+    }
+    if (!Platform.isIOS && !Platform.isMacOS) {
+      return;
+    }
+    final available = await SignInWithApple.isAvailable();
+    if (!mounted) {
+      return;
+    }
+    setState(() => _appleAvailable = available);
+  }
+
+  Future<void> _runApple() async {
+    if (_busy || _appleFlowEntered) return;
+    _appleFlowEntered = true;
+    final envMsg = missingBetterAuthBaseUrlMessage();
+    if (envMsg != null) {
+      _appleFlowEntered = false;
+      widget.onError?.call(envMsg);
+      return;
+    }
+    setState(() => _busy = true);
+    try {
+      final result =
+          await ref.read(authProvider.notifier).signInWithApple();
+      if (!mounted) return;
+      result.fold(
+        (e) {
+          if (e is AuthException && e.message == 'oauth_in_progress') {
+            return;
+          }
+          final msg = mapAuthExceptionToUserMessage(e);
+          widget.onError?.call(msg);
+        },
+        (user) {
+          final returnTo = ref.read(pendingAuthReturnToProvider);
+          ref.read(pendingAuthReturnToProvider.notifier).state = null;
+          context.go(postAuthLocation(user, returnTo));
+        },
+      );
+    } finally {
+      _appleFlowEntered = false;
+      if (mounted) setState(() => _busy = false);
+    }
+  }
 
   Future<void> _runGoogle() async {
     if (_busy || _googleFlowEntered) return;
@@ -77,6 +137,16 @@ class _SocialAuthRowState extends ConsumerState<SocialAuthRow> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (_appleAvailable) ...[
+          SignInWithAppleButton(
+            onPressed: _busy ? () {} : _runApple,
+            style: SignInWithAppleButtonStyle.white,
+            height: 52,
+            borderRadius: BorderRadius.circular(14),
+            text: 'Continue with Apple',
+          ),
+          const SizedBox(height: AppSpacing.sm),
+        ],
         _SocialButton(
           label: 'Continue with Google',
           leading: _googleBrandIcon(),

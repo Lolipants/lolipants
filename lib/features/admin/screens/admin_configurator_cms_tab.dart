@@ -7,7 +7,43 @@ import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/features/admin/providers/admin_providers.dart';
+import 'package:lolipants/features/admin/utils/admin_cms_helpers.dart';
 import 'package:lolipants/features/editor/providers/designs_providers.dart';
+
+/// Selectable parent row for template/slot filter and create forms.
+class _ParentOption {
+  const _ParentOption({required this.id, required this.label});
+
+  final String id;
+  final String label;
+}
+
+List<_ParentOption> _templateOptions(List<Map<String, dynamic>> rows) {
+  return rows
+      .map((row) {
+        final id = row['id']?.toString() ?? '';
+        if (id.isEmpty) return null;
+        final name = row['name_en']?.toString().trim();
+        final label = (name != null && name.isNotEmpty) ? '$name ($id)' : id;
+        return _ParentOption(id: id, label: label);
+      })
+      .whereType<_ParentOption>()
+      .toList(growable: false);
+}
+
+List<_ParentOption> _slotOptions(List<Map<String, dynamic>> rows) {
+  return rows
+      .map((row) {
+        final id = row['id']?.toString() ?? '';
+        if (id.isEmpty) return null;
+        final title = row['title_en']?.toString().trim();
+        final key = row['slot_key']?.toString().trim();
+        final prefix = title ?? key ?? id;
+        return _ParentOption(id: id, label: '$prefix ($id)');
+      })
+      .whereType<_ParentOption>()
+      .toList(growable: false);
+}
 
 /// CMS for configurator templates, slots, and options.
 class AdminConfiguratorCmsTab extends ConsumerStatefulWidget {
@@ -48,6 +84,25 @@ class _AdminConfiguratorCmsTabState extends ConsumerState<AdminConfiguratorCmsTa
   @override
   Widget build(BuildContext context) {
     final resource = _resources[_tabs.index];
+    final templates = ref
+            .watch(
+              adminConfiguratorListProvider(
+                const AdminConfiguratorFilter(resource: 'configurator_templates'),
+              ),
+            )
+            .valueOrNull ??
+        const [];
+    final slots = ref
+            .watch(
+              adminConfiguratorListProvider(
+                AdminConfiguratorFilter(
+                  resource: 'configurator_slots',
+                  templateId: _filterTemplateId,
+                ),
+              ),
+            )
+            .valueOrNull ??
+        const [];
     return Column(
       children: [
         Material(
@@ -86,7 +141,13 @@ class _AdminConfiguratorCmsTabState extends ConsumerState<AdminConfiguratorCmsTa
           padding: const EdgeInsets.all(AppSpacing.md),
           child: FloatingActionButton.extended(
             heroTag: 'cfg-add-$resource',
-            onPressed: () => _openForm(context, resource, null),
+            onPressed: () => _openForm(
+              context,
+              resource,
+              null,
+              templates: templates,
+              slots: slots,
+            ),
             icon: const Icon(Icons.add),
             label: const Text('New'),
           ),
@@ -120,37 +181,25 @@ class _AdminConfiguratorCmsTabState extends ConsumerState<AdminConfiguratorCmsTa
       children: [
         if (resource == 'configurator_slots')
           _ParentFilterBar(
-            label: 'Template id',
+            label: 'Template',
             value: _filterTemplateId,
-            items: templatesAsync.valueOrNull
-                    ?.map((r) => r['id']?.toString() ?? '')
-                    .where((id) => id.isNotEmpty)
-                    .toList(growable: false) ??
-                const [],
+            options: _templateOptions(templatesAsync.valueOrNull ?? const []),
             onChanged: (v) => setState(() => _filterTemplateId = v),
           ),
         if (resource == 'configurator_options') ...[
           _ParentFilterBar(
-            label: 'Template id',
+            label: 'Template',
             value: _filterTemplateId,
-            items: templatesAsync.valueOrNull
-                    ?.map((r) => r['id']?.toString() ?? '')
-                    .where((id) => id.isNotEmpty)
-                    .toList(growable: false) ??
-                const [],
+            options: _templateOptions(templatesAsync.valueOrNull ?? const []),
             onChanged: (v) => setState(() {
               _filterTemplateId = v;
               _filterSlotId = null;
             }),
           ),
           _ParentFilterBar(
-            label: 'Slot id',
+            label: 'Slot',
             value: _filterSlotId,
-            items: slotsAsync.valueOrNull
-                    ?.map((r) => r['id']?.toString() ?? '')
-                    .where((id) => id.isNotEmpty)
-                    .toList(growable: false) ??
-                const [],
+            options: _slotOptions(slotsAsync.valueOrNull ?? const []),
             onChanged: (v) => setState(() => _filterSlotId = v),
           ),
         ],
@@ -186,7 +235,13 @@ class _AdminConfiguratorCmsTabState extends ConsumerState<AdminConfiguratorCmsTa
                   itemBuilder: (context, i) => _ConfiguratorRow(
                     resource: resource,
                     data: rows[i],
-                    onEdit: () => _openForm(context, resource, rows[i]),
+                    onEdit: () => _openForm(
+                      context,
+                      resource,
+                      rows[i],
+                      templates: templatesAsync.valueOrNull ?? const [],
+                      slots: slotsAsync.valueOrNull ?? const [],
+                    ),
                     onChanged: () =>
                         ref.invalidate(adminConfiguratorListProvider(filter)),
                   ),
@@ -202,13 +257,19 @@ class _AdminConfiguratorCmsTabState extends ConsumerState<AdminConfiguratorCmsTa
   Future<void> _openForm(
     BuildContext context,
     String resource,
-    Map<String, dynamic>? existing,
-  ) async {
+    Map<String, dynamic>? existing, {
+    required List<Map<String, dynamic>> templates,
+    required List<Map<String, dynamic>> slots,
+  }) async {
     final saved = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (_) => _ConfiguratorFormDialog(
         resource: resource,
         initial: existing,
+        templateOptions: _templateOptions(templates),
+        slotOptions: _slotOptions(slots),
+        defaultTemplateId: _filterTemplateId,
+        defaultSlotId: _filterSlotId,
       ),
     );
     if (saved == null || !context.mounted) return;
@@ -228,10 +289,11 @@ class _AdminConfiguratorCmsTabState extends ConsumerState<AdminConfiguratorCmsTa
           );
     if (!context.mounted) return;
     result.fold(
-      (err) => _snack(context, 'Failed: ${err.runtimeType}'),
+      (err) => _snack(context, formatAdminCmsError(err)),
       (_) {
         _snack(context, existing == null ? 'Created' : 'Updated');
         ref.invalidate(adminConfiguratorListProvider(filter));
+        invalidatePublicCmsCache(ref, resource);
       },
     );
   }
@@ -246,17 +308,18 @@ class _ParentFilterBar extends StatelessWidget {
   const _ParentFilterBar({
     required this.label,
     required this.value,
-    required this.items,
+    required this.options,
     required this.onChanged,
   });
 
   final String label;
   final String? value;
-  final List<String> items;
+  final List<_ParentOption> options;
   final ValueChanged<String?> onChanged;
 
   @override
   Widget build(BuildContext context) {
+    final ids = options.map((o) => o.id).toList(growable: false);
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
@@ -269,12 +332,15 @@ class _ParentFilterBar extends StatelessWidget {
           Expanded(
             child: DropdownButton<String?>(
               isExpanded: true,
-              value: value != null && items.contains(value) ? value : null,
+              value: value != null && ids.contains(value) ? value : null,
               hint: const Text('All'),
               items: [
-                const DropdownMenuItem<String?>(child: Text('All')),
-                for (final id in items)
-                  DropdownMenuItem(value: id, child: Text(id)),
+                const DropdownMenuItem<String?>(value: null, child: Text('All')),
+                for (final option in options)
+                  DropdownMenuItem(
+                    value: option.id,
+                    child: Text(option.label, overflow: TextOverflow.ellipsis),
+                  ),
               ],
               onChanged: onChanged,
             ),
@@ -313,7 +379,12 @@ class _ConfiguratorRow extends ConsumerWidget {
             ? SizedBox(
                 width: 48,
                 height: 48,
-                child: CachedNetworkImage(imageUrl: thumb, fit: BoxFit.cover),
+                child: CachedNetworkImage(
+                  imageUrl: thumb,
+                  fit: BoxFit.cover,
+                  errorWidget: (_, __, ___) =>
+                      const Icon(Icons.broken_image_outlined),
+                ),
               )
             : const Icon(Icons.layers_outlined),
         title: Text(title, style: AppTextStyles.bodyMedium),
@@ -365,22 +436,34 @@ class _ConfiguratorRow extends ConsumerWidget {
     if (!context.mounted) return;
     res.fold(
       (err) => ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed: ${err.runtimeType}')),
+        SnackBar(content: Text(formatAdminCmsError(err))),
       ),
       (_) {
         ScaffoldMessenger.of(context)
             .showSnackBar(const SnackBar(content: Text('Deleted')));
         onChanged();
+        invalidatePublicCmsCache(ref, resource);
       },
     );
   }
 }
 
 class _ConfiguratorFormDialog extends ConsumerStatefulWidget {
-  const _ConfiguratorFormDialog({required this.resource, this.initial});
+  const _ConfiguratorFormDialog({
+    required this.resource,
+    this.initial,
+    this.templateOptions = const [],
+    this.slotOptions = const [],
+    this.defaultTemplateId,
+    this.defaultSlotId,
+  });
 
   final String resource;
   final Map<String, dynamic>? initial;
+  final List<_ParentOption> templateOptions;
+  final List<_ParentOption> slotOptions;
+  final String? defaultTemplateId;
+  final String? defaultSlotId;
 
   @override
   ConsumerState<_ConfiguratorFormDialog> createState() =>
@@ -393,6 +476,8 @@ class _ConfiguratorFormDialogState
   final Map<String, bool> _bools = {};
   String? _imageUrl;
   bool _uploading = false;
+  String? _selectedTemplateId;
+  String? _selectedSlotId;
 
   List<_CfgField> get _fields {
     switch (widget.resource) {
@@ -409,7 +494,7 @@ class _ConfiguratorFormDialogState
         ];
       case 'configurator_slots':
         return const [
-          _CfgField('template_id', 'Template id'),
+          _CfgField('template_id', 'Template'),
           _CfgField('slot_key', 'Slot key'),
           _CfgField('title_en', 'Title (EN)'),
           _CfgField('title_ar', 'Title (AR)'),
@@ -419,7 +504,7 @@ class _ConfiguratorFormDialogState
       case 'configurator_options':
       default:
         return const [
-          _CfgField('slot_id', 'Slot id'),
+          _CfgField('slot_id', 'Slot'),
           _CfgField('option_key', 'Option key'),
           _CfgField('label_en', 'Label (EN)'),
           _CfgField('label_ar', 'Label (AR)'),
@@ -435,12 +520,18 @@ class _ConfiguratorFormDialogState
   void initState() {
     super.initState();
     _controllers = {};
+    _selectedTemplateId = widget.initial?['template_id']?.toString() ??
+        widget.defaultTemplateId;
+    _selectedSlotId =
+        widget.initial?['slot_id']?.toString() ?? widget.defaultSlotId;
     for (final f in _fields) {
       if (f.isBool) {
         final v = widget.initial?[f.key];
         _bools[f.key] = v == 1 || v == true;
       } else if (f.isImage) {
         _imageUrl = widget.initial?['asset_url']?.toString();
+      } else if (f.key == 'template_id' || f.key == 'slot_id') {
+        continue;
       } else {
         _controllers[f.key] = TextEditingController(
           text: widget.initial?[f.key]?.toString() ?? '',
@@ -483,6 +574,10 @@ class _ConfiguratorFormDialogState
                           imageUrl: _imageUrl!,
                           height: 80,
                           fit: BoxFit.contain,
+                          errorWidget: (_, __, ___) => const SizedBox(
+                            height: 80,
+                            child: Center(child: Icon(Icons.broken_image_outlined)),
+                          ),
                         ),
                       Row(
                         children: [
@@ -543,10 +638,30 @@ class _ConfiguratorFormDialogState
                       ),
                     ],
                   )
+                else if (f.key == 'template_id' &&
+                    widget.resource == 'configurator_slots')
+                  _parentDropdown(
+                    label: f.label,
+                    value: _selectedTemplateId,
+                    options: widget.templateOptions,
+                    onChanged: (v) => setState(() => _selectedTemplateId = v),
+                  )
+                else if (f.key == 'slot_id' &&
+                    widget.resource == 'configurator_options')
+                  _parentDropdown(
+                    label: f.label,
+                    value: _selectedSlotId,
+                    options: widget.slotOptions,
+                    onChanged: (v) => setState(() => _selectedSlotId = v),
+                  )
+                else if (f.key == 'template_id' || f.key == 'slot_id')
+                  const SizedBox.shrink()
                 else
                   TextField(
                     controller: _controllers[f.key],
                     decoration: InputDecoration(labelText: f.label),
+                    keyboardType:
+                        f.isNumber ? TextInputType.number : TextInputType.text,
                   ),
                 const SizedBox(height: AppSpacing.sm),
               ],
@@ -561,6 +676,29 @@ class _ConfiguratorFormDialogState
         ),
         FilledButton(onPressed: _submit, child: const Text('Save')),
       ],
+    );
+  }
+
+  Widget _parentDropdown({
+    required String label,
+    required String? value,
+    required List<_ParentOption> options,
+    required ValueChanged<String?> onChanged,
+  }) {
+    final ids = options.map((o) => o.id).toList(growable: false);
+    final resolved = value != null && ids.contains(value) ? value : null;
+    return DropdownButtonFormField<String>(
+      decoration: InputDecoration(labelText: label),
+      isExpanded: true,
+      value: resolved,
+      items: [
+        for (final option in options)
+          DropdownMenuItem(
+            value: option.id,
+            child: Text(option.label, overflow: TextOverflow.ellipsis),
+          ),
+      ],
+      onChanged: options.isEmpty ? null : onChanged,
     );
   }
 
@@ -581,13 +719,23 @@ class _ConfiguratorFormDialogState
               filename: file.name,
             );
         if (!mounted) return;
-        res.fold((_) {}, (url) => setState(() => _imageUrl = url));
+        res.fold(
+          (err) => ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(formatAdminCmsError(err))),
+          ),
+          (url) => setState(() => _imageUrl = url),
+        );
       } else {
         final res = await ref
             .read(designsRepositoryProvider)
             .uploadPrintImage(filePath: file.path);
         if (!mounted) return;
-        res.fold((_) {}, (url) => setState(() => _imageUrl = url));
+        res.fold(
+          (err) => ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(formatAdminCmsError(err))),
+          ),
+          (url) => setState(() => _imageUrl = url),
+        );
       }
     } finally {
       if (mounted) setState(() => _uploading = false);
@@ -596,6 +744,16 @@ class _ConfiguratorFormDialogState
 
   void _submit() {
     final out = <String, dynamic>{};
+    if (widget.resource == 'configurator_slots' &&
+        _selectedTemplateId != null &&
+        _selectedTemplateId!.isNotEmpty) {
+      out['template_id'] = _selectedTemplateId;
+    }
+    if (widget.resource == 'configurator_options' &&
+        _selectedSlotId != null &&
+        _selectedSlotId!.isNotEmpty) {
+      out['slot_id'] = _selectedSlotId;
+    }
     for (final f in _fields) {
       if (f.isBool) {
         out[f.key] = (_bools[f.key] ?? false) ? 1 : 0;

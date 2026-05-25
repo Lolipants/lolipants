@@ -86,6 +86,25 @@ const Set<String> kLocalBundledMannequinIds = {
   'custom_photo',
 };
 
+/// Maps editor mannequin id to a v1 catalogue id stored in `mannequin_options`.
+String? canonicalMannequinIdForApi(String mannequinId) {
+  var key = mannequinId.trim().toLowerCase();
+  if (key.isEmpty || key == 'custom_photo') return null;
+  if (key.endsWith('.png')) {
+    key = key.substring(0, key.length - 4);
+  }
+  for (final m in kVersionMannequinCatalog) {
+    if (m.id == key) return m.id;
+  }
+  if (!kBuiltInMannequinAssets.containsKey(key)) {
+    return mannequinId.trim();
+  }
+  if (key.contains('male') && !key.contains('female')) {
+    return key.contains('slim') ? 'slim_male' : 'standard_male';
+  }
+  return key == 'petite_female' || key == 'child' ? 'petite_female' : 'standard_female';
+}
+
 /// Asset path for [mannequinId], or null if none (vector-only silhouette).
 String? builtInMannequinAssetPath(String mannequinId) {
   var key = mannequinId.trim().toLowerCase();

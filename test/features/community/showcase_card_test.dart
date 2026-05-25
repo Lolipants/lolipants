@@ -30,6 +30,7 @@ void main() {
           body: Center(
             child: SizedBox(
               width: 300,
+              height: 420,
               child: ShowcaseCard(
                 item: _item(),
                 onTap: () {},
@@ -59,6 +60,7 @@ void main() {
           body: Center(
             child: SizedBox(
               width: 300,
+              height: 420,
               child: ShowcaseCard(
                 item: _item(pro: false),
                 onTap: () => opens += 1,

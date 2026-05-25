@@ -24,6 +24,7 @@ class ShowcaseCard extends StatelessWidget {
     required this.item,
     required this.onTap,
     required this.onOrder,
+    this.compact = false,
     super.key,
   });
 
@@ -36,10 +37,22 @@ class ShowcaseCard extends StatelessWidget {
   /// Called when the "Order this" button is tapped.
   final VoidCallback onOrder;
 
+  /// Tighter footer spacing for horizontal feed strips.
+  final bool compact;
+
   @override
   Widget build(BuildContext context) {
     final primary = parseHexColour(item.primaryColour);
     final accent = parseHexColour(item.accentColour, fallback: primary);
+    final footerPadding = compact
+        ? const EdgeInsets.fromLTRB(
+            AppSpacing.sm,
+            AppSpacing.xs,
+            AppSpacing.sm,
+            AppSpacing.sm,
+          )
+        : const EdgeInsets.all(AppSpacing.md);
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -50,36 +63,40 @@ class ShowcaseCard extends StatelessWidget {
           border: Border.all(color: AppColors.borderSubtle),
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            AspectRatio(
-              aspectRatio: 3 / 4,
+            Expanded(
               child: ClipRRect(
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(AppRadius.lg),
                 ),
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [primary, accent],
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [primary, accent],
+                        ),
+                      ),
                     ),
-                  ),
-                  child: item.previewImageUrl != null
-                      ? CachedNetworkImage(
-                          imageUrl: item.previewImageUrl!,
-                          fit: BoxFit.cover,
-                          errorWidget: (_, __, ___) => const SizedBox.shrink(),
-                        )
-                      : const SizedBox.shrink(),
+                    if (item.previewImageUrl != null)
+                      CachedNetworkImage(
+                        imageUrl: item.previewImageUrl!,
+                        fit: BoxFit.cover,
+                        errorWidget: (_, __, ___) => const SizedBox.shrink(),
+                      ),
+                  ],
                 ),
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(AppSpacing.md),
+              padding: footerPadding,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     item.name,
@@ -87,18 +104,24 @@ class ShowcaseCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    item.garmentType,
-                    style: AppTextStyles.bodySmall,
-                  ),
-                  const SizedBox(height: 4),
+                  if (!compact) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      item.garmentType,
+                      style: AppTextStyles.bodySmall,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                  SizedBox(height: compact ? 2 : 4),
                   Row(
                     children: [
                       Expanded(
                         child: Text(
                           'by ${item.designer.name}',
-                          style: AppTextStyles.bodyMedium,
+                          style: compact
+                              ? AppTextStyles.bodySmall
+                              : AppTextStyles.bodyMedium,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -111,7 +134,7 @@ class ShowcaseCard extends StatelessWidget {
                         ),
                     ],
                   ),
-                  const SizedBox(height: AppSpacing.sm),
+                  SizedBox(height: compact ? AppSpacing.xs : AppSpacing.sm),
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton(
@@ -122,9 +145,20 @@ class ShowcaseCard extends StatelessWidget {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(AppRadius.pill),
                         ),
-                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        padding: EdgeInsets.symmetric(
+                          vertical: compact ? 4 : 6,
+                        ),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
-                      child: const Text('Order this'),
+                      child: Text(
+                        'Order this',
+                        style: compact
+                            ? AppTextStyles.bodySmall.copyWith(
+                                color: AppColors.gold,
+                              )
+                            : null,
+                      ),
                     ),
                   ),
                 ],

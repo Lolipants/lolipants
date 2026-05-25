@@ -62,9 +62,9 @@ showcaseRoutes.get("/", async (c) => {
   }
 
   const orderBy = {
-    newest: "d.created_at DESC",
+    newest: "COALESCE(d.published_at, d.created_at) DESC",
     most_ordered: "d.order_count DESC, d.created_at DESC",
-    trending: "trending_score DESC, d.created_at DESC",
+    trending: "trending_score DESC, COALESCE(d.published_at, d.created_at) DESC",
   }[sort];
 
   const sql = `

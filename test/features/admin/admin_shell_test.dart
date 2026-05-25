@@ -43,7 +43,7 @@ class _Page extends StatelessWidget {
 
 void main() {
   testWidgets('super admin sees every dashboard tab', (tester) async {
-    tester.view.physicalSize = const Size(400, 900);
+    tester.view.physicalSize = const Size(1200, 900);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
 
@@ -67,9 +67,10 @@ void main() {
     );
     await tester.pump();
 
+    expect(find.text('Overview'), findsAtLeastNWidgets(1));
     for (final label in [
-      'Stats',
       'Users',
+      'Role requests',
       'Orders',
       'Payouts',
       'Moderation',
@@ -80,9 +81,9 @@ void main() {
     }
   });
 
-  testWidgets('scoped admin only sees allowed tabs + the always-visible stats',
+  testWidgets('scoped admin only sees allowed tabs + the always-visible overview',
       (tester) async {
-    tester.view.physicalSize = const Size(400, 900);
+    tester.view.physicalSize = const Size(1200, 900);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
 
@@ -106,7 +107,7 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text('Stats'), findsOneWidget);
+    expect(find.text('Overview'), findsAtLeastNWidgets(1));
     expect(find.text('Users'), findsOneWidget);
     expect(find.text('Payouts'), findsOneWidget);
     expect(find.text('Orders'), findsNothing);

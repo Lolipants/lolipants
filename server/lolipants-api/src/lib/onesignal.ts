@@ -108,3 +108,45 @@ export const orderStatusTemplates: Record<
     },
   },
 };
+
+/** Push templates for quote negotiation lifecycle. */
+export const quoteNegotiationTemplates: Record<
+  string,
+  { headings: PushHeadings; contents: PushPayload }
+> = {
+  quote_negotiation_received: {
+    headings: { en: "Price request", ar: "طلب سعر" },
+    contents: {
+      en: "A customer sent a price offer for your review.",
+      ar: "أرسل عميل عرض سعر للمراجعة.",
+    },
+  },
+  quote_negotiation_counter: {
+    headings: { en: "Counter offer", ar: "عرض مضاد" },
+    contents: {
+      en: "The tailor sent a counter offer on your price request.",
+      ar: "أرسل الخياط عرضًا مضادًا على طلب السعر.",
+    },
+  },
+  quote_negotiation_accepted: {
+    headings: { en: "Price agreed", ar: "تم الاتفاق على السعر" },
+    contents: {
+      en: "Your negotiated price was accepted. Continue to checkout.",
+      ar: "تم قبول السعر المتفاوض عليه. أكمل عملية الدفع.",
+    },
+  },
+  quote_negotiation_message: {
+    headings: { en: "Price negotiation", ar: "تفاوض السعر" },
+    contents: {
+      en: "You have a new message about a price offer.",
+      ar: "لديك رسالة جديدة بخصوص عرض السعر.",
+    },
+  },
+  quote_negotiation_declined: {
+    headings: { en: "Offer declined", ar: "تم رفض العرض" },
+    contents: {
+      en: "A price negotiation was declined.",
+      ar: "تم رفض التفاوض على السعر.",
+    },
+  },
+};

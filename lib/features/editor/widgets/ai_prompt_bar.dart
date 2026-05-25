@@ -7,6 +7,7 @@ import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/features/auth/providers/auth_providers.dart';
 import 'package:lolipants/features/editor/data/ai_design_service.dart';
+import 'package:lolipants/features/editor/data/built_in_mannequin_assets.dart';
 import 'package:lolipants/core/preferences/design_gender_defaults.dart';
 import 'package:lolipants/core/preferences/user_gender_provider.dart';
 import 'package:lolipants/features/editor/models/garment_design_suggestion.dart';
@@ -306,16 +307,30 @@ class _AiPromptBarState extends ConsumerState<AiPromptBar> {
     _applyGenderDefaults(resolved);
 
     final mannequinId = mannequinIdForGender(resolved);
+    final prompt = _promptController.text.trim();
     final repo = ref.read(designsRepositoryProvider);
     final result = await repo.createDesign(
       payload: {
         'name': 'AI Draft',
         'garmentType': _garmentType,
-        'mannequinId': mannequinId,
+        'mannequinId': canonicalMannequinIdForApi(mannequinId) ?? mannequinId,
         'primaryColour': suggestion.primaryColour,
         'accentColour': suggestion.accentColour,
         'fabricId': suggestion.fabricId,
         'patternId': suggestion.patternId,
+        'renderMetadata': {
+          'editorMannequinId': mannequinId,
+          'garmentType': _garmentType,
+          'primaryColour': suggestion.primaryColour,
+          'accentColour': suggestion.accentColour,
+          'fabricId': suggestion.fabricId,
+          'patternId': suggestion.patternId,
+          'aiLookUserPrompt': prompt,
+          'buildStyleMode': 'configurator',
+          'aiHomeDraft': true,
+          if ((suggestion.description ?? '').trim().isNotEmpty)
+            'aiSuggestionDescription': suggestion.description!.trim(),
+        },
       },
     );
     if (!mounted) return;

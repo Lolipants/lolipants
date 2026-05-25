@@ -142,7 +142,7 @@ class _Summary extends StatelessWidget {
           children: [
             Expanded(
               child: _Bucket(
-                label: 'Pending',
+                label: 'Accrued',
                 bucket: earnings.pending,
                 currency: earnings.currency,
                 colour: AppColors.dust,
@@ -151,7 +151,7 @@ class _Summary extends StatelessWidget {
             const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: _Bucket(
-                label: 'Approved',
+                label: 'Payable',
                 bucket: earnings.approved,
                 currency: earnings.currency,
                 colour: AppColors.gold,
@@ -250,11 +250,11 @@ class _CommissionTile extends StatelessWidget {
       case CommissionStatus.paid:
         return 'PAID';
       case CommissionStatus.approved:
-        return 'APPROVED';
+        return 'PAYABLE';
       case CommissionStatus.voidStatus:
         return 'VOID';
       case CommissionStatus.pending:
-        return 'PENDING';
+        return 'ACCRUED';
     }
   }
 

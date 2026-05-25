@@ -7,6 +7,7 @@ import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/features/community/models/post.dart';
 import 'package:lolipants/features/community/providers/community_providers.dart';
 import 'package:lolipants/features/community/widgets/post_card.dart';
+import 'package:lolipants/features/community/widgets/showcase_feed_slivers.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
 
@@ -123,7 +124,12 @@ class _NewsFeedScreenState extends ConsumerState<NewsFeedScreen> {
                   child: RefreshIndicator(
                     color: AppColors.gold,
                     backgroundColor: AppColors.ink,
-                    onRefresh: notifier.refresh,
+                    onRefresh: () async {
+                      await Future.wait([
+                        notifier.refresh(),
+                        ref.read(showcaseFeedProvider.notifier).refresh(),
+                      ]);
+                    },
                     child: _FeedBody(
                       state: state,
                       controller: _scrollController,
@@ -237,12 +243,22 @@ class _FeedBody extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (state.loading && state.posts.isEmpty) {
+    final showcaseState = ref.watch(showcaseFeedProvider);
+    final showcaseSlivers = buildShowcaseFeedSlivers(
+      tagFilter: tagFilter,
+      showcaseItems: showcaseState.items,
+    );
+    final hasShowcase = showcaseSlivers.isNotEmpty;
+
+    if (state.loading &&
+        state.posts.isEmpty &&
+        showcaseState.loading &&
+        !hasShowcase) {
       return const Center(
         child: CircularProgressIndicator(color: AppColors.gold),
       );
     }
-    if (state.error != null && state.posts.isEmpty) {
+    if (state.error != null && state.posts.isEmpty && !hasShowcase) {
       final message = communityErrorMessage(
         state.error!,
         fallback: 'Could not load community feed.',
@@ -253,7 +269,7 @@ class _FeedBody extends ConsumerWidget {
             ref.read(feedPostsProvider(tagFilter).notifier).loadFirstPage(),
       );
     }
-    if (state.posts.isEmpty) {
+    if (state.posts.isEmpty && !hasShowcase) {
       return ListView(
         controller: controller,
         children: [
@@ -286,43 +302,89 @@ class _FeedBody extends ConsumerWidget {
         ],
       );
     }
-    final count = state.posts.length + 1;
-    return ListView.builder(
+
+    return CustomScrollView(
       controller: controller,
-      padding: const EdgeInsets.only(bottom: 168),
-      itemCount: count,
-      itemBuilder: (context, index) {
-        if (index == state.posts.length) {
-          if (state.loadingMore) {
-            return const Padding(
-              padding: EdgeInsets.symmetric(vertical: 16),
-              child: Center(
-                child: CircularProgressIndicator(color: AppColors.gold),
+      slivers: [
+        ...showcaseSlivers,
+        if (tagFilter == 'showcase' && state.posts.isNotEmpty)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.md,
+                AppSpacing.lg,
+                AppSpacing.xs,
               ),
-            );
-          }
-          if (state.reachedEnd) {
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              child: Center(
-                child: Text(
-                  'Thats all the posts for now.',
-                  style: AppTextStyles.bodyMedium,
-                ),
+              child: Text(
+                'Showcase posts',
+                style: AppTextStyles.titleSmall,
               ),
-            );
-          }
-          return const SizedBox.shrink();
-        }
-        final post = state.posts[index];
-        return PostCard(
-          post: post,
-          onToggleReaction: (r) => onToggleReaction(post, r),
-          onOpenDetail: () => onOpenDetail(post),
-          onTapAuthor: () => onTapAuthor(post),
-        );
-      },
+            ),
+          ),
+        if (state.posts.isEmpty && hasShowcase)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: Text(
+                'No posts yet for this filter.',
+                textAlign: TextAlign.center,
+                style: AppTextStyles.bodyMedium,
+              ),
+            ),
+          ),
+        SliverPadding(
+          padding: const EdgeInsets.only(bottom: 168),
+          sliver: SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, index) {
+                final post = state.posts[index];
+                return PostCard(
+                  post: post,
+                  onToggleReaction: (r) => onToggleReaction(post, r),
+                  onOpenDetail: () => onOpenDetail(post),
+                  onTapAuthor: () => onTapAuthor(post),
+                );
+              },
+              childCount: state.posts.length,
+            ),
+          ),
+        ),
+        SliverToBoxAdapter(
+          child: _FeedFooter(state: state),
+        ),
+      ],
     );
+  }
+}
+
+class _FeedFooter extends StatelessWidget {
+  const _FeedFooter({required this.state});
+
+  final FeedPostsState state;
+
+  @override
+  Widget build(BuildContext context) {
+    if (state.loadingMore) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 16),
+        child: Center(
+          child: CircularProgressIndicator(color: AppColors.gold),
+        ),
+      );
+    }
+    if (state.reachedEnd && state.posts.isNotEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Center(
+          child: Text(
+            'Thats all the posts for now.',
+            style: AppTextStyles.bodyMedium,
+          ),
+        ),
+      );
+    }
+    return const SizedBox.shrink();
   }
 }
 

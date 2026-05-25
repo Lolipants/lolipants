@@ -1,9 +1,10 @@
 import { Hono, type Context } from "hono";
 import { v4 as uuidv4 } from "uuid";
 import { apiError } from "../lib/http";
-import { orderStatusTemplates, sendToUser } from "../lib/onesignal";
+import { orderStatusTemplates, sendToUser, quoteNegotiationTemplates } from "../lib/onesignal";
+import { designerCommissionPct } from "../lib/commissionConfig";
 import { pickCourierForDelivery } from "../lib/courierAssignment";
-import { pickTailorForDelivery, estimateGarmentPriceRange, compareTailorsForDelivery } from "../lib/tailorAssignment";
+import { pickTailorForDelivery, estimateGarmentPriceRange, compareTailorsForDelivery, quoteForTailorId } from "../lib/tailorAssignment";
 import {
   computeWeddingQuote,
   pickTailorForWedding,
@@ -12,6 +13,7 @@ import {
 } from "../lib/weddingPricing";
 import { requireAuth, requireRole } from "../middleware/auth";
 import type { AppVariables, Env } from "../types";
+import { quoteNegotiationRoutes } from "./quoteNegotiations";
 
 export const orderRoutes = new Hono<{ Bindings: Env; Variables: AppVariables }>();
 orderRoutes.use("*", requireAuth);
@@ -375,6 +377,8 @@ orderRoutes.get("/quotes/compare", async (c) => {
     quotes,
   });
 });
+
+orderRoutes.route("/quote-negotiations", quoteNegotiationRoutes);
 
 orderRoutes.get("/wedding-quote", async (c) => {
   const dressId = (c.req.query("dressId") ?? "").trim();
@@ -876,6 +880,56 @@ orderRoutes.post("/", async (c) => {
     return apiError(c, 400, "TAILOR_ID_REQUIRED", "tailorId is required");
   }
 
+  const quoteLockToken = String(body.quoteLockToken ?? body.quote_lock_token ?? "").trim();
+  let lockedNegotiation: {
+    locked_base_price: number;
+    locked_fabric_fee: number;
+    locked_delivery_fee: number;
+    locked_total: number;
+    price_plan_id: string;
+    tailor_id: string;
+    currency: string;
+  } | null = null;
+
+  if (quoteLockToken) {
+    const neg = await c.env.DB.prepare(
+      `SELECT * FROM quote_negotiations
+       WHERE quote_lock_token = ? AND user_id = ? AND design_id = ? AND status = 'accepted'`,
+    )
+      .bind(quoteLockToken, userId, designId)
+      .first<{
+        locked_base_price: number | null;
+        locked_fabric_fee: number | null;
+        locked_delivery_fee: number | null;
+        locked_total: number | null;
+        price_plan_id: string;
+        tailor_id: string;
+        currency: string;
+        quote_lock_expires_at: string | null;
+      }>();
+    if (!neg || neg.locked_total == null) {
+      return apiError(c, 409, "QUOTE_LOCK_INVALID", "Negotiated quote lock is invalid or expired");
+    }
+    if (neg.quote_lock_expires_at) {
+      const expires = Date.parse(neg.quote_lock_expires_at);
+      if (Number.isFinite(expires) && Date.now() > expires) {
+        return apiError(c, 409, "QUOTE_LOCK_EXPIRED", "Negotiated quote lock has expired");
+      }
+    }
+    if (neg.tailor_id !== requestedTailorId) {
+      return apiError(c, 409, "TAILOR_MISMATCH", "Tailor does not match the locked negotiation");
+    }
+    lockedNegotiation = {
+      locked_base_price: neg.locked_base_price ?? 0,
+      locked_fabric_fee: neg.locked_fabric_fee ?? 0,
+      locked_delivery_fee: neg.locked_delivery_fee ?? 0,
+      locked_total: neg.locked_total,
+      price_plan_id: neg.price_plan_id,
+      tailor_id: neg.tailor_id,
+      currency: neg.currency,
+    };
+  }
+
   const sizing = await c.env.DB.prepare(
     "SELECT id FROM measurements WHERE user_id = ? ORDER BY saved_at DESC LIMIT 1",
   )
@@ -890,30 +944,53 @@ orderRoutes.post("/", async (c) => {
     );
   }
 
-  const quote = await assignTailorAndQuote(c.env.DB, {
-    design: {
-      garment_type: design.garment_type,
-      fabric_quality: design.fabric_quality,
-    },
-    city: deliveryCity,
-    deliveryLat: lat,
-    deliveryLng: lng,
-  });
-  if (!quote) {
-    return apiError(
-      c,
-      404,
-      "NO_TAILOR_AVAILABLE",
-      "No tailor is available for this garment",
-    );
-  }
-  if (quote.tailorId !== requestedTailorId) {
-    return apiError(
-      c,
-      409,
-      "QUOTE_STALE",
-      "Assigned tailor changed. Refresh your quote before paying.",
-    );
+  let quote: Awaited<ReturnType<typeof quoteForTailorId>>;
+  if (lockedNegotiation) {
+    quote = {
+      tailorId: lockedNegotiation.tailor_id,
+      tailorName: "",
+      shopName: null,
+      distanceKm: 0,
+      pricePlanId: lockedNegotiation.price_plan_id,
+      assignmentMethod: "proximity",
+      basePrice: lockedNegotiation.locked_base_price,
+      fabricFee: lockedNegotiation.locked_fabric_fee,
+      deliveryFee: lockedNegotiation.locked_delivery_fee,
+      total: lockedNegotiation.locked_total,
+      currency: lockedNegotiation.currency,
+      fabricQuality: design.fabric_quality ?? "standard",
+      garmentType: design.garment_type,
+    };
+    const tailorMeta = await c.env.DB.prepare(
+      `SELECT u.name AS tailor_name, tp.shop_name
+       FROM users u LEFT JOIN tailor_profiles tp ON tp.user_id = u.id WHERE u.id = ?`,
+    )
+      .bind(requestedTailorId)
+      .first<{ tailor_name: string | null; shop_name: string | null }>();
+    if (tailorMeta) {
+      quote.tailorName = tailorMeta.tailor_name ?? "";
+      quote.shopName = tailorMeta.shop_name;
+    }
+  } else {
+    quote = await quoteForTailorId({
+      db: c.env.DB,
+      tailorId: requestedTailorId,
+      design: {
+        garment_type: design.garment_type,
+        fabric_quality: design.fabric_quality,
+      },
+      city: deliveryCity,
+      deliveryLat: lat,
+      deliveryLng: lng,
+    });
+    if (!quote) {
+      return apiError(
+        c,
+        404,
+        "NO_TAILOR_AVAILABLE",
+        "Selected tailor cannot price this design at your delivery location",
+      );
+    }
   }
 
   const clientBase = Number(body.basePrice ?? body.base_price);
@@ -993,7 +1070,7 @@ orderRoutes.post("/", async (c) => {
       .run();
 
     if (designerId && designerId !== userId) {
-      const commissionPct = 10;
+      const commissionPct = designerCommissionPct(c.env);
       const commissionAmount = Math.round(totalPrice * (commissionPct / 100));
       await c.env.DB.prepare(
         `INSERT OR IGNORE INTO commissions

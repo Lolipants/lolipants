@@ -23,6 +23,13 @@ RESET_FROM_EMAIL = "LOLIPANTS <no-reply@lolipants.com>"
 #   wrangler secret put GOOGLE_CLIENT_ID
 #   wrangler secret put GOOGLE_CLIENT_SECRET
 # See GOOGLE_OAUTH_SETUP.md for redirect URIs and consent screen.
+#
+# Sign in with Apple — Services ID + auth key (.p8). See APPLE_SIGNIN_SETUP.md:
+#   wrangler secret put APPLE_CLIENT_ID
+#   wrangler secret put APPLE_TEAM_ID
+#   wrangler secret put APPLE_KEY_ID
+#   wrangler secret put APPLE_PRIVATE_KEY
+#   wrangler secret put APPLE_APP_BUNDLE_IDENTIFIER
 # Shared HMAC secret used by lolipants-api admin routes to sync role/scope
 # changes via POST /internal/user/:id/role:
 #   INTERNAL_SYNC_SECRET

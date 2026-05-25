@@ -660,7 +660,7 @@ class EditorNotifier extends StateNotifier<EditorState> {
     final initial = EditorState.initial();
     state = state.copyWith(
       primaryColour: initial.primaryColour,
-      accentColour: initial.accentColour,
+      accentColour: initial.primaryColour,
       activeTab: EditorTab.build,
       heroMode: EditorHeroMode.compose,
       refinedLookUrl: null,
@@ -849,6 +849,7 @@ class EditorNotifier extends StateNotifier<EditorState> {
   /// user can edit it again.
   void loadDesign(GarmentDesign design) {
     final snapshot = editorDesignRestoreSnapshot(design);
+    final meta = design.renderMetadata ?? const <String, dynamic>{};
     final configurator = parseConfiguratorFromRenderMetadata(
       design.renderMetadata,
     );
@@ -860,13 +861,17 @@ class EditorNotifier extends StateNotifier<EditorState> {
     );
     final hasRefinedLook =
         refinedLookUrl != null && refinedLookUrl.isNotEmpty;
+    final resolvedMannequin =
+        editorMannequinIdFromDesign(design) ?? EditorState.initial().mannequinId;
+    final customMannequin = editorCustomMannequinFromRenderMetadata(meta);
+    final aiPrompt = meta['aiLookUserPrompt']?.toString().trim() ?? '';
     state = state.copyWith(
       designName: design.name,
       garmentType: snapshot.garmentType,
       primaryColour: _parseHexColor(design.primaryColour),
       accentColour: design.accentColour != null && design.accentColour!.isNotEmpty
           ? _parseHexColor(design.accentColour!)
-          : state.accentColour,
+          : _parseHexColor(design.primaryColour),
       selectedFabricId: design.fabricId ?? state.selectedFabricId,
       fabricQuality: design.fabricQuality ?? state.fabricQuality,
       selectedPatternId: design.patternId ?? state.selectedPatternId,
@@ -877,7 +882,9 @@ class EditorNotifier extends StateNotifier<EditorState> {
       printOffsetY: snapshot.printOffsetY,
       printScale: snapshot.printScale,
       textLayers: snapshot.textLayers,
-      mannequinId: design.mannequinId ?? state.mannequinId,
+      mannequinId: resolvedMannequin,
+      customMannequinImagePath: customMannequin,
+      aiLookUserPrompt: aiPrompt,
       remoteDesignId: design.id,
       activeTool: EditorTool.colour,
       activeTab: EditorTab.build,
@@ -1452,6 +1459,10 @@ class EditorNotifier extends StateNotifier<EditorState> {
       'customMannequinImagePath': state.customMannequinImagePath,
       'renderMetadata': {
         'mannequinTemplateId': _resolveMannequinTemplateId(),
+        'editorMannequinId': state.mannequinId.trim(),
+        if (state.customMannequinImagePath != null &&
+            state.customMannequinImagePath!.trim().isNotEmpty)
+          'customMannequinImagePath': state.customMannequinImagePath!.trim(),
         'garmentType': garmentType,
         'primaryColour': _colorToHex(state.primaryColour),
         'accentColour': _colorToHex(state.accentColour),
@@ -1688,10 +1699,8 @@ class EditorNotifier extends StateNotifier<EditorState> {
 
   String? _normalizedMannequinIdForApi() {
     final id = state.mannequinId.trim();
-    if (id.isEmpty || kLocalBundledMannequinIds.contains(id)) {
-      return null;
-    }
-    return id;
+    if (id.isEmpty) return null;
+    return canonicalMannequinIdForApi(id);
   }
 
   String _colorToHex(Color color) {

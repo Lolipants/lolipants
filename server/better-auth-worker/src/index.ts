@@ -2,6 +2,7 @@ import { drizzle } from "drizzle-orm/d1";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { generateAppleClientSecret } from "./apple/generate_client_secret";
 import { createAuth } from "./auth";
 import * as schema from "./db/schema";
 
@@ -134,6 +135,11 @@ type Bindings = {
   APP_NAME?: string;
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
+  APPLE_CLIENT_ID?: string;
+  APPLE_TEAM_ID?: string;
+  APPLE_KEY_ID?: string;
+  APPLE_PRIVATE_KEY?: string;
+  APPLE_APP_BUNDLE_IDENTIFIER?: string;
   INTERNAL_SYNC_SECRET?: string;
 };
 
@@ -180,6 +186,34 @@ app.on(["GET", "POST", "OPTIONS"], "/auth/*", async (c) => {
 
   if (!cachedAuth) {
     const db = drizzle(c.env.DB, { schema });
+    const appleClientId = c.env.APPLE_CLIENT_ID?.trim();
+    const appleTeamId = c.env.APPLE_TEAM_ID?.trim();
+    const appleKeyId = c.env.APPLE_KEY_ID?.trim();
+    const applePrivateKey = c.env.APPLE_PRIVATE_KEY?.trim();
+    const appleBundleId =
+      c.env.APPLE_APP_BUNDLE_IDENTIFIER?.trim() ?? "com.lolipants.lolipants";
+
+    let apple:
+      | {
+          clientId: string;
+          clientSecret: string;
+          appBundleIdentifier: string;
+        }
+      | undefined;
+    if (appleClientId && appleTeamId && appleKeyId && applePrivateKey) {
+      const clientSecret = await generateAppleClientSecret({
+        teamId: appleTeamId,
+        keyId: appleKeyId,
+        clientId: appleClientId,
+        privateKeyPem: applePrivateKey,
+      });
+      apple = {
+        clientId: appleClientId,
+        clientSecret,
+        appBundleIdentifier: appleBundleId,
+      };
+    }
+
     cachedAuth = createAuth({
       db,
       secret,
@@ -195,6 +229,7 @@ app.on(["GET", "POST", "OPTIONS"], "/auth/*", async (c) => {
         clientId: c.env.GOOGLE_CLIENT_ID,
         clientSecret: c.env.GOOGLE_CLIENT_SECRET,
       },
+      apple,
     });
   }
 

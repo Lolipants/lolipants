@@ -33,10 +33,7 @@ import 'package:lolipants/features/browse/screens/mannequin_selector_screen.dart
 import 'package:lolipants/features/community/screens/community_screen.dart';
 import 'package:lolipants/features/community/screens/create_post_screen.dart';
 import 'package:lolipants/features/community/screens/post_detail_screen.dart';
-import 'package:lolipants/features/community/screens/showcase_screen.dart';
 import 'package:lolipants/features/community/screens/designer_profile_screen.dart';
-import 'package:lolipants/features/community/screens/pro_designers_screen.dart';
-import 'package:lolipants/features/community/screens/consultations_screen.dart';
 import 'package:lolipants/features/community/screens/designer_earnings_screen.dart';
 import 'package:lolipants/features/community/models/post.dart';
 import 'package:lolipants/features/editor/models/editor_preset_args.dart';
@@ -62,9 +59,13 @@ import 'package:lolipants/features/tailor/screens/tailor_incoming_orders_screen.
 import 'package:lolipants/features/tailor/screens/tailor_pricing_screen.dart';
 import 'package:lolipants/features/tailor/screens/tailor_active_orders_screen.dart';
 import 'package:lolipants/features/tailor/screens/tailor_completed_orders_screen.dart';
+import 'package:lolipants/features/orders/screens/quote_negotiation_detail_screen.dart';
+import 'package:lolipants/features/tailor/screens/tailor_price_requests_screen.dart';
+import 'package:lolipants/features/tailor/screens/tailor_quote_negotiation_detail_screen.dart';
 import 'package:lolipants/features/profile/screens/edit_profile_screen.dart';
 import 'package:lolipants/features/profile/screens/my_designs_screen.dart';
 import 'package:lolipants/features/profile/screens/my_measurements_screen.dart';
+import 'package:lolipants/features/profile/screens/my_price_negotiations_screen.dart';
 import 'package:lolipants/features/profile/screens/profile_screen.dart';
 import 'package:lolipants/features/profile/screens/settings_screen.dart';
 import 'package:lolipants/features/role_request/screens/role_request_screen.dart';
@@ -354,6 +355,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const OrderQuoteReviewScreen(),
       ),
       GoRoute(
+        path: '/order/quote-negotiation/:negotiationId',
+        name: 'orderQuoteNegotiation',
+        builder: (context, state) {
+          final id = state.pathParameters['negotiationId']!;
+          return QuoteNegotiationDetailScreen(negotiationId: id);
+        },
+      ),
+      GoRoute(
         path: '/order/payment',
         name: 'orderPayment',
         builder: (context, state) => const PaymentScreen(),
@@ -384,6 +393,27 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                     builder: (context, state) {
                       final id = state.pathParameters['orderId']!;
                       return TailorOrderDetailScreen(orderId: id);
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/tailor/price-requests',
+                name: 'tailorPriceRequests',
+                builder: (context, state) => const TailorPriceRequestsScreen(),
+                routes: [
+                  GoRoute(
+                    path: ':negotiationId',
+                    name: 'tailorPriceRequestDetail',
+                    builder: (context, state) {
+                      final id = state.pathParameters['negotiationId']!;
+                      return TailorQuoteNegotiationDetailScreen(
+                        negotiationId: id,
+                      );
                     },
                   ),
                 ],
@@ -675,31 +705,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                     },
                   ),
                   GoRoute(
-                    path: 'showcase',
-                    name: 'communityShowcase',
-                    builder: (context, state) => const ShowcaseScreen(),
-                  ),
-                  GoRoute(
-                    path: 'pros',
-                    name: 'communityPros',
-                    builder: (context, state) => const ProDesignersScreen(),
-                  ),
-                  GoRoute(
                     path: 'designer/:designerId',
                     name: 'communityDesigner',
+                    parentNavigatorKey: rootNavigatorKey,
                     builder: (context, state) {
                       final id = state.pathParameters['designerId']!;
                       return DesignerProfileScreen(designerId: id);
                     },
                   ),
                   GoRoute(
-                    path: 'consultations',
-                    name: 'communityConsultations',
-                    builder: (context, state) => const ConsultationsScreen(),
-                  ),
-                  GoRoute(
                     path: 'earnings',
                     name: 'communityEarnings',
+                    parentNavigatorKey: rootNavigatorKey,
                     builder: (context, state) => const DesignerEarningsScreen(),
                   ),
                 ],
@@ -722,6 +739,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                     path: 'measurements',
                     name: 'myMeasurements',
                     builder: (context, state) => const MyMeasurementsScreen(),
+                  ),
+                  GoRoute(
+                    path: 'price-negotiations',
+                    name: 'myPriceNegotiations',
+                    builder: (context, state) =>
+                        const MyPriceNegotiationsScreen(),
                   ),
                   GoRoute(
                     path: 'settings',
