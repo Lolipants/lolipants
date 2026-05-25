@@ -13,6 +13,18 @@ fail() {
   exit 1
 }
 
+write_password_file() {
+  local path="${RUNNER_TEMP}/p12-password.txt"
+  printf '%s' "${IOS_DIST_CERT_PASSWORD}" >"${path}"
+  echo "${path}"
+}
+
+run_openssl_pkcs12() {
+  local password_file="$1"
+  shift
+  openssl pkcs12 -passin "file:${password_file}" "$@"
+}
+
 if [[ -z "${IOS_DIST_CERT_P12_BASE64:-}" || -z "${IOS_DIST_CERT_PASSWORD:-}" ]]; then
   fail "IOS_DIST_CERT_P12_BASE64 and IOS_DIST_CERT_PASSWORD are required."
 fi
@@ -27,6 +39,7 @@ fi
 
 KEYCHAIN_PATH="${RUNNER_TEMP:-/tmp}/app-signing.keychain-db"
 KEYCHAIN_PASSWORD="$(openssl rand -base64 32)"
+PASSWORD_FILE="$(write_password_file)"
 
 security create-keychain -p "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_PATH}"
 security set-keychain-settings -lut 21600 "${KEYCHAIN_PATH}"
@@ -43,41 +56,70 @@ if [[ ! -s "${CERT_PATH}" ]]; then
 fi
 
 validate_p12() {
-  openssl pkcs12 -in "${CERT_PATH}" -passin "pass:${IOS_DIST_CERT_PASSWORD}" -noout "$@" 2>/dev/null
+  run_openssl_pkcs12 "${PASSWORD_FILE}" -in "${CERT_PATH}" -noout "$@" 2>/dev/null
+}
+
+extract_p12_material() {
+  local cert_pem="$1"
+  local key_pem="$2"
+
+  if run_openssl_pkcs12 "${PASSWORD_FILE}" -in "${CERT_PATH}" -clcerts -nokeys -out "${cert_pem}"; then
+    :
+  elif run_openssl_pkcs12 "${PASSWORD_FILE}" -legacy -in "${CERT_PATH}" -clcerts -nokeys -out "${cert_pem}"; then
+    :
+  else
+    return 1
+  fi
+
+  if run_openssl_pkcs12 "${PASSWORD_FILE}" -in "${CERT_PATH}" -nocerts -nodes -out "${key_pem}"; then
+    :
+  elif run_openssl_pkcs12 "${PASSWORD_FILE}" -legacy -in "${CERT_PATH}" -nocerts -nodes -out "${key_pem}"; then
+    :
+  else
+    return 1
+  fi
+}
+
+import_wwdr_certificate() {
+  local wwdr_cer="${RUNNER_TEMP}/AppleWWDRCAG3.cer"
+  local wwdr_pem="${RUNNER_TEMP}/AppleWWDRCAG3.pem"
+
+  if ! curl -fsSL "https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer" -o "${wwdr_cer}"; then
+    echo "Warning: could not download Apple WWDR intermediate certificate." >&2
+    return 0
+  fi
+
+  openssl x509 -inform der -in "${wwdr_cer}" -out "${wwdr_pem}"
+  security import "${wwdr_pem}" -k "${KEYCHAIN_PATH}" -A \
+    -T /usr/bin/codesign -T /usr/bin/security -T /usr/bin/productbuild || true
 }
 
 import_distribution_p12() {
   local p12_path="$1"
+  local cert_pem="${RUNNER_TEMP}/distribution-cert.pem"
+  local key_pem="${RUNNER_TEMP}/distribution-key.pem"
 
   if security import "${p12_path}" -P "${IOS_DIST_CERT_PASSWORD}" -A -t cert -f pkcs12 -k "${KEYCHAIN_PATH}" 2>/dev/null; then
     echo "Imported .p12 into keychain."
     return 0
   fi
 
-  echo "Direct .p12 import failed; re-packaging for macOS keychain…" >&2
+  echo "Direct .p12 import failed; importing certificate + private key separately…" >&2
 
-  local pem_path="${RUNNER_TEMP}/distribution.pem"
-  local mac_p12_path="${RUNNER_TEMP}/distribution-macos.p12"
-
-  if ! openssl pkcs12 -in "${p12_path}" -passin "pass:${IOS_DIST_CERT_PASSWORD}" -nodes -out "${pem_path}" 2>/dev/null; then
-    openssl pkcs12 -legacy -in "${p12_path}" -passin "pass:${IOS_DIST_CERT_PASSWORD}" -nodes -out "${pem_path}" 2>/dev/null \
-      || fail "Could not unpack .p12 with OpenSSL. Check IOS_DIST_CERT_PASSWORD."
+  if ! extract_p12_material "${cert_pem}" "${key_pem}"; then
+    fail "Could not extract certificate/private key from .p12. Check IOS_DIST_CERT_PASSWORD."
   fi
 
-  if ! openssl pkcs12 -export \
-    -legacy \
-    -certpbe PBE-SHA1-3DES \
-    -keypbe PBE-SHA1-3DES \
-    -macalg sha1 \
-    -passout "pass:${IOS_DIST_CERT_PASSWORD}" \
-    -out "${mac_p12_path}" \
-    -in "${pem_path}" 2>/dev/null; then
-    fail "Could not re-pack .p12 for macOS keychain import."
-  fi
+  security import "${cert_pem}" -k "${KEYCHAIN_PATH}" -A \
+    -T /usr/bin/codesign -T /usr/bin/security -T /usr/bin/productbuild \
+    || fail "Could not import distribution certificate into keychain."
 
-  security import "${mac_p12_path}" -P "${IOS_DIST_CERT_PASSWORD}" -A -t cert -f pkcs12 -k "${KEYCHAIN_PATH}" \
-    || fail "macOS keychain rejected the .p12 after re-packaging. Check IOS_DIST_CERT_PASSWORD."
-  echo "Imported re-packaged .p12 into keychain."
+  security import "${key_pem}" -k "${KEYCHAIN_PATH}" -A \
+    -T /usr/bin/codesign -T /usr/bin/security -T /usr/bin/productbuild \
+    || fail "Could not import distribution private key into keychain."
+
+  import_wwdr_certificate
+  echo "Imported distribution certificate and private key into keychain."
 }
 
 if validate_p12; then
@@ -85,7 +127,7 @@ if validate_p12; then
 elif validate_p12 -legacy; then
   echo "Validated .p12 (legacy algorithms)."
 else
-  fail "Invalid .p12 or wrong IOS_DIST_CERT_PASSWORD. Re-export with AES-256-CBC (see docs/ios-github-actions.md)."
+  fail "Invalid .p12 or wrong IOS_DIST_CERT_PASSWORD."
 fi
 
 import_distribution_p12 "${CERT_PATH}"
