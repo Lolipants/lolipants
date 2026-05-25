@@ -71,6 +71,12 @@ jobs:
           IOS_PROVISIONING_PROFILE_NAME: ${{ env.IOS_PROVISIONING_PROFILE_NAME }}
         run: bash scripts/ci/generate_export_options_plist.sh
 
+      - name: Configure Xcode manual signing
+        env:
+          IOS_TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
+          IOS_PROVISIONING_PROFILE_NAME: ${{ env.IOS_PROVISIONING_PROFILE_NAME }}
+        run: bash scripts/ci/write_ios_signing_xcconfig.sh
+
       - name: Install Flutter dependencies
         run: flutter pub get
 
@@ -81,6 +87,7 @@ jobs:
 
       - name: Build IPA
         run: |
+          bash scripts/ci/unlock_signing_keychain.sh
           flutter build ipa --release \
             --build-name="${BUILD_NAME}" \
             --build-number="${BUILD_NUMBER}" \

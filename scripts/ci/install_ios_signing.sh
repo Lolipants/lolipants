@@ -135,6 +135,11 @@ import_distribution_p12 "${CERT_PATH}"
 security list-keychain -d user -s "${KEYCHAIN_PATH}"
 security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_PATH}"
 
+{
+  echo "KEYCHAIN_PATH=${KEYCHAIN_PATH}"
+  echo "KEYCHAIN_PASSWORD=${KEYCHAIN_PASSWORD}"
+} >>"${GITHUB_ENV:-/dev/null}"
+
 PROFILE_PATH="${RUNNER_TEMP}/appstore.mobileprovision"
 if ! printf '%s' "${IOS_PROVISIONING_PROFILE_BASE64}" | decode_base64 >"${PROFILE_PATH}"; then
   fail "Could not decode IOS_PROVISIONING_PROFILE_BASE64."
