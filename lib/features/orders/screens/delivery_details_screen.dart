@@ -48,7 +48,11 @@ class _DeliveryDetailsScreenState extends ConsumerState<DeliveryDetailsScreen> {
         TextEditingController(text: weddingDraft?.notes ?? draft?.notes ?? '');
     _deliveryLat = weddingDraft?.deliveryLat ?? draft?.deliveryLat;
     _deliveryLng = weddingDraft?.deliveryLng ?? draft?.deliveryLng;
-    WidgetsBinding.instance.addPostFrameCallback((_) => _collectLocation());
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _collectLocation(
+        preferCached: _deliveryLat != null && _deliveryLng != null,
+      ),
+    );
   }
 
   @override

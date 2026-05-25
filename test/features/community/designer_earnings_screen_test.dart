@@ -69,12 +69,12 @@ void main() {
     expect(find.text('Earnings'), findsOneWidget);
     // Lifetime label + one of the bucket labels.
     expect(find.text('Lifetime earnings'), findsOneWidget);
-    expect(find.text('Pending'), findsOneWidget);
-    expect(find.text('Approved'), findsOneWidget);
+    expect(find.text('Accrued'), findsOneWidget);
+    expect(find.text('Payable'), findsOneWidget);
     expect(find.text('Paid'), findsOneWidget);
     expect(find.text('Void'), findsOneWidget);
     // Status pills.
-    expect(find.text('PENDING'), findsOneWidget);
+    expect(find.text('ACCRUED'), findsOneWidget);
     expect(find.text('PAID'), findsOneWidget);
     // Commission list.
     expect(find.text('Midnight Thobe'), findsNWidgets(2));

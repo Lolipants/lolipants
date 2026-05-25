@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lolipants/features/browse/data/region_presets.dart';
 import 'package:lolipants/features/browse/widgets/region_style_button.dart';
 
 void main() {
+  setUpAll(() {
+    dotenv.testLoad(fileInput: 'CLOUDFLARE_R2_BASE_URL=\n');
+  });
+
   testWidgets('RegionStyleButton renders title + subtitle and fires onTap',
       (tester) async {
     var tapped = 0;

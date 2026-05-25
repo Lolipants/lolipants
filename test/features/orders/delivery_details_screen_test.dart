@@ -5,6 +5,7 @@ import 'package:lolipants/features/orders/models/checkout_draft.dart';
 import 'package:lolipants/features/orders/models/order_design_draft.dart';
 import 'package:lolipants/features/orders/providers/checkout_providers.dart';
 import 'package:lolipants/features/orders/screens/delivery_details_screen.dart';
+import 'package:lolipants/shared/widgets/lolipants_button.dart';
 
 void main() {
   testWidgets('delivery form surfaces validation errors on empty submit',
@@ -22,15 +23,20 @@ void main() {
               ),
               idempotencyKey: 'k_test',
               city: 'Doha',
+              deliveryLat: 25.2854,
+              deliveryLng: 51.531,
             ),
           ),
         ],
         child: const MaterialApp(home: DeliveryDetailsScreen()),
       ),
     );
-    await tester.pump();
+    await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Continue to payment'));
+    await tester.ensureVisible(
+      find.widgetWithText(LolipantsButton, 'Get price & tailor'),
+    );
+    await tester.tap(find.widgetWithText(LolipantsButton, 'Get price & tailor'));
     await tester.pump();
 
     expect(find.text('Required'), findsWidgets);
