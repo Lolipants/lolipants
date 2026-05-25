@@ -49,6 +49,23 @@ flutter build ipa --release --dart-define=FEATURE_MOCK_PAYMENT=false
 
 On a Mac CI runner, the first `flutter build ipa` will create the iOS `Podfile.lock` (CocoaPods). Commit the generated `ios/Podfile.lock` to keep lockfiles stable across submissions.
 
+## App Store / TestFlight (GitHub Actions)
+
+CI builds and TestFlight uploads are configured in [`.github/workflows/ios-testflight.yml`](.github/workflows/ios-testflight.yml).
+
+**Setup:** add Apple signing + App Store Connect API secrets and runtime URL secrets — full checklist in [`docs/ios-github-actions.md`](docs/ios-github-actions.md).
+
+**Release a build:**
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+Or run **Actions → iOS TestFlight → Run workflow** on `main`.
+
+PRs run [`flutter-ci.yml`](.github/workflows/flutter-ci.yml) (analyze + test on Ubuntu).
+
 ## Tests
 
 ```bash
