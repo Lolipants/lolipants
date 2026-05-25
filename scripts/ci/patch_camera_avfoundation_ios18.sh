@@ -4,18 +4,15 @@
 set -euo pipefail
 
 PUB_CACHE="${PUB_CACHE:-${HOME}/.pub-cache}"
-mapfile -t targets < <(
-  find "${PUB_CACHE}/hosted/pub.dev" -path "*/camera_avfoundation-*/ios/camera_avfoundation/Sources/camera_avfoundation/*.swift" \
-    -print 2>/dev/null || true
-)
+SEARCH_ROOT="${PUB_CACHE}/hosted/pub.dev"
 
-if [[ ${#targets[@]} -eq 0 ]]; then
-  echo "No camera_avfoundation Swift sources found in ${PUB_CACHE}; skipping patch."
+if [[ ! -d "${SEARCH_ROOT}" ]]; then
+  echo "Pub cache not found at ${SEARCH_ROOT}; skipping patch."
   exit 0
 fi
 
 patched=0
-for file in "${targets[@]}"; do
+for file in $(find "${SEARCH_ROOT}" -path "*/camera_avfoundation-*/ios/camera_avfoundation/Sources/camera_avfoundation/*.swift" 2>/dev/null); do
   if grep -q 'AVCaptureSession\.wasInterruptedNotification\|AVCaptureSession\.runtimeErrorNotification' "${file}"; then
     sed -i.bak \
       -e 's/AVCaptureSession\.wasInterruptedNotification/NSNotification.Name("AVCaptureSessionWasInterruptedNotification")/g' \
