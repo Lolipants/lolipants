@@ -25,6 +25,8 @@ import 'package:lolipants/features/editor/models/configurator_catalog.dart';
 import 'package:lolipants/features/editor/providers/designs_providers.dart';
 import 'package:lolipants/features/editor/providers/editor_provider.dart';
 import 'package:lolipants/core/config/app_features.dart';
+import 'package:lolipants/features/editor/widgets/editor_ai_refine_cta.dart';
+import 'package:lolipants/features/editor/widgets/editor_hero_fabric_rail.dart';
 import 'package:lolipants/features/editor/widgets/editor_compose_tool_rail.dart';
 import 'package:lolipants/features/editor/widgets/editor_bottom_panel.dart';
 import 'package:lolipants/features/editor/widgets/editor_design_summary_bar.dart';
@@ -277,6 +279,9 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                                     ),
                                   if (!isWedding &&
                                       editor.heroMode == EditorHeroMode.compose)
+                                    const EditorHeroFabricRail(),
+                                  if (!isWedding &&
+                                      editor.heroMode == EditorHeroMode.compose)
                                     EditorComposeToolRail(
                                       onPalette: () =>
                                           _onHeroPalettePressed(context),
@@ -284,6 +289,12 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                                           _showTextToolSheet(context),
                                       onAddImage: () =>
                                           _showImagePrintSheet(context),
+                                    ),
+                                  if (!isWedding)
+                                    EditorRefineFab(
+                                      onPressed: canGenerateLook
+                                          ? () => _generateLook(context)
+                                          : null,
                                     ),
                                   if (editor.heroMode == EditorHeroMode.look &&
                                       editor.refinedLookUrl != null &&
@@ -553,8 +564,13 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
       composePreviewBytes: composeBytes,
     );
     if (!context.mounted) return;
-    if (!result.success &&
-        result.message != null &&
+    if (result.success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Look generated — switch to the AI preview'),
+        ),
+      );
+    } else if (result.message != null &&
         result.message!.trim().isNotEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(result.message!)),

@@ -1,5 +1,5 @@
 /**
- * Uploads Flutter catalogue PNGs to R2 under `catalog/{designs|mannequins|configurator}/`.
+ * Uploads Flutter catalogue PNGs to R2 under `catalog/{designs|mannequins|configurator|fabrics}/`.
  *
  * Prerequisites:
  *   - `wrangler` logged in (`npx wrangler whoami`)
@@ -15,7 +15,7 @@ import { readdir, stat } from "node:fs/promises";
 import { join, relative } from "node:path";
 
 const BUCKET = "lolipants-media";
-const CATALOG_DIRS = ["designs", "mannequins", "configurator"] as const;
+const CATALOG_DIRS = ["designs", "mannequins", "configurator", "fabrics"] as const;
 const REPO_ROOT = join(import.meta.dirname, "../../..");
 const IMAGES_ROOT = join(REPO_ROOT, "assets/images");
 
@@ -92,7 +92,7 @@ async function main() {
   );
   if (uploaded === 0) {
     console.warn(
-      "No files found. Restore assets/images/{designs,mannequins,configurator} before uploading.",
+      "No files found. Restore assets/images/{designs,mannequins,configurator,fabrics} before uploading.",
     );
   }
   console.log(

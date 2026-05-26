@@ -25,7 +25,7 @@ class EditorComposeToolRail extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           _ToolButton(
-            tooltip: 'Colour & fabric',
+            tooltip: 'Colour',
             icon: Icons.palette_outlined,
             onPressed: onPalette,
           ),

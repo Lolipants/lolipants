@@ -415,6 +415,7 @@ class _CmsFormDialogState extends ConsumerState<_CmsFormDialog> {
           _FieldSpec('quality', 'Quality'),
           _FieldSpec('garment_type', 'Garment type'),
           _FieldSpec('is_available', 'Available', isBool: true),
+          _FieldSpec('swatch_url', 'Fabric swatch (square photo)', isImage: true),
         ];
       case 'patterns':
         return const [

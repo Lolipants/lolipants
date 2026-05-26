@@ -20,6 +20,7 @@ import 'package:lolipants/features/editor/providers/designs_providers.dart';
 import 'package:lolipants/features/editor/constants/ai_look_prompt_suffix.dart';
 import 'package:lolipants/features/editor/data/built_in_mannequin_assets.dart';
 import 'package:lolipants/features/editor/data/bundled_design_assets.dart';
+import 'package:lolipants/features/editor/data/bundled_fabric_catalog.dart';
 import 'package:lolipants/features/editor/models/catalog_design_pick.dart';
 import 'package:lolipants/features/editor/providers/design_catalog_providers.dart';
 import 'package:lolipants/features/editor/data/configurator_defaults.dart';
@@ -132,23 +133,8 @@ class EditorState {
       activeTool: EditorTool.colour,
       activeTab: EditorTab.build,
       fabricQuality: 'standard',
-      selectedFabricId: 'cotton',
-      availableFabrics: const <FabricOption>[
-        FabricOption(
-          id: 'cotton',
-          name: 'Cotton',
-          nameAr: 'قطن',
-          quality: 'standard',
-          isAvailable: true,
-        ),
-        FabricOption(
-          id: 'linen',
-          name: 'Linen',
-          nameAr: 'كتان',
-          quality: 'standard',
-          isAvailable: true,
-        ),
-      ],
+      selectedFabricId: '',
+      availableFabrics: const <FabricOption>[],
       selectedPatternId: 'plain',
       selectedEmbroideryId: 'motif_1',
       textLayers: const <DesignTextLayer>[],
@@ -262,6 +248,9 @@ class EditorState {
   final int rentalDays;
 
   bool get isWeddingTab => activeTab == EditorTab.wedding;
+
+  /// True when the user has explicitly picked a fabric from the catalogue.
+  bool get isFabricSelected => selectedFabricId.trim().isNotEmpty;
 
   EditorState copyWith({
     String? designName,
@@ -909,13 +898,17 @@ class EditorNotifier extends StateNotifier<EditorState> {
     final repo = ref.read(designsRepositoryProvider);
     final result = await repo.getFabricsForGarmentType(state.garmentType);
     result.fold(
-      (_) {},
+      (_) {
+        final bundled = bundledFabricOptionsForGarment(state.garmentType);
+        if (bundled.isEmpty) return;
+        state = state.copyWith(availableFabrics: bundled);
+      },
       (fabrics) {
         if (fabrics.isEmpty) return;
         final fabricIds = fabrics.map((e) => e.id).toList(growable: false);
         final selected = fabricIds.contains(state.selectedFabricId)
             ? state.selectedFabricId
-            : fabricIds.first;
+            : '';
         state = state.copyWith(
           availableFabrics: fabrics,
           selectedFabricId: selected,
@@ -1296,6 +1289,12 @@ class EditorNotifier extends StateNotifier<EditorState> {
     String? forceName,
     Uint8List? composePreviewBytes,
   }) async {
+    if (!state.isFabricSelected) {
+      return const SaveDesignResult(
+        success: false,
+        message: 'Pick a fabric before saving.',
+      );
+    }
     final repo = ref.read(designsRepositoryProvider);
     var name = (forceName ?? state.designName).trim();
     if (name.isEmpty) {
@@ -1586,6 +1585,12 @@ class EditorNotifier extends StateNotifier<EditorState> {
   Future<GenerateLookResult> generateRefinedLook({
     Uint8List? composePreviewBytes,
   }) async {
+    if (!state.isFabricSelected) {
+      return const GenerateLookResult(
+        success: false,
+        message: 'Pick a fabric before refining.',
+      );
+    }
     state = state.copyWith(
       lookGenerating: true,
       unsetLookError: true,

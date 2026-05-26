@@ -85,6 +85,29 @@ class _FakeDesignsRepository extends DesignsRepository {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  void pickFabric(ProviderContainer container) {
+    container.read(editorProvider.notifier).setFabric('cotton');
+  }
+
+  test('saveDesign fails when no fabric is selected', () async {
+    final fakeRepo = _FakeDesignsRepository();
+    final container = ProviderContainer(
+      overrides: [
+        designsRepositoryProvider.overrideWithValue(fakeRepo),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final notifier = container.read(editorProvider.notifier);
+    notifier.setDesignName('No Fabric Test');
+
+    final result = await notifier.saveDesign();
+
+    expect(result.success, isFalse);
+    expect(result.message, 'Pick a fabric before saving.');
+    expect(fakeRepo.lastPayload, isNull);
+  });
+
   test('editor save uploads local print and persists remote url', () async {
     final fakeRepo = _FakeDesignsRepository();
     final container = ProviderContainer(
@@ -100,6 +123,7 @@ void main() {
     await file.writeAsBytes([1, 2, 3, 4]);
 
     final notifier = container.read(editorProvider.notifier);
+    pickFabric(container);
     notifier.setDesignName('Save Flow Test');
     notifier.setPrintImagePath(file.path);
 
@@ -126,6 +150,7 @@ void main() {
     addTearDown(container.dispose);
 
     final notifier = container.read(editorProvider.notifier);
+    pickFabric(container);
     notifier.setDesignName('Text Move Test');
     notifier.addTextLayer('Hello');
     final state = container.read(editorProvider);
@@ -151,6 +176,7 @@ void main() {
     addTearDown(container.dispose);
 
     final notifier = container.read(editorProvider.notifier);
+    pickFabric(container);
     notifier.setDesignName('Compose AI Test');
 
     final result = await notifier.saveDesign(

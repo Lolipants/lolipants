@@ -11,6 +11,10 @@ export type GarmentLookPromptInput = {
   garmentType: string;
   primaryColour: string;
   accentColour: string;
+  /** Human-readable fabric material name (e.g. Silk, Cotton). */
+  fabricName?: string | null;
+  /** True when a fabric swatch image is attached as a Gemini reference. */
+  hasFabricSwatchReference?: boolean;
   fabricQuality: string;
   printPlacement?: string | null;
   textLayersSummary?: string | null;
@@ -37,12 +41,37 @@ export const COMPOSE_PREVIEW_REF_CAPTION =
   "PRIMARY design preview — refine this image. Keep the exact same mannequin, pose, scale, colours, and garment layout. " +
   "Output on pure white background (#FFFFFF). Merge layered pieces into one realistic garment.";
 
+/** Compose preview when a fabric swatch defines garment material (ignore flat fill). */
+export const COMPOSE_PREVIEW_LAYOUT_REF_CAPTION =
+  "Design preview — SILHOUETTE AND LAYOUT ONLY. Keep the exact same mannequin, pose, scale, cut lines, panels, and slot layout. " +
+  "IGNORE any flat placeholder colour fill in this image — it is NOT the final fabric. " +
+  "Output on pure white background (#FFFFFF). Merge layered pieces into one realistic garment.";
+
+export const FABRIC_SWATCH_REF_CAPTION =
+  "FABRIC SWATCH — authoritative material for the MAIN GARMENT BODY. " +
+  "Sew the entire dress/garment from this exact fabric: match its print, pattern repeat, texture, weave, and colours at natural garment scale. " +
+  "This overrides any flat colour shown in the layout preview.";
+
+/** Brand suffix when a showcase fabric swatch drives garment material. */
+export const FABRIC_MATERIAL_LOOK_SUFFIX =
+  "Lolipants fabric refine rules: pure solid white background (#FFFFFF). " +
+  "Keep the EXACT same mannequin, pose, proportions, and framing. " +
+  "Preserve garment silhouette, cut lines, panels, trim placement, and slot layout from the layout preview only. " +
+  "The MAIN GARMENT BODY must use the attached fabric swatch — NOT the flat placeholder colour from the compose preview. " +
+  "Render realistic fabric drape, subtle stitching, and natural pattern scale. " +
+  "Accent/trim hex colours apply ONLY to trim or overlay pieces explicitly shown in the layout — never recolour the main body over the swatch. " +
+  "No studio set, scenery, props, watermarks, or readable text/logos.";
+
 export function buildGarmentLookPrompt(input: GarmentLookPromptInput): string {
   const textExtra =
     input.textLayersSummary != null && input.textLayersSummary.trim().length > 0
       ? `\nEmbroidery / text on garment (preserve placement): ${input.textLayersSummary.trim()}`
       : "";
   const placement = input.printPlacement?.trim() || "chest";
+  const fabricName = input.fabricName?.trim() ?? "";
+  const hasFabric = fabricName.length > 0;
+  const useSwatchMaterial = hasFabric && Boolean(input.hasFabricSwatchReference);
+  const fabricMaterialLine = hasFabric ? `Fabric material (mandatory): ${fabricName}` : "";
 
   const userBlock =
     input.userExtra != null && input.userExtra.trim().length > 0
@@ -63,6 +92,33 @@ export function buildGarmentLookPrompt(input: GarmentLookPromptInput): string {
       : "";
 
   if (input.hasDesignPreviewReference) {
+    if (useSwatchMaterial || hasFabric) {
+      return (
+        [
+          "Edit and refine the attached design preview image. This is a REFINE task — not a new photoshoot.",
+          "Background: pure solid white (#FFFFFF). No gradients, scenery, or studio props.",
+          "Mannequin: keep IDENTICAL — same silhouette, pose, proportions, and camera framing as the preview.",
+          "Garment layout: preserve EXACT cut lines, panels, trim placement, prints, and slot selections from the preview — silhouette and construction only.",
+          useSwatchMaterial
+            ? "CRITICAL — Main garment fabric: The compose preview uses a flat placeholder colour. IGNORE that fill for the main garment body. The entire main dress/garment must be sewn from the attached fabric swatch reference — match its print, texture, weave, and colours at realistic scale."
+            : "CRITICAL — Main garment fabric: Do NOT render the main garment body in the flat placeholder colour from the compose preview. The main body must appear sewn from the specified fabric material below.",
+          "Refinement goal: turn stacked/layered configurator graphics into ONE cohesive, photorealistic sewn garment with natural fabric drape.",
+          "Do NOT invent new garment parts, replace the mannequin, or change the garment silhouette.",
+          "Do NOT misread chest/overlay panels as sleeves — overlay graphics stay on the front torso only.",
+          "",
+          `Garment type (reference): ${input.garmentType}`,
+          fabricMaterialLine,
+          `Accent / trim colour (trim pieces only — not main body fabric): ${input.accentColour}`,
+          `Fabric quality tier: ${input.fabricQuality}`,
+          textExtra,
+        ].join("\n") +
+        configuratorBlock +
+        aiLayerNotesBlock +
+        userBlock +
+        suffixBlock
+      );
+    }
+
     return (
       [
         "Edit and refine the attached design preview image. This is a REFINE task — not a new photoshoot.",
@@ -78,6 +134,32 @@ export function buildGarmentLookPrompt(input: GarmentLookPromptInput): string {
         `Accent / trim colour: ${input.accentColour}`,
         `Fabric quality tier: ${input.fabricQuality}`,
         textExtra,
+      ].join("\n") +
+      configuratorBlock +
+      aiLayerNotesBlock +
+      userBlock +
+      suffixBlock
+    );
+  }
+
+  if (hasFabric) {
+    return (
+      [
+        "Generate exactly ONE refined fashion preview on a pure white background (#FFFFFF).",
+        "One modest mannequin or model wearing the described custom garment, full-length, catalogue clarity.",
+        "",
+        `Garment type: ${input.garmentType}`,
+        fabricMaterialLine,
+        useSwatchMaterial
+          ? "Main garment body: use the attached fabric swatch reference for all colour, print, texture, and weave — not a flat hex fill."
+          : "Main garment body: render in the specified fabric material — not a generic flat colour fill.",
+        `Accent / trim colour (trim only): ${input.accentColour}`,
+        `Fabric quality tier: ${input.fabricQuality}`,
+        `Integrate the user's print artwork from the supplied reference image onto the garment (${placement} placement unless the sketch suggests otherwise).`,
+        textExtra,
+        "",
+        "If reference images are provided: honor the mannequin/body reference for pose; honor the garment reference for layout; honor the fabric swatch for main body material.",
+        "Output must be modest formalwear appropriate for Gulf / Middle Eastern contexts.",
       ].join("\n") +
       configuratorBlock +
       aiLayerNotesBlock +

@@ -560,7 +560,14 @@ const CMS_TABLES: Record<string, CmsTableConfig> = {
   },
   fabrics: {
     table: "fabric_options",
-    columns: ["name", "name_ar", "quality", "garment_type", "is_available"],
+    columns: [
+      "name",
+      "name_ar",
+      "quality",
+      "garment_type",
+      "is_available",
+      "swatch_url",
+    ],
     required: ["name", "name_ar", "quality", "garment_type"],
   },
   presets: {

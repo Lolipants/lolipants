@@ -36,6 +36,37 @@ describe("geminiImageClient", () => {
     expect(prompt).toContain("NOT sleeves");
   });
 
+  it("includes fabric material name in garment look prompt", () => {
+    const prompt = buildGarmentLookPrompt({
+      garmentType: "abaya",
+      primaryColour: "#162F28",
+      accentColour: "#C9A84C",
+      fabricName: "Silk",
+      hasFabricSwatchReference: true,
+      fabricQuality: "premium",
+      hasDesignPreviewReference: true,
+    });
+    expect(prompt).toContain("Fabric material (mandatory): Silk");
+    expect(prompt).toContain("IGNORE that fill");
+    expect(prompt).toContain("attached fabric swatch");
+    expect(prompt).not.toContain("Primary fabric colour:");
+    expect(prompt).toContain("Fabric quality tier: premium");
+  });
+
+  it("uses fabric-first prompt without primary colour when fabric is selected", () => {
+    const prompt = buildGarmentLookPrompt({
+      garmentType: "dress",
+      primaryColour: "#FF0000",
+      accentColour: "#C9A84C",
+      fabricName: "Blue vintage floral",
+      fabricQuality: "standard",
+      hasDesignPreviewReference: true,
+    });
+    expect(prompt).toContain("placeholder colour");
+    expect(prompt).not.toContain("Primary fabric colour:");
+    expect(prompt).not.toContain("#FF0000");
+  });
+
   it("extracts inline_data from Gemini REST shape", () => {
     const out = extractInlineImageFromGeminiResponse({
       candidates: [

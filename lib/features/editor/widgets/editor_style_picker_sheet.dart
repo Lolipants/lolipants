@@ -4,12 +4,11 @@ import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
-import 'package:lolipants/features/editor/models/fabric_option.dart';
 import 'package:lolipants/features/editor/providers/editor_provider.dart';
 import 'package:lolipants/shared/widgets/full_spectrum_color_picker.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
 
-/// Opens the editor colour + fabric bottom sheet.
+/// Opens the editor colour bottom sheet.
 Future<void> showEditorStylePickerSheet(BuildContext context) {
   return showModalBottomSheet<void>(
     context: context,
@@ -38,7 +37,7 @@ Future<void> showEditorStylePickerSheet(BuildContext context) {
   );
 }
 
-/// Colour + fabric picker content for the palette FAB sheet.
+/// Colour picker content for the palette FAB sheet.
 class EditorStylePickerSheet extends ConsumerWidget {
   const EditorStylePickerSheet({required this.scrollController, super.key});
 
@@ -65,8 +64,6 @@ class EditorStylePickerSheet extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final editor = ref.watch(editorProvider);
     final notifier = ref.read(editorProvider.notifier);
-    final fabrics = editor.availableFabrics;
-    final selectedFabric = _fabricById(fabrics, editor.selectedFabricId);
 
     return Column(
       children: [
@@ -90,7 +87,7 @@ class EditorStylePickerSheet extends ConsumerWidget {
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
-                'Choose a colour and fabric — changes apply to your design right away.',
+                'Choose a colour — changes apply to your design right away.',
                 style: AppTextStyles.bodySmall.copyWith(color: AppColors.fog),
               ),
               const SizedBox(height: AppSpacing.xl),
@@ -140,111 +137,39 @@ class EditorStylePickerSheet extends ConsumerWidget {
               ),
               const SizedBox(height: AppSpacing.lg),
               _SectionCard(
-                icon: Icons.texture_outlined,
-                title: AppStrings.editorTabFabric,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (fabrics.isEmpty)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: AppSpacing.md,
-                        ),
-                        child: Row(
-                          children: [
-                            const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
+                icon: Icons.grade_outlined,
+                title: 'Quality tier',
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    return SegmentedButton<String>(
+                      segments: [
+                        for (final q in _qualityOptions)
+                          ButtonSegment<String>(
+                            value: q.id,
+                            label: Text(
+                              q.label,
+                              style: const TextStyle(fontSize: 11),
                             ),
-                            const SizedBox(width: AppSpacing.md),
-                            Text(
-                              'Loading fabrics…',
-                              style: AppTextStyles.bodySmall,
-                            ),
-                          ],
-                        ),
-                      )
-                    else ...[
-                      if (selectedFabric != null) ...[
-                        Text(
-                          'Selected',
-                          style: AppTextStyles.labelGold.copyWith(fontSize: 9),
-                        ),
-                        const SizedBox(height: AppSpacing.xs),
-                        _SelectedFabricBanner(fabric: selectedFabric),
-                        const SizedBox(height: AppSpacing.md),
-                      ],
-                      Text(
-                        'Material',
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.fog,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      SizedBox(
-                        height: 44,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: fabrics.length,
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(width: AppSpacing.sm),
-                          itemBuilder: (context, index) {
-                            final fabric = fabrics[index];
-                            return _FabricPill(
-                              fabric: fabric,
-                              selected: fabric.id == editor.selectedFabricId,
-                              onTap: fabric.isAvailable
-                                  ? () => notifier.setFabric(fabric.id)
-                                  : null,
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: AppSpacing.lg),
-                    Text(
-                      'Quality tier',
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.fog,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    LayoutBuilder(
-                      builder: (context, constraints) {
-                        return SegmentedButton<String>(
-                          segments: [
-                            for (final q in _qualityOptions)
-                              ButtonSegment<String>(
-                                value: q.id,
-                                label: Text(
-                                  q.label,
-                                  style: const TextStyle(fontSize: 11),
-                                ),
-                              ),
-                          ],
-                          style: SegmentedButton.styleFrom(
-                            backgroundColor: AppColors.smoke,
-                            foregroundColor: AppColors.dust,
-                            selectedForegroundColor: AppColors.sand,
-                            selectedBackgroundColor:
-                                AppColors.gold.withValues(alpha: 0.22),
-                            side: const BorderSide(
-                              color: AppColors.borderSubtle,
-                            ),
-                            visualDensity: VisualDensity.compact,
                           ),
-                          selected: {editor.fabricQuality},
-                          onSelectionChanged: (next) {
-                            if (next.isEmpty) return;
-                            notifier.setFabricQuality(next.first);
-                          },
-                        );
+                      ],
+                      style: SegmentedButton.styleFrom(
+                        backgroundColor: AppColors.smoke,
+                        foregroundColor: AppColors.dust,
+                        selectedForegroundColor: AppColors.sand,
+                        selectedBackgroundColor:
+                            AppColors.gold.withValues(alpha: 0.22),
+                        side: const BorderSide(
+                          color: AppColors.borderSubtle,
+                        ),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      selected: {editor.fabricQuality},
+                      onSelectionChanged: (next) {
+                        if (next.isEmpty) return;
+                        notifier.setFabricQuality(next.first);
                       },
-                    ),
-                  ],
+                    );
+                  },
                 ),
               ),
             ],
@@ -264,13 +189,6 @@ class EditorStylePickerSheet extends ConsumerWidget {
         ),
       ],
     );
-  }
-
-  FabricOption? _fabricById(List<FabricOption> fabrics, String id) {
-    for (final f in fabrics) {
-      if (f.id == id) return f;
-    }
-    return fabrics.isEmpty ? null : fabrics.first;
   }
 
   Future<void> _pickCustomColour(
@@ -476,90 +394,3 @@ class _ColourDot extends StatelessWidget {
   }
 }
 
-class _SelectedFabricBanner extends StatelessWidget {
-  const _SelectedFabricBanner({required this.fabric});
-
-  final FabricOption fabric;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.gold.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(color: AppColors.gold.withValues(alpha: 0.45)),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.check_circle, size: 18, color: AppColors.gold),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Text(
-              fabric.nameAr.isNotEmpty
-                  ? '${fabric.name} · ${fabric.nameAr}'
-                  : fabric.name,
-              style: AppTextStyles.bodyMedium.copyWith(color: AppColors.sand),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _FabricPill extends StatelessWidget {
-  const _FabricPill({
-    required this.fabric,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final FabricOption fabric;
-  final bool selected;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final enabled = onTap != null;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppRadius.pill),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md,
-            vertical: AppSpacing.sm,
-          ),
-          decoration: BoxDecoration(
-            color: selected
-                ? AppColors.gold.withValues(alpha: 0.18)
-                : AppColors.smoke,
-            borderRadius: BorderRadius.circular(AppRadius.pill),
-            border: Border.all(
-              color: selected
-                  ? AppColors.gold
-                  : (enabled ? AppColors.borderSubtle : AppColors.borderDefault),
-              width: selected ? 1.5 : 1,
-            ),
-          ),
-          child: Text(
-            fabric.name,
-            style: AppTextStyles.bodySmall.copyWith(
-              color: enabled
-                  ? (selected ? AppColors.gold : AppColors.dust)
-                  : AppColors.fog,
-              fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}

@@ -1,0 +1,11 @@
+/help
+  Content-Type: text/html; charset=utf-8
+
+/privacy
+  Content-Type: text/html; charset=utf-8
+
+/terms
+  Content-Type: text/html; charset=utf-8
+
+/styles.css
+  Content-Type: text/css; charset=utf-8

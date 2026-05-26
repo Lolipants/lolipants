@@ -4,6 +4,7 @@ import 'package:fpdart/fpdart.dart' show Either, Unit, left, right, unit;
 import 'package:lolipants/core/errors/app_exception.dart';
 import 'package:lolipants/core/network/api_endpoints.dart';
 import 'package:lolipants/features/auth/data/auth_local_storage.dart';
+import 'package:lolipants/features/editor/data/bundled_fabric_catalog.dart';
 import 'package:lolipants/features/editor/models/fabric_option.dart';
 import 'package:lolipants/features/editor/models/garment_design.dart';
 
@@ -67,7 +68,10 @@ class DesignsRepository {
           );
         }
       }
-      return right(options);
+      if (options.isEmpty) {
+        return right(bundledFabricOptionsForGarment(garmentType));
+      }
+      return right(enrichFabricSwatches(options));
     } on DioException catch (e) {
       return left(_mapDio(e));
     } on Exception {

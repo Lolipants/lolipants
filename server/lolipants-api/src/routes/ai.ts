@@ -2,8 +2,11 @@ import { Hono } from "hono";
 import { apiError } from "../lib/http";
 import {
   buildGarmentLookPrompt,
+  COMPOSE_PREVIEW_LAYOUT_REF_CAPTION,
   COMPOSE_PREVIEW_REF_CAPTION,
   DEFAULT_LOLIPANTS_LOOK_SUFFIX,
+  FABRIC_MATERIAL_LOOK_SUFFIX,
+  FABRIC_SWATCH_REF_CAPTION,
   fetchUrlAsInlinePart,
   generateGarmentLookImage,
   inlinePartToBytes,
@@ -14,7 +17,7 @@ import {
   generateGarmentLookImageEditOpenAI,
   generateGarmentLookImageOpenAI,
 } from "../lib/openaiImageClient";
-import { buildR2PublicUrl } from "../lib/r2PublicUrl";
+import { buildR2PublicUrl, resolveCatalogAssetPublicUrl } from "../lib/r2PublicUrl";
 import {
   AI_RENDER_WEEKLY_LIMIT,
   getAiRenderQuota,
@@ -66,6 +69,8 @@ type DesignRenderSourceRow = {
   primary_colour: string | null;
   accent_colour: string | null;
   fabric_quality: string | null;
+  fabric_name: string | null;
+  fabric_swatch_url: string | null;
 };
 
 aiRoutes.post("/design", async (c) => {
@@ -366,9 +371,12 @@ async function _advanceDesignRenderJob(env: Env, jobId: string) {
 
   const design = await env.DB.prepare(
     `SELECT d.print_image_url, d.sketch_image_url, d.render_metadata, d.garment_type, d.mannequin_id,
-      d.primary_colour, d.accent_colour, d.fabric_quality, mo.preview_url AS mannequin_preview_url
+      d.primary_colour, d.accent_colour, d.fabric_quality,
+      fo.name AS fabric_name, fo.swatch_url AS fabric_swatch_url,
+      mo.preview_url AS mannequin_preview_url
      FROM designs d
      LEFT JOIN mannequin_options mo ON mo.id = d.mannequin_id
+     LEFT JOIN fabric_options fo ON fo.id = d.fabric_id
      WHERE d.id = ? AND d.user_id = ?`,
   )
     .bind(row.design_id, row.user_id)
@@ -567,8 +575,20 @@ function _resolveInitialRenderProvider(env: Env): string {
   return "template";
 }
 
+function _resolveFabricSwatchUrl(
+  env: Env,
+  swatchPath: string | null | undefined,
+): string | null {
+  const resolved = resolveCatalogAssetPublicUrl(env, swatchPath)?.trim();
+  if (resolved) return resolved;
+  const raw = swatchPath?.trim() ?? "";
+  if (raw.startsWith("http://") || raw.startsWith("https://")) return raw;
+  return null;
+}
+
 function _buildGarmentLookPromptForDesign(
   design: (DesignRenderSourceRow & { mannequin_preview_url: string | null }) | null,
+  env: Env,
 ): string {
   const placement = _readPrintPlacement(design?.render_metadata ?? null);
   const textSummary = _summarizeTextLayers(design?.render_metadata ?? null);
@@ -576,35 +596,61 @@ function _buildGarmentLookPromptForDesign(
   const hasPreview = Boolean(
     hints.configuratorComposeImageUrl?.trim() || design?.print_image_url?.trim(),
   );
+  const fabricName = design?.fabric_name?.trim() || null;
+  const hasFabricSwatch = Boolean(
+    _resolveFabricSwatchUrl(env, design?.fabric_swatch_url),
+  );
+  const brandSuffix = fabricName
+    ? FABRIC_MATERIAL_LOOK_SUFFIX
+    : (hints.aiLookPromptSuffix ?? DEFAULT_LOLIPANTS_LOOK_SUFFIX);
 
   return buildGarmentLookPrompt({
     garmentType: design?.garment_type ?? "garment",
     primaryColour: design?.primary_colour ?? "#162F28",
     accentColour: design?.accent_colour ?? "#C9A84C",
+    fabricName,
+    hasFabricSwatchReference: hasFabricSwatch,
     fabricQuality: design?.fabric_quality ?? "standard",
     printPlacement: placement,
     textLayersSummary: textSummary,
     userExtra: hints.aiLookUserPrompt,
     configuratorSummary: hints.configuratorSummary,
     configuratorAiLayerNotes: hints.configuratorAiLayerNotes,
-    brandSuffix: hints.aiLookPromptSuffix ?? DEFAULT_LOLIPANTS_LOOK_SUFFIX,
+    brandSuffix,
     hasDesignPreviewReference: hasPreview,
   });
 }
 
 async function _loadGarmentLookReferenceParts(
   design: (DesignRenderSourceRow & { mannequin_preview_url: string | null }) | null,
+  env: Env,
 ): Promise<GeminiInlinePart[]> {
   const hints = _readEditorRenderHints(design?.render_metadata ?? null);
   const composeUrl = hints.configuratorComposeImageUrl?.trim() || null;
+  const swatchUrl = _resolveFabricSwatchUrl(env, design?.fabric_swatch_url);
   const refs: GeminiInlinePart[] = [];
+  const useFabricSwatch = Boolean(swatchUrl);
+
+  async function appendSwatchIfPresent(): Promise<void> {
+    if (!swatchUrl) return;
+    const part = await fetchUrlAsInlinePart(swatchUrl, fetch, MAX_REFERENCE_IMAGE_BYTES);
+    if (part) {
+      refs.push({ ...part, caption: FABRIC_SWATCH_REF_CAPTION });
+    }
+  }
 
   // Compose preview already includes mannequin + garment — use it alone when present.
   if (composeUrl) {
     const part = await fetchUrlAsInlinePart(composeUrl, fetch, MAX_REFERENCE_IMAGE_BYTES);
     if (part) {
-      refs.push({ ...part, caption: COMPOSE_PREVIEW_REF_CAPTION });
+      refs.push({
+        ...part,
+        caption: useFabricSwatch
+          ? COMPOSE_PREVIEW_LAYOUT_REF_CAPTION
+          : COMPOSE_PREVIEW_REF_CAPTION,
+      });
     }
+    await appendSwatchIfPresent();
     return refs;
   }
 
@@ -629,6 +675,8 @@ async function _loadGarmentLookReferenceParts(
     }
     if (refs.length >= 3) break;
   }
+
+  await appendSwatchIfPresent();
 
   return refs;
 }
@@ -712,8 +760,8 @@ async function _runGeminiGarmentRefinement(input: {
       ? env.GEMINI_IMAGE_MODEL.trim()
       : DEFAULT_GEMINI_IMAGE_MODEL;
 
-  const prompt = _buildGarmentLookPromptForDesign(design);
-  const refs = await _loadGarmentLookReferenceParts(design);
+  const prompt = _buildGarmentLookPromptForDesign(design, env);
+  const refs = await _loadGarmentLookReferenceParts(design, env);
 
   const gen = await generateGarmentLookImage({
     apiKey: geminiKey,
@@ -767,8 +815,8 @@ async function _runOpenAiGarmentRefinement(input: {
       ? env.OPENAI_IMAGE_MODEL.trim()
       : DEFAULT_OPENAI_IMAGE_MODEL;
 
-  const prompt = _buildGarmentLookPromptForDesign(design);
-  const refs = await _loadGarmentLookReferenceParts(design);
+  const prompt = _buildGarmentLookPromptForDesign(design, env);
+  const refs = await _loadGarmentLookReferenceParts(design, env);
 
   console.info(
     JSON.stringify({

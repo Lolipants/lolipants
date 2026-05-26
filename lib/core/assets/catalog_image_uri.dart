@@ -20,12 +20,13 @@ bool get useRemoteCatalogAssets {
   return base != null && base.isNotEmpty;
 }
 
-/// True for paths under `assets/images/designs|mannequins|configurator/`.
+/// True for paths under `assets/images/designs|mannequins|configurator|fabrics/`.
 bool isCatalogAssetPath(String path) {
   final p = path.trim();
   return p.startsWith('assets/images/designs/') ||
       p.startsWith('assets/images/mannequins/') ||
-      p.startsWith('assets/images/configurator/');
+      p.startsWith('assets/images/configurator/') ||
+      p.startsWith('assets/images/fabrics/');
 }
 
 /// Maps a bundled catalogue path to an R2 URL, or returns [pathOrUrl] unchanged.

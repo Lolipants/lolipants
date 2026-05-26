@@ -6,6 +6,7 @@ class FabricOption {
     required this.nameAr,
     required this.quality,
     required this.isAvailable,
+    this.swatchUrl = '',
   });
 
   final String id;
@@ -13,6 +14,9 @@ class FabricOption {
   final String nameAr;
   final String quality;
   final bool isAvailable;
+
+  /// Admin-uploaded square swatch photo URL (optional until CMS upload).
+  final String swatchUrl;
 
   factory FabricOption.fromApi(Map<String, dynamic> json) {
     return FabricOption(
@@ -25,6 +29,9 @@ class FabricOption {
       isAvailable: (json['is_available'] == 1) ||
           (json['isAvailable'] == true) ||
           (json['is_available']?.toString() == '1'),
+      swatchUrl: json['swatch_url']?.toString().trim() ??
+          json['swatchUrl']?.toString().trim() ??
+          '',
     );
   }
 }
