@@ -103,9 +103,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           );
           return;
         }
-        final ok = await ref.read(settingsProvider.notifier).applyPushPreference(
-              want: true,
-            );
+        final ok =
+            await ref.read(settingsProvider.notifier).applyPushPreference(
+                  want: true,
+                );
         if (!mounted) return;
         if (!ok) {
           if (!isOneSignalAppConfigured()) {
@@ -264,7 +265,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       if (mounted) context.go('/login');
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -578,7 +578,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   subtitle: Text(
                     _version ??
                         '${AppStrings.settingsVersionLoading} / '
-                        '${AppStrings.settingsVersionLoadingAr}',
+                            '${AppStrings.settingsVersionLoadingAr}',
                     style: AppTextStyles.bodySmall,
                   ),
                 ),
