@@ -32,7 +32,11 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>Camera access is needed for AI measurement estimation.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Microphone access may be used when recording video during AI measurements.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Your location is used to assign the nearest tailor and calculate delivery pricing.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>Your location is used to assign the nearest tailor and calculate delivery pricing.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Photo library access is needed to select images for measurements and design uploads.</string>
