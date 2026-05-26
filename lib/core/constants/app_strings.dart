@@ -380,10 +380,10 @@ class AppStrings {
       'أضف نصك أو صورتك على القمصان والملابس الكاجوال';
 
   /// Sign-up gender label (English).
-  static const String signupGenderLabel = 'I shop for';
+  static const String signupGenderLabel = 'I design for';
 
   /// Sign-up gender label (Arabic).
-  static const String signupGenderLabelAr = 'أتسوّق لـ';
+  static const String signupGenderLabelAr = 'أصمم لـ';
 
   /// Sign-up profile photo hint (English).
   static const String signupPhotoHint = 'Profile photo (optional)';
@@ -1360,10 +1360,11 @@ class AppStrings {
   static const String settingsDeleteDialogConfirmAr = 'حذف';
 
   /// Default help center URL.
-  static const String settingsDefaultHelpUrl = 'https://lolipants.com/help';
+  static const String settingsDefaultHelpUrl =
+      'https://loli-pants.com/help';
 
   /// Default FAQ URL.
-  static const String settingsDefaultFaqUrl = 'https://lolipants.com/faq';
+  static const String settingsDefaultFaqUrl = 'https://loli-pants.com/help';
 
   /// Default mailto for support.
   static const String settingsDefaultSupportMailto =

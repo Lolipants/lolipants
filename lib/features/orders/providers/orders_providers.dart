@@ -18,8 +18,18 @@ final apiDioProvider = Provider<Dio>((ref) {
   return DioClient.create(
     readSessionToken: storage.readSessionToken,
     onUnauthorized: () async {
+      // A 401 while already unauthenticated (e.g. during sign-up) is
+      // expected — only treat it as session expiry when there is an
+      // active authenticated session.
+      if (ref.read(authProvider).value is! AuthAuthenticated) return;
+      // Suppress during post-auth init (e.g. GET /users/me 401 for a
+      // brand-new account that has no profile row yet).
+      if (ref.read(authProvider.notifier).isPostAuthInit) return;
+
       final context = rootNavigatorKey.currentContext;
-      final location = context == null ? null : GoRouterState.of(context).uri.toString();
+      final router = ref.read(appRouterProvider);
+      final location =
+          router.routerDelegate.currentConfiguration.uri.toString();
       await ref
           .read(authProvider.notifier)
           .handleUnauthorized(returnTo: location);

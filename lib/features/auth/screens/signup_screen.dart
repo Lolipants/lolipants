@@ -117,21 +117,25 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     if (_avatarUploadUrl != null) {
       return _avatarUploadUrl;
     }
-    setState(() => _uploadingAvatar = true);
+    if (mounted) setState(() => _uploadingAvatar = true);
     final repo = ref.read(designsRepositoryProvider);
     final upload = await repo.uploadPrintImage(filePath: _avatarLocalPath!);
-    if (!mounted) return null;
-    setState(() => _uploadingAvatar = false);
+    // Always clear the uploading flag and return the URL regardless of
+    // mounted state — the caller needs the URL even if the widget dismounted
+    // during the upload (e.g. router redirect fired mid-flight).
+    if (mounted) setState(() => _uploadingAvatar = false);
     return upload.fold(
       (err) {
-        setState(() {
-          _banner = switch (err) {
-            ServerException(:final message) when message.isNotEmpty => message,
-            AuthException(:final message) when message.isNotEmpty => message,
-            NetworkException(:final message) when message.isNotEmpty => message,
-            _ => AppStrings.errorAuthGeneric,
-          };
-        });
+        if (mounted) {
+          setState(() {
+            _banner = switch (err) {
+              ServerException(:final message) when message.isNotEmpty => message,
+              AuthException(:final message) when message.isNotEmpty => message,
+              NetworkException(:final message) when message.isNotEmpty => message,
+              _ => AppStrings.errorAuthGeneric,
+            };
+          });
+        }
         return null;
       },
       (url) {
@@ -152,33 +156,36 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       return;
     }
     setState(() => _loading = true);
-    final avatarUrl = await _uploadAvatarIfNeeded();
-    if (!mounted) return;
-    if (_avatarLocalPath != null && avatarUrl == null) {
-      setState(() => _loading = false);
-      return;
-    }
+    // Gender is passed to signUpWithProfile and saved server-side before the
+    // authenticated state is announced, so it is always tied to the account.
+    // Avatar upload requires auth — it runs in the success callback below.
     final result = await ref.read(authProvider.notifier).signUpWithProfile(
           name: _name.text.trim(),
           email: _email.text.trim(),
           password: _password.text,
-          avatarUrl: avatarUrl,
+          gender: _selectedGender,
         );
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
     setState(() => _loading = false);
+    // Capture ref-dependent objects before any async gap — the widget may be
+    // disposed (router redirect) during the avatar upload await below.
+    final authNotifier = ref.read(authProvider.notifier);
+    final returnTo = ref.read(pendingAuthReturnToProvider);
+    final returnToNotifier = ref.read(pendingAuthReturnToProvider.notifier);
+
     await result.fold(
       (e) async => setState(() => _banner = mapAuthExceptionToUserMessage(e)),
       (user) async {
-        if (_selectedGender != null) {
-          await ref
-              .read(userGenderProvider.notifier)
-              .persistGender(_selectedGender!);
+        // User is now authenticated — upload avatar and persist to Better Auth.
+        final avatarUrl = await _uploadAvatarIfNeeded();
+        if (avatarUrl != null) {
+          await authNotifier.updateProfile(
+            name: user.name,
+            image: avatarUrl,
+          );
         }
         if (!mounted) return;
-        final returnTo = ref.read(pendingAuthReturnToProvider);
-        ref.read(pendingAuthReturnToProvider.notifier).state = null;
+        returnToNotifier.state = null;
         context.go(postAuthLocation(user, returnTo));
       },
     );
@@ -318,14 +325,6 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                             _selectedGender == UserGenderPreference.women,
                         onTap: () => setState(() {
                           _selectedGender = UserGenderPreference.women;
-                          _genderError = null;
-                        }),
-                      ),
-                      _GenderChip(
-                        label: AppStrings.homeCategoryKids,
-                        selected: _selectedGender == UserGenderPreference.kids,
-                        onTap: () => setState(() {
-                          _selectedGender = UserGenderPreference.kids;
                           _genderError = null;
                         }),
                       ),

@@ -73,6 +73,15 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   /// Prevents overlapping native social sign-in attempts.
   bool _socialSignInInFlight = false;
 
+  /// True while [_afterAuthenticated] is running (post-login init window).
+  /// The 401 interceptor must not treat failures during this window as
+  /// session expiry — e.g. [GET /users/me] returning 401 for a brand-new
+  /// account that has no profile row yet.
+  bool _postAuthInit = false;
+
+  /// Whether the notifier is currently inside the post-auth init window.
+  bool get isPostAuthInit => _postAuthInit;
+
   @override
   Future<AuthState> build() async {
     final repo = ref.read(authRepositoryProvider);
@@ -89,13 +98,18 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   }
 
   Future<void> _afterAuthenticated(User user) async {
-    await linkOneSignalUser(user.id);
-    await ref.read(userGenderProvider.notifier).syncFromApi();
-    if (ref.read(settingsProvider).pushEnabled) {
-      final playerId = await currentPlayerId();
-      if (playerId != null && playerId.isNotEmpty) {
-        await ref.read(pushRepositoryProvider).registerPlayerId(playerId);
+    _postAuthInit = true;
+    try {
+      await linkOneSignalUser(user.id);
+      await ref.read(userGenderProvider.notifier).syncFromApi();
+      if (ref.read(settingsProvider).pushEnabled) {
+        final playerId = await currentPlayerId();
+        if (playerId != null && playerId.isNotEmpty) {
+          await ref.read(pushRepositoryProvider).registerPlayerId(playerId);
+        }
       }
+    } finally {
+      _postAuthInit = false;
     }
   }
 
@@ -145,12 +159,21 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
 
   /// Signs up and updates [authProvider] on success.
   ///
-  /// When [avatarUrl] is set, patches the Better Auth profile after registration.
+  /// [gender] is persisted to both local storage and the API before the router
+  /// redirect fires, so it is reliably tied to the account even if the signup
+  /// screen dismounts immediately after this method returns.
+  ///
+  /// [avatarUrl] (an already-uploaded URL) is patched onto the Better Auth
+  /// profile before the state transition so it is also saved atomically.
+  ///
+  /// [_afterAuthenticated] runs *before* [AuthAuthenticated] is announced so
+  /// the signup screen stays mounted long enough for any remaining UI work.
   Future<Either<AppException, User>> signUpWithProfile({
     required String name,
     required String email,
     required String password,
     String? avatarUrl,
+    String? gender,
   }) async {
     final repo = ref.read(authRepositoryProvider);
     final result = await repo.signUp(
@@ -162,6 +185,15 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
       left,
       (user) async {
         User current = user;
+        await _afterAuthenticated(current);
+        // Persist gender before announcing authenticated state so that a 401
+        // from the API (new user — profile row being created) cannot trigger
+        // session-expiry and gender is always tied to the account.
+        if (gender != null && gender.trim().isNotEmpty) {
+          await ref
+              .read(userGenderProvider.notifier)
+              .persistGender(gender.trim());
+        }
         if (avatarUrl != null && avatarUrl.trim().isNotEmpty) {
           final patched = await repo.updateProfile(
             name: name.trim(),
@@ -171,7 +203,6 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
         }
         state = AsyncValue.data(AuthAuthenticated(current));
         ref.read(authRecoveryMessageProvider.notifier).state = null;
-        await _afterAuthenticated(current);
         return right(current);
       },
     );
