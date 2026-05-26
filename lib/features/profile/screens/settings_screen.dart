@@ -265,13 +265,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
-  void _showLicenses() {
-    showLicensePage(
-      context: context,
-      applicationName: AppStrings.appName,
-      applicationVersion: _version,
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -425,22 +418,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   labelEn: AppStrings.settingsTermsOfService,
                   labelAr: AppStrings.settingsTermsOfServiceAr,
                   url: AppStrings.settingsDefaultTermsUrl,
-                ),
-                ListTile(
-                  leading: const Icon(
-                    Icons.policy_outlined,
-                    color: AppColors.gold,
-                  ),
-                  title: Text(
-                    '${AppStrings.settingsOpenSourceLicenses} / '
-                    '${AppStrings.settingsOpenSourceLicensesAr}',
-                    style: AppTextStyles.titleSmall,
-                  ),
-                  trailing: const Icon(
-                    Icons.chevron_right,
-                    color: AppColors.fog,
-                  ),
-                  onTap: _showLicenses,
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 const GoldDivider(),
