@@ -314,6 +314,7 @@ final List<Map<String, dynamic>> _bundledJson = [
             stem: 'cfg_mod_closure_snap_NEUTRAL',
             layerZ: 4,
             sortOrder: 0,
+            tintRole: ConfiguratorTintRole.accent,
           ),
           _cfgOption(
             id: 'opt_mod_waist_tie',
@@ -323,6 +324,7 @@ final List<Map<String, dynamic>> _bundledJson = [
             stem: 'cfg_mod_waist_tie_NEUTRAL',
             layerZ: 4,
             sortOrder: 1,
+            tintRole: ConfiguratorTintRole.accent,
           ),
         ],
       ),

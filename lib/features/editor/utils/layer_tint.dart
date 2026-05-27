@@ -21,6 +21,24 @@ ConfiguratorTintRole parseTintRole(Map<String, dynamic> metadata) {
   }
 }
 
+/// Closure belts and snaps use accent colour instead of body fabric.
+ConfiguratorTintRole effectiveTintRole(ConfiguratorOption option) {
+  final role = option.tintRole;
+  if (role != ConfiguratorTintRole.primary) return role;
+
+  final key = option.optionKey.trim().toLowerCase();
+  if (key == 'snap' || key == 'tie_belt') {
+    return ConfiguratorTintRole.accent;
+  }
+
+  final path = option.bundledAssetPath?.toLowerCase() ?? '';
+  if (path.contains('closure') || path.contains('waist_tie')) {
+    return ConfiguratorTintRole.accent;
+  }
+
+  return role;
+}
+
 /// Resolves the tint colour for [option], or null when tinting is disabled.
 Color? resolveOptionTintColor({
   required ConfiguratorOption option,
@@ -29,7 +47,7 @@ Color? resolveOptionTintColor({
   required Color accentColour,
 }) {
   if (!template.layerTintEnabled) return null;
-  switch (option.tintRole) {
+  switch (effectiveTintRole(option)) {
     case ConfiguratorTintRole.none:
       return null;
     case ConfiguratorTintRole.accent:

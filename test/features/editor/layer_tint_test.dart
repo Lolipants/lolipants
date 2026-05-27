@@ -21,6 +21,46 @@ void main() {
     });
   });
 
+  group('effectiveTintRole', () {
+    ConfiguratorOption option({
+      String role = 'primary',
+      String optionKey = 'floor',
+      String? assetPath,
+    }) =>
+        ConfiguratorOption(
+          id: 'opt',
+          optionKey: optionKey,
+          labelEn: 'L',
+          labelAr: 'L',
+          assetUrl: null,
+          metadata: {
+            'tintRole': role,
+            if (assetPath != null) 'assetPath': assetPath,
+          },
+          sortOrder: 0,
+        );
+
+    test('maps closure trims to accent when metadata is primary', () {
+      expect(
+        effectiveTintRole(
+          option(optionKey: 'snap', assetPath: 'assets/x/cfg_mod_closure_snap_NEUTRAL.png'),
+        ),
+        ConfiguratorTintRole.accent,
+      );
+      expect(
+        effectiveTintRole(option(optionKey: 'tie_belt')),
+        ConfiguratorTintRole.accent,
+      );
+    });
+
+    test('respects explicit metadata roles', () {
+      expect(
+        effectiveTintRole(option(role: 'none')),
+        ConfiguratorTintRole.none,
+      );
+    });
+  });
+
   group('resolveOptionTintColor', () {
     const template = ConfiguratorTemplate(
       id: 't1',
