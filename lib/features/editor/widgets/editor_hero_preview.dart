@@ -11,10 +11,11 @@ import 'package:lolipants/features/editor/models/configurator_catalog.dart';
 import 'package:lolipants/features/editor/providers/configurator_providers.dart';
 import 'package:lolipants/features/editor/providers/design_catalog_providers.dart';
 import 'package:lolipants/features/editor/providers/editor_provider.dart';
-import 'package:lolipants/features/editor/utils/layer_tint.dart';
+import 'package:lolipants/features/editor/utils/fabric_texture_overlay.dart';
 import 'package:lolipants/features/editor/widgets/configurator_option_image.dart';
+import 'package:lolipants/features/editor/widgets/fabric_textured_catalog_image.dart';
+import 'package:lolipants/features/editor/widgets/fabric_textured_garment_layer.dart';
 import 'package:lolipants/features/editor/widgets/editor_wedding_hero.dart';
-import 'package:lolipants/shared/widgets/catalog_image.dart';
 import 'package:lolipants/features/wedding/models/wedding_dress.dart';
 import 'package:lolipants/features/wedding/providers/wedding_providers.dart';
 
@@ -134,11 +135,20 @@ class _BuildComposeBody extends ConsumerWidget {
         ? custom
         : bundledPath;
 
+    final selectedFabric = selectedFabricOption(
+      selectedFabricId: state.selectedFabricId,
+      availableFabrics: state.availableFabrics,
+    );
+    final fabricProvider = selectedFabric != null
+        ? fabricSwatchImageProvider(selectedFabric)
+        : null;
+
     if (state.buildStyleMode == EditorBuildStyleMode.catalog) {
       final designPath = state.selectedCatalogDesignPath.trim();
       if (designPath.isNotEmpty) {
         final lookup = ref.watch(designCatalogLookupProvider);
         final imageSource = resolveCatalogDesignImageSource(designPath, lookup);
+        final path = imageSource.isNotEmpty ? imageSource : designPath;
         return InteractiveViewer(
           minScale: 0.85,
           maxScale: 3,
@@ -146,8 +156,9 @@ class _BuildComposeBody extends ConsumerWidget {
           child: SizedBox(
             width: double.infinity,
             height: double.infinity,
-            child: CatalogImage(
-              path: imageSource.isNotEmpty ? imageSource : designPath,
+            child: FabricTexturedCatalogImage(
+              path: path,
+              fabricProvider: fabricProvider,
               fit: BoxFit.contain,
               alignment: Alignment.bottomCenter,
               errorWidget: Center(
@@ -208,19 +219,22 @@ class _BuildComposeBody extends ConsumerWidget {
               ),
             for (final opt in layers)
               Positioned.fill(
-                child: ConfiguratorOptionImage(
-                  option: opt,
-                  tintColor: template == null
-                      ? null
-                      : resolveOptionTintColor(
-                          option: opt,
-                          template: template!,
-                          primaryColour: state.primaryColour,
-                          accentColour: state.accentColour,
-                        ),
-                  fit: layerFit,
-                  alignment: layerAlign,
-                ),
+                child: template == null
+                    ? ConfiguratorOptionImage(
+                        option: opt,
+                        tintColor: null,
+                        fit: layerFit,
+                        alignment: layerAlign,
+                      )
+                    : FabricTexturedGarmentLayer(
+                        option: opt,
+                        template: template!,
+                        primaryColour: state.primaryColour,
+                        accentColour: state.accentColour,
+                        fabricProvider: fabricProvider,
+                        fit: layerFit,
+                        alignment: layerAlign,
+                      ),
               ),
           ],
         ),
