@@ -52,16 +52,17 @@ abstract final class DevicePermissionPrompt {
     BuildContext context,
     AppDevicePermission kind,
   ) async {
-    final permissions = await _permissionsFor(kind);
-    if (await _isSatisfied(permissions)) {
+    // Gallery picks on iOS use PHPicker and do not require photo-library
+    // permission. Pre-checking [Permission.photos] can falsely report
+    // "permanently denied" and send users to Settings before the system
+    // prompt (App Store Guideline 5.1.1(iv)).
+    if (Platform.isIOS && kind == AppDevicePermission.photos) {
       return DevicePermissionOutcome.granted;
     }
 
-    final permanentlyDenied = await _anyPermanentlyDenied(permissions);
-    if (permanentlyDenied) {
-      if (!context.mounted) return DevicePermissionOutcome.permanentlyDenied;
-      await _showOpenSettingsDialog(context, kind);
-      return DevicePermissionOutcome.permanentlyDenied;
+    final permissions = await _permissionsFor(kind);
+    if (await _isSatisfied(permissions)) {
+      return DevicePermissionOutcome.granted;
     }
 
     if (!context.mounted) return DevicePermissionOutcome.denied;
@@ -69,7 +70,12 @@ abstract final class DevicePermissionPrompt {
     if (!proceed) return DevicePermissionOutcome.denied;
 
     if (kind == AppDevicePermission.location) {
-      return _requestLocation();
+      final outcome = await _requestLocation();
+      if (outcome == DevicePermissionOutcome.permanentlyDenied &&
+          context.mounted) {
+        await _showOpenSettingsDialog(context, kind);
+      }
+      return outcome;
     }
     if (kind == AppDevicePermission.notifications) {
       return _requestNotifications();
@@ -142,17 +148,6 @@ abstract final class DevicePermissionPrompt {
     }
     final status = await permissions.single.status;
     return status.isGranted || status.isLimited;
-  }
-
-  static Future<bool> _anyPermanentlyDenied(
-    List<Permission> permissions,
-  ) async {
-    for (final permission in permissions) {
-      if (await permission.isPermanentlyDenied) {
-        return true;
-      }
-    }
-    return false;
   }
 
   static Future<DevicePermissionOutcome> _requestLocation() async {
