@@ -5,6 +5,8 @@ import 'package:lolipants/core/config/app_features.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/constants/community_strings.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/features/community/data/community_repository.dart';
 import 'package:lolipants/features/community/providers/community_providers.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
@@ -40,7 +42,13 @@ class _ConsultationsScreenState extends ConsumerState<ConsultationsScreen> {
   Future<void> _submit() async {
     final description = _descriptionController.text.trim();
     if (description.isEmpty) {
-      setState(() => _error = 'Please describe what you are looking for.');
+      setState(
+        () => _error = localizedFromContext(
+          context,
+          CommunityStrings.describeNeedsRequired,
+          CommunityStrings.describeNeedsRequiredAr,
+        ),
+      );
       return;
     }
     setState(() => _error = null);
@@ -56,7 +64,11 @@ class _ConsultationsScreenState extends ConsumerState<ConsultationsScreen> {
       setState(
         () => _error = communityErrorMessage(
           state.error!,
-          fallback: 'Could not submit consultation.',
+          fallback: localizedFromContext(
+            context,
+            CommunityStrings.couldNotSubmitConsultation,
+            CommunityStrings.couldNotSubmitConsultationAr,
+          ),
         ),
       );
       return;
@@ -65,7 +77,15 @@ class _ConsultationsScreenState extends ConsumerState<ConsultationsScreen> {
     _budgetMinController.clear();
     _budgetMaxController.clear();
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Consultation submitted')),
+      SnackBar(
+        content: Text(
+          localizedFromContext(
+            context,
+            CommunityStrings.consultationSubmitted,
+            CommunityStrings.consultationSubmittedAr,
+          ),
+        ),
+      ),
     );
     ref.invalidate(myConsultationsProvider);
   }
@@ -78,7 +98,14 @@ class _ConsultationsScreenState extends ConsumerState<ConsultationsScreen> {
       backgroundColor: AppColors.ink,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
-        title: Text('Consultations', style: AppTextStyles.titleLarge),
+        title: Text(
+          localizedFromContext(
+            context,
+            CommunityStrings.consultationsTitle,
+            CommunityStrings.consultationsTitleAr,
+          ),
+          style: AppTextStyles.titleLarge,
+        ),
       ),
       body: Stack(
         children: [
@@ -111,14 +138,25 @@ class _ConsultationsScreenState extends ConsumerState<ConsultationsScreen> {
                     onSubmit: _submit,
                   ),
                   const SizedBox(height: AppSpacing.xl),
-                  Text('Your requests', style: AppTextStyles.titleMedium),
+                  Text(
+                    localizedFromContext(
+                      context,
+                      CommunityStrings.yourRequests,
+                      CommunityStrings.yourRequestsAr,
+                    ),
+                    style: AppTextStyles.titleMedium,
+                  ),
                   const SizedBox(height: AppSpacing.sm),
                   consultations.when(
                     data: (items) => items.isEmpty
                         ? Padding(
                             padding: const EdgeInsets.all(AppSpacing.md),
                             child: Text(
-                              'No consultations yet.',
+                              localizedFromContext(
+                                context,
+                                CommunityStrings.noConsultations,
+                                CommunityStrings.noConsultationsAr,
+                              ),
                               style: AppTextStyles.bodyMedium,
                             ),
                           )
@@ -136,7 +174,11 @@ class _ConsultationsScreenState extends ConsumerState<ConsultationsScreen> {
                     error: (e, _) => Text(
                       communityErrorMessage(
                         e,
-                        fallback: 'Could not load consultations.',
+                        fallback: localizedFromContext(
+                          context,
+                          CommunityStrings.consultationsLoadError,
+                          CommunityStrings.consultationsLoadErrorAr,
+                        ),
                       ),
                     ),
                   ),
@@ -148,6 +190,37 @@ class _ConsultationsScreenState extends ConsumerState<ConsultationsScreen> {
       ),
     );
   }
+}
+
+String _localizedGarmentType(BuildContext context, String value) {
+  return switch (value) {
+    'Abaya' => localizedFromContext(
+      context,
+      CommunityStrings.filterAbaya,
+      CommunityStrings.filterAbayaAr,
+    ),
+    'Thobe' => localizedFromContext(
+      context,
+      CommunityStrings.filterThobe,
+      CommunityStrings.filterThobeAr,
+    ),
+    'Suit' => localizedFromContext(
+      context,
+      CommunityStrings.filterSuit,
+      CommunityStrings.filterSuitAr,
+    ),
+    'Dress' => localizedFromContext(
+      context,
+      CommunityStrings.filterDress,
+      CommunityStrings.filterDressAr,
+    ),
+    'Other' => localizedFromContext(
+      context,
+      CommunityStrings.garmentOther,
+      CommunityStrings.garmentOtherAr,
+    ),
+    _ => value,
+  };
 }
 
 double? _toDouble(String value) {
@@ -187,19 +260,41 @@ class _Form extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Request a consultation', style: AppTextStyles.titleMedium),
+          Text(
+            localizedFromContext(
+              context,
+              CommunityStrings.requestConsultation,
+              CommunityStrings.requestConsultationAr,
+            ),
+            style: AppTextStyles.titleMedium,
+          ),
           const SizedBox(height: AppSpacing.sm),
           DropdownButtonFormField<String>(
             initialValue: garmentType,
             dropdownColor: AppColors.smoke,
             items: [
-              const DropdownMenuItem(value: 'Abaya', child: Text('Abaya')),
-              if (kFeatureMens) ...const [
-                DropdownMenuItem(value: 'Thobe', child: Text('Thobe')),
-                DropdownMenuItem(value: 'Suit', child: Text('Suit')),
+              DropdownMenuItem(
+                value: 'Abaya',
+                child: Text(_localizedGarmentType(context, 'Abaya')),
+              ),
+              if (kFeatureMens) ...[
+                DropdownMenuItem(
+                  value: 'Thobe',
+                  child: Text(_localizedGarmentType(context, 'Thobe')),
+                ),
+                DropdownMenuItem(
+                  value: 'Suit',
+                  child: Text(_localizedGarmentType(context, 'Suit')),
+                ),
               ],
-              const DropdownMenuItem(value: 'Dress', child: Text('Dress')),
-              const DropdownMenuItem(value: 'Other', child: Text('Other')),
+              DropdownMenuItem(
+                value: 'Dress',
+                child: Text(_localizedGarmentType(context, 'Dress')),
+              ),
+              DropdownMenuItem(
+                value: 'Other',
+                child: Text(_localizedGarmentType(context, 'Other')),
+              ),
             ],
             onChanged: (value) {
               if (value != null) onGarmentTypeChanged(value);
@@ -207,7 +302,11 @@ class _Form extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.sm),
           LolipantsTextField(
-            label: 'Describe what you are looking for',
+            label: localizedFromContext(
+              context,
+              CommunityStrings.describeNeeds,
+              CommunityStrings.describeNeedsAr,
+            ),
             controller: descriptionController,
           ),
           const SizedBox(height: AppSpacing.sm),
@@ -215,7 +314,11 @@ class _Form extends StatelessWidget {
             children: [
               Expanded(
                 child: LolipantsTextField(
-                  label: 'Budget min',
+                  label: localizedFromContext(
+                    context,
+                    CommunityStrings.budgetMinShort,
+                    CommunityStrings.budgetMinShortAr,
+                  ),
                   controller: budgetMinController,
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
@@ -224,7 +327,11 @@ class _Form extends StatelessWidget {
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: LolipantsTextField(
-                  label: 'Budget max',
+                  label: localizedFromContext(
+                    context,
+                    CommunityStrings.budgetMaxShort,
+                    CommunityStrings.budgetMaxShortAr,
+                  ),
                   controller: budgetMaxController,
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
@@ -234,7 +341,11 @@ class _Form extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.md),
           LolipantsButton(
-            label: 'Submit request',
+            label: localizedFromContext(
+              context,
+              CommunityStrings.submitRequest,
+              CommunityStrings.submitRequestAr,
+            ),
             loading: submitting,
             onPressed: onSubmit,
           ),
@@ -285,7 +396,7 @@ class _ConsultationTile extends StatelessWidget {
           if (item.budgetMin != null || item.budgetMax != null) ...[
             const SizedBox(height: AppSpacing.xs),
             Text(
-              'Budget: '
+              '${localizedFromContext(context, CommunityStrings.budgetRange, CommunityStrings.budgetRangeAr)} '
               '${item.budgetMin?.toStringAsFixed(0) ?? '-'} - '
               '${item.budgetMax?.toStringAsFixed(0) ?? '-'}',
               style: AppTextStyles.labelGold,

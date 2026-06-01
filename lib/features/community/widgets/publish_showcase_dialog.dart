@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
+import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/constants/community_strings.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/features/community/utils/community_navigation.dart';
 import 'package:lolipants/features/editor/models/garment_design.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
@@ -21,7 +24,14 @@ Future<bool?> showPublishShowcaseDialog(
     builder: (ctx) => StatefulBuilder(
       builder: (ctx, setState) => AlertDialog(
         backgroundColor: AppColors.stone,
-        title: Text('Publish to Showcase', style: AppTextStyles.titleMedium),
+        title: Text(
+          localizedFromContext(
+            ctx,
+            CommunityStrings.publishToShowcase,
+            CommunityStrings.publishToShowcaseAr,
+          ),
+          style: AppTextStyles.titleMedium,
+        ),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -44,7 +54,11 @@ Future<bool?> showPublishShowcaseDialog(
               Text(design.garmentType, style: AppTextStyles.bodySmall),
               const SizedBox(height: AppSpacing.md),
               Text(
-                'You earn $commissionPct% when others order this design from Showcase.',
+                localizedFromContext(
+                  ctx,
+                  CommunityStrings.publishShowcaseEarn,
+                  CommunityStrings.publishShowcaseEarnAr,
+                ).replaceAll('{pct}', '$commissionPct'),
                 style: AppTextStyles.bodyMedium,
               ),
               const SizedBox(height: AppSpacing.sm),
@@ -53,7 +67,11 @@ Future<bool?> showPublishShowcaseDialog(
                 value: accepted,
                 onChanged: (v) => setState(() => accepted = v ?? false),
                 title: Text(
-                  'I accept the commission terms (v1)',
+                  localizedFromContext(
+                    ctx,
+                    CommunityStrings.commissionTerms,
+                    CommunityStrings.commissionTermsAr,
+                  ),
                   style: AppTextStyles.bodySmall,
                 ),
                 controlAffinity: ListTileControlAffinity.leading,
@@ -64,10 +82,16 @@ Future<bool?> showPublishShowcaseDialog(
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel'),
+            child: Text(
+              localizedFromContext(ctx, AppStrings.cancel, AppStrings.cancelAr),
+            ),
           ),
           LolipantsButton(
-            label: 'Publish',
+            label: localizedFromContext(
+              ctx,
+              CommunityStrings.publish,
+              CommunityStrings.publishAr,
+            ),
             onPressed: accepted ? () => Navigator.of(ctx).pop(true) : null,
           ),
         ],
@@ -89,11 +113,18 @@ void showPublishSuccessSnackBar(
   messenger.showSnackBar(
     SnackBar(
       content: Text(
-        'Published to Showcase — you earn $commissionPct% on orders. '
-        'Find it under Community → Showcase or Feed.',
+        localizedFromContext(
+          context,
+          CommunityStrings.showcasePublishedSnack,
+          CommunityStrings.showcasePublishedSnackAr,
+        ).replaceAll('{pct}', '$commissionPct'),
       ),
       action: SnackBarAction(
-        label: 'Showcase',
+        label: localizedFromContext(
+          context,
+          CommunityStrings.showcaseTitle,
+          CommunityStrings.showcaseTitleAr,
+        ),
         onPressed: () => openCommunityHubTab(
           ref,
           router,

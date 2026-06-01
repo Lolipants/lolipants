@@ -5,6 +5,8 @@ import 'package:intl/intl.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/constants/community_strings.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/features/community/models/post.dart';
 import 'package:lolipants/features/community/widgets/user_avatar.dart';
 
@@ -256,24 +258,48 @@ class _ActionsRow extends StatelessWidget {
           label: '${post.reactionCount}',
           onTap: () => onToggleReaction(ReactionType.love),
           semanticsLabel: post.currentUserReaction == ReactionType.love
-              ? 'Unlike post'
-              : 'Like post',
+              ? localizedFromContext(
+                  context,
+                  CommunityStrings.unlikePost,
+                  CommunityStrings.unlikePostAr,
+                )
+              : localizedFromContext(
+                  context,
+                  CommunityStrings.likePost,
+                  CommunityStrings.likePostAr,
+                ),
         ),
         const SizedBox(width: AppSpacing.md),
         _ReactionButton(
           active: post.currentUserReaction == ReactionType.fire,
           icon: Icons.local_fire_department_outlined,
-          label: 'Fire',
+          label: localizedFromContext(
+            context,
+            CommunityStrings.fire,
+            CommunityStrings.fireAr,
+          ),
           onTap: () => onToggleReaction(ReactionType.fire),
-          semanticsLabel: 'Fire reaction',
+          semanticsLabel: localizedFromContext(
+            context,
+            CommunityStrings.fireReaction,
+            CommunityStrings.fireReactionAr,
+          ),
         ),
         const SizedBox(width: AppSpacing.md),
         _ReactionButton(
           active: post.currentUserReaction == ReactionType.clap,
           icon: Icons.celebration_outlined,
-          label: 'Clap',
+          label: localizedFromContext(
+            context,
+            CommunityStrings.clap,
+            CommunityStrings.clapAr,
+          ),
           onTap: () => onToggleReaction(ReactionType.clap),
-          semanticsLabel: 'Clap reaction',
+          semanticsLabel: localizedFromContext(
+            context,
+            CommunityStrings.clapReaction,
+            CommunityStrings.clapReactionAr,
+          ),
         ),
         const Spacer(),
         InkWell(

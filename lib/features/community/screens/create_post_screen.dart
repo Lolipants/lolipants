@@ -10,6 +10,8 @@ import 'package:lolipants/core/permissions/device_permission_prompt.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/constants/community_strings.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/features/community/providers/community_providers.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
 import 'package:lolipants/shared/widgets/error_banner.dart';
@@ -112,7 +114,13 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
         }
       });
     } on Exception catch (_) {
-      setState(() => _errorMessage = 'Could not open photo library.');
+      setState(
+        () => _errorMessage = localizedFromContext(
+          context,
+          CommunityStrings.photoLibraryError,
+          CommunityStrings.photoLibraryErrorAr,
+        ),
+      );
     }
   }
 
@@ -129,11 +137,23 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   Future<void> _submit() async {
     final body = _bodyController.text.trim();
     if (body.isEmpty) {
-      setState(() => _errorMessage = 'Write something before posting.');
+      setState(
+        () => _errorMessage = localizedFromContext(
+          context,
+          CommunityStrings.writeSomething,
+          CommunityStrings.writeSomethingAr,
+        ),
+      );
       return;
     }
     if (body.length > _maxBodyLength) {
-      setState(() => _errorMessage = 'Post is too long.');
+      setState(
+        () => _errorMessage = localizedFromContext(
+          context,
+          CommunityStrings.postTooLong,
+          CommunityStrings.postTooLongAr,
+        ),
+      );
       return;
     }
     setState(() {
@@ -159,7 +179,11 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
             _submitting = false;
             _errorMessage = communityErrorMessage(
               e,
-              fallback: 'Could not upload image.',
+              fallback: localizedFromContext(
+                context,
+                CommunityStrings.couldNotUploadImage,
+                CommunityStrings.couldNotUploadImageAr,
+              ),
             );
           });
           return null;
@@ -183,7 +207,11 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
         setState(
           () => _errorMessage = communityErrorMessage(
             e,
-            fallback: 'Could not publish post.',
+            fallback: localizedFromContext(
+              context,
+              CommunityStrings.publishFailed,
+              CommunityStrings.publishFailedAr,
+            ),
           ),
         );
       },
@@ -192,7 +220,15 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
           ref.invalidate(feedPostsProvider(tag));
         }
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Post published')),
+          SnackBar(
+            content: Text(
+              localizedFromContext(
+                context,
+                CommunityStrings.postPublished,
+                CommunityStrings.postPublishedAr,
+              ),
+            ),
+          ),
         );
         context.pop(true);
       },
@@ -205,7 +241,14 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       backgroundColor: AppColors.ink,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
-        title: Text('New post', style: AppTextStyles.titleLarge),
+        title: Text(
+          localizedFromContext(
+            context,
+            CommunityStrings.newPost,
+            CommunityStrings.newPostAr,
+          ),
+          style: AppTextStyles.titleLarge,
+        ),
       ),
       body: Stack(
         children: [
@@ -249,14 +292,25 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                               cursorColor: AppColors.gold,
                               decoration: InputDecoration(
                                 border: InputBorder.none,
-                                hintText: 'What are you showcasing?',
+                                hintText: localizedFromContext(
+                                  context,
+                                  CommunityStrings.whatShowcasing,
+                                  CommunityStrings.whatShowcasingAr,
+                                ),
                                 hintStyle: AppTextStyles.bodyMedium,
                                 counterStyle: AppTextStyles.bodySmall,
                               ),
                             ),
                           ),
                           const SizedBox(height: AppSpacing.lg),
-                          Text('Images', style: AppTextStyles.titleSmall),
+                          Text(
+                            localizedFromContext(
+                              context,
+                              CommunityStrings.images,
+                              CommunityStrings.imagesAr,
+                            ),
+                            style: AppTextStyles.titleSmall,
+                          ),
                           const SizedBox(height: AppSpacing.sm),
                           _ImageTray(
                             images: _images,
@@ -265,7 +319,14 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                                 setState(() => _images.removeAt(idx)),
                           ),
                           const SizedBox(height: AppSpacing.lg),
-                          Text('Tags', style: AppTextStyles.titleSmall),
+                          Text(
+                            localizedFromContext(
+                              context,
+                              CommunityStrings.tags,
+                              CommunityStrings.tagsAr,
+                            ),
+                            style: AppTextStyles.titleSmall,
+                          ),
                           const SizedBox(height: AppSpacing.sm),
                           Wrap(
                             spacing: 8,
@@ -285,7 +346,11 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                     ),
                   ),
                   LolipantsButton(
-                    label: 'Publish post',
+                    label: localizedFromContext(
+                      context,
+                      CommunityStrings.publishPost,
+                      CommunityStrings.publishPostAr,
+                    ),
                     loading: _submitting,
                     onPressed: _submit,
                   ),
@@ -379,7 +444,14 @@ class _AddImageTile extends StatelessWidget {
                 color: AppColors.gold,
               ),
               const SizedBox(height: 4),
-              Text('Add', style: AppTextStyles.bodyMedium),
+              Text(
+                localizedFromContext(
+                  context,
+                  CommunityStrings.add,
+                  CommunityStrings.addAr,
+                ),
+                style: AppTextStyles.bodyMedium,
+              ),
             ],
           ),
         ),

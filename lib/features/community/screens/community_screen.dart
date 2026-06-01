@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/constants/community_strings.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/features/community/providers/community_providers.dart';
 import 'package:lolipants/features/community/screens/consultations_screen.dart';
 import 'package:lolipants/features/community/screens/news_feed_screen.dart';
@@ -25,10 +27,26 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen>
   var _tabListenerAttached = false;
 
   static const _tabs = <_TabSpec>[
-    _TabSpec(label: 'Feed', icon: Icons.dynamic_feed),
-    _TabSpec(label: 'Showcase', icon: Icons.shopping_bag_outlined),
-    _TabSpec(label: 'Pros', icon: Icons.star_border),
-    _TabSpec(label: 'Consult', icon: Icons.forum_outlined),
+    _TabSpec(
+      en: CommunityStrings.tabFeed,
+      ar: CommunityStrings.tabFeedAr,
+      icon: Icons.dynamic_feed,
+    ),
+    _TabSpec(
+      en: CommunityStrings.tabShowcase,
+      ar: CommunityStrings.tabShowcaseAr,
+      icon: Icons.shopping_bag_outlined,
+    ),
+    _TabSpec(
+      en: CommunityStrings.tabPros,
+      ar: CommunityStrings.tabProsAr,
+      icon: Icons.star_border,
+    ),
+    _TabSpec(
+      en: CommunityStrings.tabConsult,
+      ar: CommunityStrings.tabConsultAr,
+      icon: Icons.forum_outlined,
+    ),
   ];
 
   @override
@@ -110,7 +128,7 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen>
                         icon: Icon(tab.icon, size: 16),
                         iconMargin: EdgeInsets.zero,
                         height: 48,
-                        text: tab.label,
+                        text: localizedFromContext(context, tab.en, tab.ar),
                       ),
                   ],
                 ),
@@ -136,7 +154,8 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen>
 }
 
 class _TabSpec {
-  const _TabSpec({required this.label, required this.icon});
-  final String label;
+  const _TabSpec({required this.en, required this.ar, required this.icon});
+  final String en;
+  final String ar;
   final IconData icon;
 }

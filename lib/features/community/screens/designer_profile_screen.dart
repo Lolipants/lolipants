@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/constants/community_strings.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/features/community/models/designer_profile.dart';
 import 'package:lolipants/features/community/models/showcase_item.dart';
 import 'package:lolipants/features/community/providers/community_providers.dart';
@@ -95,7 +97,7 @@ class DesignerProfileScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   Text(
-                    'by ${item.designer.name}',
+                    '${localizedFromContext(context, CommunityStrings.byDesigner, CommunityStrings.byDesignerAr)} ${item.designer.name}',
                     style: AppTextStyles.bodyMedium,
                   ),
                   const SizedBox(height: AppSpacing.lg),
@@ -119,7 +121,11 @@ class DesignerProfileScreen extends ConsumerWidget {
                     ),
                   const SizedBox(height: AppSpacing.lg),
                   LolipantsButton(
-                    label: 'Order this design',
+                    label: localizedFromContext(
+                      context,
+                      CommunityStrings.orderThisDesign,
+                      CommunityStrings.orderThisDesignAr,
+                    ),
                     onPressed: () {
                       Navigator.of(sheetContext).pop();
                       _orderShowcaseItem(ref, context, item);
@@ -142,7 +148,10 @@ class DesignerProfileScreen extends ConsumerWidget {
       backgroundColor: AppColors.ink,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
-        title: Text('Designer', style: AppTextStyles.titleLarge),
+        title: Text(
+          localized(ref, CommunityStrings.designer, CommunityStrings.designerAr),
+          style: AppTextStyles.titleLarge,
+        ),
       ),
       body: Stack(
         children: [
@@ -164,7 +173,14 @@ class DesignerProfileScreen extends ConsumerWidget {
                 child: Padding(
                   padding: const EdgeInsets.all(AppSpacing.xl),
                   child: Text(
-                    communityErrorMessage(e, fallback: 'Designer not found.'),
+                    communityErrorMessage(
+                      e,
+                      fallback: localized(
+                        ref,
+                        CommunityStrings.designerNotFound,
+                        CommunityStrings.designerNotFoundAr,
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -213,7 +229,11 @@ class _Body extends ConsumerWidget {
                     padding: const EdgeInsets.all(AppSpacing.xl),
                     child: Center(
                       child: Text(
-                        'No public designs yet.',
+                        localizedFromContext(
+                          context,
+                          CommunityStrings.noPublicDesigns,
+                          CommunityStrings.noPublicDesignsAr,
+                        ),
                         style: AppTextStyles.bodyMedium,
                       ),
                     ),
@@ -252,7 +272,14 @@ class _Body extends ConsumerWidget {
               child: Padding(
                 padding: const EdgeInsets.all(AppSpacing.xl),
                 child: Text(
-                  communityErrorMessage(e, fallback: 'Could not load designs.'),
+                  communityErrorMessage(
+                    e,
+                    fallback: localizedFromContext(
+                      context,
+                      CommunityStrings.couldNotLoadDesigns,
+                      CommunityStrings.couldNotLoadDesignsAr,
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -315,17 +342,29 @@ class _Header extends StatelessWidget {
                     Row(
                       children: [
                         _Stat(
-                          label: 'Followers',
+                          label: localizedFromContext(
+                            context,
+                            CommunityStrings.followers,
+                            CommunityStrings.followersAr,
+                          ),
                           value: '${profile.followerCount}',
                         ),
                         const SizedBox(width: AppSpacing.md),
                         _Stat(
-                          label: 'Designs',
+                          label: localizedFromContext(
+                            context,
+                            CommunityStrings.designs,
+                            CommunityStrings.designsAr,
+                          ),
                           value: '${profile.publicDesigns}',
                         ),
                         const SizedBox(width: AppSpacing.md),
                         _Stat(
-                          label: 'Orders',
+                          label: localizedFromContext(
+                            context,
+                            CommunityStrings.orders,
+                            CommunityStrings.ordersAr,
+                          ),
                           value: '${profile.ordersEarned}',
                         ),
                       ],
@@ -341,7 +380,17 @@ class _Header extends StatelessWidget {
           ],
           const SizedBox(height: AppSpacing.md),
           LolipantsButton(
-            label: profile.isFollowing ? 'Following' : 'Follow',
+            label: profile.isFollowing
+                ? localizedFromContext(
+                    context,
+                    CommunityStrings.following,
+                    CommunityStrings.followingAr,
+                  )
+                : localizedFromContext(
+                    context,
+                    CommunityStrings.follow,
+                    CommunityStrings.followAr,
+                  ),
             onPressed: onToggleFollow,
             variant: profile.isFollowing
                 ? LolipantsButtonVariant.secondary

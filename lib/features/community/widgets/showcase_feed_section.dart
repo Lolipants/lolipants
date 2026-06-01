@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/constants/community_strings.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/features/community/models/showcase_item.dart';
 import 'package:lolipants/features/community/utils/showcase_order.dart';
 import 'package:lolipants/features/community/widgets/showcase_card.dart';
@@ -34,7 +36,14 @@ class ShowcaseFeedStrip extends ConsumerWidget {
             AppSpacing.lg,
             AppSpacing.xs,
           ),
-          child: Text('From Showcase', style: AppTextStyles.titleSmall),
+          child: Text(
+            localizedFromContext(
+              context,
+              CommunityStrings.fromShowcase,
+              CommunityStrings.fromShowcaseAr,
+            ),
+            style: AppTextStyles.titleSmall,
+          ),
         ),
         SizedBox(
           height: _cardHeight,
@@ -83,7 +92,11 @@ class ShowcaseFeedGrid extends ConsumerWidget {
         padding: const EdgeInsets.all(AppSpacing.xl),
         child: Center(
           child: Text(
-            'No showcase designs yet. Publish from My Designs.',
+            localizedFromContext(
+              context,
+              CommunityStrings.showcasePublishHint,
+              CommunityStrings.showcasePublishHintAr,
+            ),
             style: AppTextStyles.bodyMedium,
             textAlign: TextAlign.center,
           ),

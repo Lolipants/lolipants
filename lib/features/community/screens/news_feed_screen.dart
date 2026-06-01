@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/constants/community_strings.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/features/community/models/post.dart';
 import 'package:lolipants/features/community/providers/community_providers.dart';
 import 'package:lolipants/features/community/widgets/post_card.dart';
@@ -11,15 +13,51 @@ import 'package:lolipants/features/community/widgets/showcase_feed_slivers.dart'
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
 
-/// Available tag filters on the feed.
-const _feedTags = <String, String>{
-  'all': 'All',
-  'abaya': 'Abaya',
-  'thobe': 'Thobe',
-  'suit': 'Suit',
-  'dress': 'Dress',
-  'showcase': 'Showcase',
-};
+/// Available tag filter keys on the feed.
+const _feedTagKeys = <String>[
+  'all',
+  'abaya',
+  'thobe',
+  'suit',
+  'dress',
+  'showcase',
+];
+
+String _localizedFeedTag(BuildContext context, String key) {
+  return switch (key) {
+    'all' => localizedFromContext(
+      context,
+      CommunityStrings.filterAll,
+      CommunityStrings.filterAllAr,
+    ),
+    'abaya' => localizedFromContext(
+      context,
+      CommunityStrings.filterAbaya,
+      CommunityStrings.filterAbayaAr,
+    ),
+    'thobe' => localizedFromContext(
+      context,
+      CommunityStrings.filterThobe,
+      CommunityStrings.filterThobeAr,
+    ),
+    'suit' => localizedFromContext(
+      context,
+      CommunityStrings.filterSuit,
+      CommunityStrings.filterSuitAr,
+    ),
+    'dress' => localizedFromContext(
+      context,
+      CommunityStrings.filterDress,
+      CommunityStrings.filterDressAr,
+    ),
+    'showcase' => localizedFromContext(
+      context,
+      CommunityStrings.filterShowcase,
+      CommunityStrings.filterShowcaseAr,
+    ),
+    _ => key,
+  };
+}
 
 /// Main news feed screen: filter chips, pull-to-refresh, infinite scroll.
 class NewsFeedScreen extends ConsumerStatefulWidget {
@@ -70,7 +108,11 @@ class _NewsFeedScreenState extends ConsumerState<NewsFeedScreen> {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           Semantics(
-            label: 'Design button',
+            label: localizedFromContext(
+              context,
+              CommunityStrings.designButton,
+              CommunityStrings.designButtonAr,
+            ),
             button: true,
             child: FloatingActionButton(
               heroTag: 'design_community_feed',
@@ -86,7 +128,11 @@ class _NewsFeedScreenState extends ConsumerState<NewsFeedScreen> {
           ),
           const SizedBox(height: 12),
           Semantics(
-            label: 'Create post',
+            label: localizedFromContext(
+              context,
+              CommunityStrings.createPost,
+              CommunityStrings.createPostAr,
+            ),
             button: true,
             child: FloatingActionButton.extended(
               heroTag: 'create-post',
@@ -105,7 +151,13 @@ class _NewsFeedScreenState extends ConsumerState<NewsFeedScreen> {
               backgroundColor: AppColors.gold,
               foregroundColor: AppColors.ink,
               icon: const Icon(Icons.add),
-              label: const Text('Post'),
+              label: Text(
+                localizedFromContext(
+                  context,
+                  CommunityStrings.post,
+                  CommunityStrings.postAr,
+                ),
+              ),
             ),
           ),
         ],
@@ -170,14 +222,14 @@ class _FilterChips extends StatelessWidget {
           horizontal: AppSpacing.lg,
           vertical: 6,
         ),
-        children: _feedTags.entries
+        children: _feedTagKeys
             .map(
-              (entry) => Padding(
+              (key) => Padding(
                 padding: const EdgeInsetsDirectional.only(end: AppSpacing.sm),
                 child: _Chip(
-                  label: entry.value,
-                  active: entry.key == active,
-                  onTap: () => onSelect(entry.key),
+                  label: _localizedFeedTag(context, key),
+                  active: key == active,
+                  onTap: () => onSelect(key),
                 ),
               ),
             )
@@ -245,6 +297,7 @@ class _FeedBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final showcaseState = ref.watch(showcaseFeedProvider);
     final showcaseSlivers = buildShowcaseFeedSlivers(
+      context,
       tagFilter: tagFilter,
       showcaseItems: showcaseState.items,
     );
@@ -261,7 +314,11 @@ class _FeedBody extends ConsumerWidget {
     if (state.error != null && state.posts.isEmpty && !hasShowcase) {
       final message = communityErrorMessage(
         state.error!,
-        fallback: 'Could not load community feed.',
+        fallback: localizedFromContext(
+          context,
+          CommunityStrings.feedLoadError,
+          CommunityStrings.feedLoadErrorAr,
+        ),
       );
       return _ErrorRetry(
         message: message,
@@ -286,12 +343,20 @@ class _FeedBody extends ConsumerWidget {
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   Text(
-                    'Be the first to post',
+                    localizedFromContext(
+                      context,
+                      CommunityStrings.beFirstToPost,
+                      CommunityStrings.beFirstToPostAr,
+                    ),
                     style: AppTextStyles.titleMedium,
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Share a design, ask for feedback, or highlight a trend.',
+                    localizedFromContext(
+                      context,
+                      CommunityStrings.beFirstToPostBody,
+                      CommunityStrings.beFirstToPostBodyAr,
+                    ),
                     textAlign: TextAlign.center,
                     style: AppTextStyles.bodyMedium,
                   ),
@@ -317,7 +382,11 @@ class _FeedBody extends ConsumerWidget {
                 AppSpacing.xs,
               ),
               child: Text(
-                'Showcase posts',
+                localizedFromContext(
+                  context,
+                  CommunityStrings.showcasePosts,
+                  CommunityStrings.showcasePostsAr,
+                ),
                 style: AppTextStyles.titleSmall,
               ),
             ),
@@ -327,7 +396,11 @@ class _FeedBody extends ConsumerWidget {
             child: Padding(
               padding: const EdgeInsets.all(AppSpacing.lg),
               child: Text(
-                'No posts yet for this filter.',
+                localizedFromContext(
+                  context,
+                  CommunityStrings.noPostsForFilter,
+                  CommunityStrings.noPostsForFilterAr,
+                ),
                 textAlign: TextAlign.center,
                 style: AppTextStyles.bodyMedium,
               ),
@@ -378,7 +451,11 @@ class _FeedFooter extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 16),
         child: Center(
           child: Text(
-            'Thats all the posts for now.',
+            localizedFromContext(
+              context,
+              CommunityStrings.endOfFeed,
+              CommunityStrings.endOfFeedAr,
+            ),
             style: AppTextStyles.bodyMedium,
           ),
         ),
@@ -413,7 +490,11 @@ class _ErrorRetry extends StatelessWidget {
                 Text(message, textAlign: TextAlign.center),
                 const SizedBox(height: AppSpacing.md),
                 LolipantsButton(
-                  label: 'Retry',
+                  label: localizedFromContext(
+                    context,
+                    CommunityStrings.retry,
+                    CommunityStrings.retryAr,
+                  ),
                   onPressed: onRetry,
                   variant: LolipantsButtonVariant.secondary,
                   fullWidth: false,

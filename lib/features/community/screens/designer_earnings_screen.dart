@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/constants/community_strings.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/features/community/models/commission.dart';
 import 'package:lolipants/features/community/providers/community_providers.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
@@ -21,7 +23,10 @@ class DesignerEarningsScreen extends ConsumerWidget {
       backgroundColor: AppColors.ink,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
-        title: Text('Earnings', style: AppTextStyles.titleLarge),
+        title: Text(
+          localized(ref, CommunityStrings.earnings, CommunityStrings.earningsAr),
+          style: AppTextStyles.titleLarge,
+        ),
       ),
       body: Stack(
         children: [
@@ -51,20 +56,35 @@ class DesignerEarningsScreen extends ConsumerWidget {
                       child: Text(
                         communityErrorMessage(
                           e,
-                          fallback: 'Could not load earnings.',
+                          fallback: localized(
+                            ref,
+                            CommunityStrings.earningsLoadError,
+                            CommunityStrings.earningsLoadErrorAr,
+                          ),
                         ),
                       ),
                     ),
                   ),
                   const SizedBox(height: AppSpacing.xl),
-                  Text('Commissions', style: AppTextStyles.titleMedium),
+                  Text(
+                    localized(
+                      ref,
+                      CommunityStrings.commissions,
+                      CommunityStrings.commissionsAr,
+                    ),
+                    style: AppTextStyles.titleMedium,
+                  ),
                   const SizedBox(height: AppSpacing.sm),
                   commissionsAsync.when(
                     data: (items) => items.isEmpty
                         ? Padding(
                             padding: const EdgeInsets.all(AppSpacing.md),
                             child: Text(
-                              'No commissions yet. Publish a design to the showcase to earn.',
+                              localized(
+                                ref,
+                                CommunityStrings.commissionsEmpty,
+                                CommunityStrings.commissionsEmptyAr,
+                              ),
                               style: AppTextStyles.bodyMedium,
                             ),
                           )
@@ -83,7 +103,11 @@ class DesignerEarningsScreen extends ConsumerWidget {
                     error: (e, _) => Text(
                       communityErrorMessage(
                         e,
-                        fallback: 'Could not load commissions.',
+                        fallback: localized(
+                          ref,
+                          CommunityStrings.commissionsLoadError,
+                          CommunityStrings.commissionsLoadErrorAr,
+                        ),
                       ),
                     ),
                   ),
@@ -126,7 +150,11 @@ class _Summary extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Lifetime earnings',
+                localizedFromContext(
+                  context,
+                  CommunityStrings.lifetimeEarnings,
+                  CommunityStrings.lifetimeEarningsAr,
+                ),
                 style: AppTextStyles.labelGold,
               ),
               const SizedBox(height: 4),
@@ -142,7 +170,11 @@ class _Summary extends StatelessWidget {
           children: [
             Expanded(
               child: _Bucket(
-                label: 'Accrued',
+                label: localizedFromContext(
+                  context,
+                  CommunityStrings.accrued,
+                  CommunityStrings.accruedAr,
+                ),
                 bucket: earnings.pending,
                 currency: earnings.currency,
                 colour: AppColors.dust,
@@ -151,7 +183,11 @@ class _Summary extends StatelessWidget {
             const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: _Bucket(
-                label: 'Payable',
+                label: localizedFromContext(
+                  context,
+                  CommunityStrings.payable,
+                  CommunityStrings.payableAr,
+                ),
                 bucket: earnings.approved,
                 currency: earnings.currency,
                 colour: AppColors.gold,
@@ -164,7 +200,11 @@ class _Summary extends StatelessWidget {
           children: [
             Expanded(
               child: _Bucket(
-                label: 'Paid',
+                label: localizedFromContext(
+                  context,
+                  CommunityStrings.paid,
+                  CommunityStrings.paidAr,
+                ),
                 bucket: earnings.paid,
                 currency: earnings.currency,
                 colour: AppColors.tealLight,
@@ -173,7 +213,11 @@ class _Summary extends StatelessWidget {
             const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: _Bucket(
-                label: 'Void',
+                label: localizedFromContext(
+                  context,
+                  CommunityStrings.voidStatus,
+                  CommunityStrings.voidStatusAr,
+                ),
                 bucket: earnings.voided,
                 currency: earnings.currency,
                 colour: AppColors.rubyLight,
@@ -220,7 +264,10 @@ class _Bucket extends StatelessWidget {
             _formatAmount(bucket.total, currency),
             style: AppTextStyles.titleMedium,
           ),
-          Text('${bucket.count} entries', style: AppTextStyles.bodySmall),
+          Text(
+            '${bucket.count} ${localizedFromContext(context, CommunityStrings.entries, CommunityStrings.entriesAr)}',
+            style: AppTextStyles.bodySmall,
+          ),
         ],
       ),
     );
@@ -245,16 +292,32 @@ class _CommissionTile extends StatelessWidget {
     }
   }
 
-  String _statusLabel() {
+  String _statusLabel(BuildContext context) {
     switch (commission.status) {
       case CommissionStatus.paid:
-        return 'PAID';
+        return localizedFromContext(
+          context,
+          CommunityStrings.statusPaidUpper,
+          CommunityStrings.statusPaidUpperAr,
+        );
       case CommissionStatus.approved:
-        return 'PAYABLE';
+        return localizedFromContext(
+          context,
+          CommunityStrings.statusPayableUpper,
+          CommunityStrings.statusPayableUpperAr,
+        );
       case CommissionStatus.voidStatus:
-        return 'VOID';
+        return localizedFromContext(
+          context,
+          CommunityStrings.statusVoidUpper,
+          CommunityStrings.statusVoidUpperAr,
+        );
       case CommissionStatus.pending:
-        return 'ACCRUED';
+        return localizedFromContext(
+          context,
+          CommunityStrings.statusAccruedUpper,
+          CommunityStrings.statusAccruedUpperAr,
+        );
     }
   }
 
@@ -277,7 +340,12 @@ class _CommissionTile extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  commission.designName ?? 'Design',
+                  commission.designName ??
+                      localizedFromContext(
+                        context,
+                        CommunityStrings.designFallback,
+                        CommunityStrings.designFallbackAr,
+                      ),
                   style: AppTextStyles.titleSmall,
                 ),
               ),
@@ -292,7 +360,7 @@ class _CommissionTile extends StatelessWidget {
                   border: Border.all(color: statusColour),
                 ),
                 child: Text(
-                  _statusLabel(),
+                  _statusLabel(context),
                   style: AppTextStyles.labelGold.copyWith(color: statusColour),
                 ),
               ),
@@ -314,7 +382,8 @@ class _CommissionTile extends StatelessWidget {
           ),
           const SizedBox(height: 2),
           Text(
-            'Order ${commission.orderId.substring(0, commission.orderId.length > 8 ? 8 : commission.orderId.length)} '
+            '${localizedFromContext(context, CommunityStrings.orderRef, CommunityStrings.orderRefAr)} '
+            '${commission.orderId.substring(0, commission.orderId.length > 8 ? 8 : commission.orderId.length)} '
             '• ${fmt.format(commission.createdAt.toLocal())}'
             '${commission.deliveryCity != null ? ' • ${commission.deliveryCity}' : ''}',
             style: AppTextStyles.bodySmall,
@@ -322,7 +391,7 @@ class _CommissionTile extends StatelessWidget {
           if (commission.payoutReference != null &&
               commission.payoutReference!.isNotEmpty)
             Text(
-              'Payout ref: ${commission.payoutReference}',
+              '${localizedFromContext(context, CommunityStrings.payoutRef, CommunityStrings.payoutRefAr)} ${commission.payoutReference}',
               style: AppTextStyles.bodySmall,
             ),
         ],

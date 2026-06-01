@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/constants/community_strings.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/features/community/models/showcase_item.dart';
 import 'package:lolipants/features/community/utils/showcase_order.dart';
 import 'package:lolipants/features/community/widgets/showcase_feed_section.dart';
 
 /// Builds feed slivers that interleave showcase designs with posts.
-List<Widget> buildShowcaseFeedSlivers({
+List<Widget> buildShowcaseFeedSlivers(
+  BuildContext context, {
   required String? tagFilter,
   required List<ShowcaseItem> showcaseItems,
 }) {
@@ -24,7 +27,11 @@ List<Widget> buildShowcaseFeedSlivers({
             0,
           ),
           child: Text(
-            'Orderable designs',
+            localizedFromContext(
+              context,
+              CommunityStrings.orderableDesigns,
+              CommunityStrings.orderableDesignsAr,
+            ),
             style: AppTextStyles.titleSmall,
           ),
         ),

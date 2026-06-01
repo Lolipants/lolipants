@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/constants/community_strings.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/features/community/data/showcase_repository.dart';
 import 'package:lolipants/features/community/utils/showcase_order.dart';
 import 'package:lolipants/features/community/models/showcase_item.dart';
@@ -60,7 +62,14 @@ class _ShowcaseScreenState extends ConsumerState<ShowcaseScreen> {
       backgroundColor: AppColors.ink,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
-        title: Text('Showcase', style: AppTextStyles.titleLarge),
+        title: Text(
+          localizedFromContext(
+            context,
+            CommunityStrings.showcaseTitle,
+            CommunityStrings.showcaseTitleAr,
+          ),
+          style: AppTextStyles.titleLarge,
+        ),
       ),
       body: Stack(
         children: [
@@ -99,7 +108,11 @@ class _ShowcaseScreenState extends ConsumerState<ShowcaseScreen> {
     if (state.error != null && state.items.isEmpty) {
       final message = communityErrorMessage(
         state.error!,
-        fallback: 'Could not load showcase.',
+        fallback: localizedFromContext(
+          context,
+          CommunityStrings.showcaseLoadError,
+          CommunityStrings.showcaseLoadErrorAr,
+        ),
       );
       return ListView(
         children: [
@@ -112,7 +125,11 @@ class _ShowcaseScreenState extends ConsumerState<ShowcaseScreen> {
                   Text(message, textAlign: TextAlign.center),
                   const SizedBox(height: AppSpacing.md),
                   LolipantsButton(
-                    label: 'Retry',
+                    label: localizedFromContext(
+                      context,
+                      CommunityStrings.retry,
+                      CommunityStrings.retryAr,
+                    ),
                     fullWidth: false,
                     variant: LolipantsButtonVariant.secondary,
                     onPressed: () => ref
@@ -132,7 +149,11 @@ class _ShowcaseScreenState extends ConsumerState<ShowcaseScreen> {
           const SizedBox(height: AppSpacing.xxl),
           Center(
             child: Text(
-              'No showcase designs yet. Be the first to publish.',
+              localizedFromContext(
+                context,
+                CommunityStrings.showcaseEmpty,
+                CommunityStrings.showcaseEmptyAr,
+              ),
               style: AppTextStyles.bodyMedium,
             ),
           ),
@@ -183,10 +204,19 @@ class _SortChips extends StatelessWidget {
   final ShowcaseSort active;
   final ValueChanged<ShowcaseSort> onSelect;
 
-  static const _entries = <ShowcaseSort, String>{
-    ShowcaseSort.trending: 'Trending',
-    ShowcaseSort.newest: 'Newest',
-    ShowcaseSort.mostOrdered: 'Most ordered',
+  static const _entries = <ShowcaseSort, ({String en, String ar})>{
+    ShowcaseSort.trending: (
+      en: CommunityStrings.sortTrending,
+      ar: CommunityStrings.sortTrendingAr,
+    ),
+    ShowcaseSort.newest: (
+      en: CommunityStrings.sortNewest,
+      ar: CommunityStrings.sortNewestAr,
+    ),
+    ShowcaseSort.mostOrdered: (
+      en: CommunityStrings.sortMostOrdered,
+      ar: CommunityStrings.sortMostOrderedAr,
+    ),
   };
 
   @override
@@ -204,7 +234,11 @@ class _SortChips extends StatelessWidget {
               (entry) => Padding(
                 padding: const EdgeInsetsDirectional.only(end: AppSpacing.sm),
                 child: _Chip(
-                  label: entry.value,
+                  label: localizedFromContext(
+                    context,
+                    entry.value.en,
+                    entry.value.ar,
+                  ),
                   active: entry.key == active,
                   onTap: () => onSelect(entry.key),
                 ),

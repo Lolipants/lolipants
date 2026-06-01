@@ -4,7 +4,10 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
+import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/constants/community_strings.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/features/community/models/comment.dart';
 import 'package:lolipants/features/community/models/post.dart';
 import 'package:lolipants/features/community/providers/community_providers.dart';
@@ -42,7 +45,13 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
   Future<void> _submitComment() async {
     final text = _commentController.text.trim();
     if (text.isEmpty) {
-      setState(() => _error = 'Comment cannot be empty.');
+      setState(
+        () => _error = localizedFromContext(
+          context,
+          CommunityStrings.commentEmpty,
+          CommunityStrings.commentEmptyAr,
+        ),
+      );
       return;
     }
     setState(() {
@@ -61,7 +70,11 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
       setState(
         () => _error = communityErrorMessage(
           e,
-          fallback: 'Could not post comment.',
+          fallback: localizedFromContext(
+            context,
+            CommunityStrings.couldNotPostComment,
+            CommunityStrings.couldNotPostCommentAr,
+          ),
         ),
       );
     } finally {
@@ -87,25 +100,47 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
           return StatefulBuilder(
             builder: (context, setState) {
               return AlertDialog(
-                title: const Text('Report post'),
+                title: Text(
+                  localizedFromContext(
+                    context,
+                    CommunityStrings.reportPost,
+                    CommunityStrings.reportPostAr,
+                  ),
+                ),
                 content: SingleChildScrollView(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       TextField(
                         controller: subjectController,
-                        decoration: const InputDecoration(
-                          labelText: 'Subject',
-                          hintText: 'Short summary (min 3 characters)',
+                        decoration: InputDecoration(
+                          labelText: localizedFromContext(
+                            context,
+                            CommunityStrings.subject,
+                            CommunityStrings.subjectAr,
+                          ),
+                          hintText: localizedFromContext(
+                            context,
+                            CommunityStrings.shortSummaryHint,
+                            CommunityStrings.shortSummaryHintAr,
+                          ),
                         ),
                         enabled: !submitting,
                       ),
                       const SizedBox(height: AppSpacing.md),
                       TextField(
                         controller: bodyController,
-                        decoration: const InputDecoration(
-                          labelText: 'Details',
-                          hintText: 'Explain what’s wrong (min 10 characters)',
+                        decoration: InputDecoration(
+                          labelText: localizedFromContext(
+                            context,
+                            CommunityStrings.details,
+                            CommunityStrings.detailsAr,
+                          ),
+                          hintText: localizedFromContext(
+                            context,
+                            CommunityStrings.explainWrongHint,
+                            CommunityStrings.explainWrongHintAr,
+                          ),
                         ),
                         enabled: !submitting,
                         minLines: 3,
@@ -128,7 +163,13 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                     onPressed: submitting
                         ? null
                         : () => Navigator.of(dialogContext).pop(),
-                    child: const Text('Cancel'),
+                    child: Text(
+                      localizedFromContext(
+                        context,
+                        AppStrings.cancel,
+                        AppStrings.cancelAr,
+                      ),
+                    ),
                   ),
                   TextButton(
                     onPressed: submitting
@@ -139,13 +180,21 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
 
                             if (subject.isEmpty || subject.length < 3) {
                               setState(
-                                () => dialogError = 'Subject is required.',
+                                () => dialogError = localizedFromContext(
+                                  context,
+                                  CommunityStrings.subjectRequired,
+                                  CommunityStrings.subjectRequiredAr,
+                                ),
                               );
                               return;
                             }
                             if (body.isEmpty || body.length < 10) {
                               setState(
-                                () => dialogError = 'Details are required.',
+                                () => dialogError = localizedFromContext(
+                                  context,
+                                  CommunityStrings.detailsRequired,
+                                  CommunityStrings.detailsRequiredAr,
+                                ),
                               );
                               return;
                             }
@@ -171,7 +220,11 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                                   submitting = false;
                                   dialogError = communityErrorMessage(
                                     e,
-                                    fallback: 'Could not send your report.',
+                                    fallback: localizedFromContext(
+                                      context,
+                                      CommunityStrings.couldNotSendReport,
+                                      CommunityStrings.couldNotSendReportAr,
+                                    ),
                                   );
                                 });
                               },
@@ -179,15 +232,32 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                                 Navigator.of(dialogContext).pop();
                                 ScaffoldMessenger.of(parentContext)
                                     .showSnackBar(
-                                  const SnackBar(
-                                    content:
-                                        Text('Thanks. Your report was sent.'),
+                                  SnackBar(
+                                    content: Text(
+                                      localizedFromContext(
+                                        parentContext,
+                                        CommunityStrings.reportSent,
+                                        CommunityStrings.reportSentAr,
+                                      ),
+                                    ),
                                   ),
                                 );
                               },
                             );
                           },
-                    child: Text(submitting ? 'Sending…' : 'Send report'),
+                    child: Text(
+                      submitting
+                          ? localizedFromContext(
+                              context,
+                              CommunityStrings.sending,
+                              CommunityStrings.sendingAr,
+                            )
+                          : localizedFromContext(
+                              context,
+                              CommunityStrings.sendReport,
+                              CommunityStrings.sendReportAr,
+                            ),
+                    ),
                   ),
                 ],
               );
@@ -212,12 +282,23 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
       backgroundColor: AppColors.ink,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
-        title: Text('Post', style: AppTextStyles.titleLarge),
+        title: Text(
+          localizedFromContext(
+            context,
+            CommunityStrings.postDetailTitle,
+            CommunityStrings.postDetailTitleAr,
+          ),
+          style: AppTextStyles.titleLarge,
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.flag_outlined, color: AppColors.gold),
             onPressed: _reportPost,
-            tooltip: 'Report post',
+            tooltip: localizedFromContext(
+              context,
+              CommunityStrings.reportPost,
+              CommunityStrings.reportPostAr,
+            ),
           ),
         ],
       ),
@@ -259,7 +340,11 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                               padding: const EdgeInsets.all(AppSpacing.xl),
                               child: Center(
                                 child: Text(
-                                  'No comments yet. Start the conversation.',
+                                  localizedFromContext(
+                                    context,
+                                    CommunityStrings.noComments,
+                                    CommunityStrings.noCommentsAr,
+                                  ),
                                   style: AppTextStyles.bodyMedium,
                                 ),
                               ),
@@ -287,7 +372,11 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                           child: Text(
                             communityErrorMessage(
                               error,
-                              fallback: 'Could not load comments.',
+                              fallback: localizedFromContext(
+                                context,
+                                CommunityStrings.commentsLoadError,
+                                CommunityStrings.commentsLoadErrorAr,
+                              ),
                             ),
                           ),
                         ),
@@ -330,7 +419,14 @@ class _CommentsHeader extends StatelessWidget {
         horizontal: AppSpacing.xl,
         vertical: AppSpacing.md,
       ),
-      child: Text('Comments', style: AppTextStyles.titleSmall),
+      child: Text(
+        localizedFromContext(
+          context,
+          CommunityStrings.comments,
+          CommunityStrings.commentsAr,
+        ),
+        style: AppTextStyles.titleSmall,
+      ),
     );
   }
 }
@@ -432,7 +528,11 @@ class _Composer extends StatelessWidget {
                 onSubmitted: (_) => onSubmit(),
                 decoration: InputDecoration(
                   border: InputBorder.none,
-                  hintText: 'Write a comment',
+                  hintText: localizedFromContext(
+                    context,
+                    CommunityStrings.writeComment,
+                    CommunityStrings.writeCommentAr,
+                  ),
                   hintStyle: AppTextStyles.bodyMedium,
                 ),
               ),

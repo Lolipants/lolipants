@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/constants/community_strings.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/features/community/models/designer_profile.dart';
 import 'package:lolipants/features/community/providers/community_providers.dart';
 import 'package:lolipants/features/community/widgets/user_avatar.dart';
@@ -21,7 +23,14 @@ class ProDesignersScreen extends ConsumerWidget {
       backgroundColor: AppColors.ink,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
-        title: Text('Pro designers', style: AppTextStyles.titleLarge),
+        title: Text(
+          localized(
+            ref,
+            CommunityStrings.proDesigners,
+            CommunityStrings.proDesignersAr,
+          ),
+          style: AppTextStyles.titleLarge,
+        ),
       ),
       body: Stack(
         children: [
@@ -32,7 +41,11 @@ class ProDesignersScreen extends ConsumerWidget {
                 if (designers.isEmpty) {
                   return Center(
                     child: Text(
-                      'No pro designers yet.',
+                      localized(
+                        ref,
+                        CommunityStrings.noProDesigners,
+                        CommunityStrings.noProDesignersAr,
+                      ),
                       style: AppTextStyles.bodyMedium,
                     ),
                   );
@@ -66,7 +79,11 @@ class ProDesignersScreen extends ConsumerWidget {
                   child: Text(
                     communityErrorMessage(
                       e,
-                      fallback: 'Could not load pro designers.',
+                      fallback: localized(
+                        ref,
+                        CommunityStrings.proDesignersLoadError,
+                        CommunityStrings.proDesignersLoadErrorAr,
+                      ),
                     ),
                   ),
                 ),
@@ -115,7 +132,7 @@ class _Tile extends StatelessWidget {
                       profile.speciality!.isNotEmpty)
                     Text(profile.speciality!, style: AppTextStyles.labelGold),
                   Text(
-                    '${profile.followerCount} followers',
+                    '${profile.followerCount} ${localizedFromContext(context, CommunityStrings.followersLower, CommunityStrings.followersLowerAr)}',
                     style: AppTextStyles.bodyMedium,
                   ),
                 ],

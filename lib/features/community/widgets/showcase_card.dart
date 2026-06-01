@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/constants/community_strings.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/features/community/models/showcase_item.dart';
 
 /// Helpers to parse `#RRGGBB` hex strings.
@@ -118,7 +120,7 @@ class ShowcaseCard extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          'by ${item.designer.name}',
+                          '${localizedFromContext(context, CommunityStrings.byDesigner, CommunityStrings.byDesignerAr)} ${item.designer.name}',
                           style: compact
                               ? AppTextStyles.bodySmall
                               : AppTextStyles.bodyMedium,
@@ -152,7 +154,11 @@ class ShowcaseCard extends StatelessWidget {
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
                       child: Text(
-                        'Order this',
+                        localizedFromContext(
+                          context,
+                          CommunityStrings.orderThis,
+                          CommunityStrings.orderThisAr,
+                        ),
                         style: compact
                             ? AppTextStyles.bodySmall.copyWith(
                                 color: AppColors.gold,
