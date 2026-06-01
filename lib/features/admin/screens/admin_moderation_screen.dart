@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lolipants/core/constants/admin_strings.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/features/admin/providers/admin_providers.dart';
 
 /// Content moderation dashboard. Admins paste the offending id (post,
@@ -33,56 +35,87 @@ class _AdminModerationScreenState extends ConsumerState<AdminModerationScreen> {
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.lg),
       children: [
-        Text('Moderation', style: AppTextStyles.titleLarge),
+        Text(
+          localized(ref, AdminStrings.moderationTitle, AdminStrings.moderationTitleAr),
+          style: AppTextStyles.titleLarge,
+        ),
         const SizedBox(height: AppSpacing.sm),
         Text(
-          'Hide community posts/showcase designs or void commissions. Paste '
-          'the offending id and confirm.',
+          localized(ref, AdminStrings.moderationBody, AdminStrings.moderationBodyAr),
           style: AppTextStyles.bodyMedium,
         ),
         const SizedBox(height: AppSpacing.xl),
         _Action(
-          title: 'Hide community post',
+          titleEn: AdminStrings.hideCommunityPost,
+          titleAr: AdminStrings.hideCommunityPostAr,
           controller: _postCtrl,
-          hint: 'post id',
-          buttonLabel: 'Hide post',
+          hintEn: AdminStrings.postId,
+          hintAr: AdminStrings.postIdAr,
+          buttonLabelEn: AdminStrings.hidePost,
+          buttonLabelAr: AdminStrings.hidePostAr,
           onSubmit: (id) async {
             final res =
                 await ref.read(adminRepositoryProvider).hidePost(id);
             res.fold(
-              (err) => _snack('Failed: ${err.runtimeType}'),
-              (_) => _snack('Post hidden'),
+              (err) => _snack(
+                '${localized(ref, AdminStrings.failedPrefix, AdminStrings.failedPrefixAr)} ${err.runtimeType}',
+              ),
+              (_) => _snack(
+                localized(ref, AdminStrings.postHidden, AdminStrings.postHiddenAr),
+              ),
             );
           },
         ),
         const SizedBox(height: AppSpacing.xl),
         _Action(
-          title: 'Unlist design from showcase',
+          titleEn: AdminStrings.unlistDesign,
+          titleAr: AdminStrings.unlistDesignAr,
           controller: _designCtrl,
-          hint: 'design id',
-          buttonLabel: 'Unlist design',
+          hintEn: AdminStrings.designId,
+          hintAr: AdminStrings.designIdAr,
+          buttonLabelEn: AdminStrings.unlistDesignAction,
+          buttonLabelAr: AdminStrings.unlistDesignActionAr,
           onSubmit: (id) async {
             final res =
                 await ref.read(adminRepositoryProvider).hideDesign(id);
             res.fold(
-              (err) => _snack('Failed: ${err.runtimeType}'),
-              (_) => _snack('Design unlisted'),
+              (err) => _snack(
+                '${localized(ref, AdminStrings.failedPrefix, AdminStrings.failedPrefixAr)} ${err.runtimeType}',
+              ),
+              (_) => _snack(
+                localized(
+                  ref,
+                  AdminStrings.designUnlisted,
+                  AdminStrings.designUnlistedAr,
+                ),
+              ),
             );
           },
         ),
         const SizedBox(height: AppSpacing.xl),
         _Action(
-          title: 'Void commission',
+          titleEn: AdminStrings.voidCommission,
+          titleAr: AdminStrings.voidCommissionAr,
           controller: _commissionCtrl,
-          hint: 'commission id',
-          buttonLabel: 'Void commission',
+          hintEn: AdminStrings.commissionId,
+          hintAr: AdminStrings.commissionIdAr,
+          buttonLabelEn: AdminStrings.voidCommissionAction,
+          buttonLabelAr: AdminStrings.voidCommissionActionAr,
           onSubmit: (id) async {
             final res = await ref
                 .read(adminRepositoryProvider)
                 .voidCommission(id);
             res.fold(
-              (err) => _snack('Failed: ${err.runtimeType}'),
-              (_) => _snack('Commission voided'),
+              (err) => _snack(
+                '${localized(ref, AdminStrings.failedPrefix, AdminStrings.failedPrefixAr)} ${err.runtimeType}',
+              ),
+              (_) => _snack(
+                localized(
+                  ref,
+                  AdminStrings.commissionVoided,
+                  AdminStrings.commissionVoidedAr,
+                ),
+              ),
             );
           },
         ),
@@ -97,34 +130,45 @@ class _AdminModerationScreenState extends ConsumerState<AdminModerationScreen> {
   }
 }
 
-class _Action extends StatelessWidget {
+class _Action extends ConsumerWidget {
   const _Action({
-    required this.title,
+    required this.titleEn,
+    required this.titleAr,
     required this.controller,
-    required this.hint,
-    required this.buttonLabel,
+    required this.hintEn,
+    required this.hintAr,
+    required this.buttonLabelEn,
+    required this.buttonLabelAr,
     required this.onSubmit,
   });
 
-  final String title;
+  final String titleEn;
+  final String titleAr;
   final TextEditingController controller;
-  final String hint;
-  final String buttonLabel;
+  final String hintEn;
+  final String hintAr;
+  final String buttonLabelEn;
+  final String buttonLabelAr;
   final Future<void> Function(String id) onSubmit;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: AppTextStyles.titleMedium),
+        Text(
+          localized(ref, titleEn, titleAr),
+          style: AppTextStyles.titleMedium,
+        ),
         const SizedBox(height: AppSpacing.sm),
         Row(
           children: [
             Expanded(
               child: TextField(
                 controller: controller,
-                decoration: InputDecoration(hintText: hint),
+                decoration: InputDecoration(
+                  hintText: localized(ref, hintEn, hintAr),
+                ),
               ),
             ),
             const SizedBox(width: AppSpacing.sm),
@@ -135,7 +179,7 @@ class _Action extends StatelessWidget {
                 await onSubmit(id);
                 controller.clear();
               },
-              child: Text(buttonLabel),
+              child: Text(localized(ref, buttonLabelEn, buttonLabelAr)),
             ),
           ],
         ),

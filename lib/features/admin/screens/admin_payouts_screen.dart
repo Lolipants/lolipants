@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lolipants/core/constants/admin_strings.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
+import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/features/admin/providers/admin_providers.dart';
 
 /// Commission payout review + approve/mark-paid UI around the existing HMAC
@@ -27,17 +30,54 @@ class _AdminPayoutsScreenState extends ConsumerState<AdminPayoutsScreen> {
           padding: const EdgeInsets.all(AppSpacing.md),
           child: Row(
             children: [
-              const Text('Status: '),
+              Text(
+                '${localized(ref, AdminStrings.statusLabel, AdminStrings.statusLabelAr)} ',
+              ),
               const SizedBox(width: AppSpacing.sm),
               DropdownButton<String?>(
                 value: _status,
-                hint: const Text('any'),
-                items: const [
-                  DropdownMenuItem(value: null, child: Text('any')),
-                  DropdownMenuItem(value: 'pending', child: Text('pending')),
-                  DropdownMenuItem(value: 'approved', child: Text('approved')),
-                  DropdownMenuItem(value: 'paid', child: Text('paid')),
-                  DropdownMenuItem(value: 'void', child: Text('void')),
+                hint: Text(
+                  localized(ref, AdminStrings.filterAny, AdminStrings.filterAnyAr),
+                ),
+                items: [
+                  DropdownMenuItem(
+                    value: null,
+                    child: Text(
+                      localized(ref, AdminStrings.filterAny, AdminStrings.filterAnyAr),
+                    ),
+                  ),
+                  DropdownMenuItem(
+                    value: 'pending',
+                    child: Text(
+                      localized(
+                        ref,
+                        AdminStrings.filterPending,
+                        AdminStrings.filterPendingAr,
+                      ),
+                    ),
+                  ),
+                  DropdownMenuItem(
+                    value: 'approved',
+                    child: Text(
+                      localized(
+                        ref,
+                        AdminStrings.filterApproved,
+                        AdminStrings.filterApprovedAr,
+                      ),
+                    ),
+                  ),
+                  DropdownMenuItem(
+                    value: 'paid',
+                    child: Text(
+                      localized(ref, AdminStrings.filterPaid, AdminStrings.filterPaidAr),
+                    ),
+                  ),
+                  DropdownMenuItem(
+                    value: 'void',
+                    child: Text(
+                      localized(ref, AdminStrings.filterVoid, AdminStrings.filterVoidAr),
+                    ),
+                  ),
                 ],
                 onChanged: (v) => setState(() => _status = v),
               ),
@@ -65,8 +105,14 @@ class _AdminPayoutsScreenState extends ConsumerState<AdminPayoutsScreen> {
                     padding: const EdgeInsets.all(AppSpacing.xl),
                     children: [
                       Center(
-                        child: Text('No commissions match the filter.',
-                            style: AppTextStyles.bodyMedium),
+                        child: Text(
+                          localized(
+                            ref,
+                            AdminStrings.noCommissionsMatch,
+                            AdminStrings.noCommissionsMatchAr,
+                          ),
+                          style: AppTextStyles.bodyMedium,
+                        ),
                       ),
                     ],
                   );
@@ -117,16 +163,27 @@ class _PayoutRow extends ConsumerWidget {
             Row(
               children: [
                 Expanded(
-                  child: Text('Commission #$id',
-                      style: AppTextStyles.titleMedium),
+                  child: Text(
+                    '${localized(ref, AdminStrings.commissionNumber, AdminStrings.commissionNumberAr)}$id',
+                    style: AppTextStyles.titleMedium,
+                  ),
                 ),
                 Chip(label: Text(status)),
               ],
             ),
             const SizedBox(height: 2),
-            Text('Designer: $designerId', style: AppTextStyles.bodySmall),
-            Text('Order: $orderId', style: AppTextStyles.bodySmall),
-            Text('Amount: $amount (cents)', style: AppTextStyles.bodyMedium),
+            Text(
+              '${localized(ref, AdminStrings.designerLabel, AdminStrings.designerLabelAr)} $designerId',
+              style: AppTextStyles.bodySmall,
+            ),
+            Text(
+              '${localized(ref, AdminStrings.orderLabel, AdminStrings.orderLabelAr)} $orderId',
+              style: AppTextStyles.bodySmall,
+            ),
+            Text(
+              '${localized(ref, AdminStrings.amountCents, AdminStrings.amountCentsAr)} $amount',
+              style: AppTextStyles.bodyMedium,
+            ),
             const SizedBox(height: AppSpacing.sm),
             Wrap(
               spacing: 6,
@@ -136,13 +193,21 @@ class _PayoutRow extends ConsumerWidget {
                   FilledButton.icon(
                     onPressed: () => _markPaid(context, ref, id),
                     icon: const Icon(Icons.check_circle_outline, size: 18),
-                    label: const Text('Mark paid'),
+                    label: Text(
+                      localized(ref, AdminStrings.markPaid, AdminStrings.markPaidAr),
+                    ),
                   ),
                 if (status != 'paid' && status != 'void')
                   OutlinedButton.icon(
                     onPressed: () => _void(context, ref, id),
                     icon: const Icon(Icons.block, size: 18),
-                    label: const Text('Void'),
+                    label: Text(
+                      localized(
+                        ref,
+                        AdminStrings.voidAction,
+                        AdminStrings.voidActionAr,
+                      ),
+                    ),
                   ),
               ],
             ),
@@ -155,7 +220,10 @@ class _PayoutRow extends ConsumerWidget {
   Future<void> _markPaid(BuildContext context, WidgetRef ref, String id) async {
     final reference = await showDialog<String>(
       context: context,
-      builder: (_) => const _TextDialog(title: 'Payout reference (optional)'),
+      builder: (_) => _TextDialog(
+        titleEn: AdminStrings.payoutReferenceOptional,
+        titleAr: AdminStrings.payoutReferenceOptionalAr,
+      ),
     );
     final res = await ref.read(adminRepositoryProvider).patchPayout(
           id: id,
@@ -165,9 +233,15 @@ class _PayoutRow extends ConsumerWidget {
               : reference.trim(),
         );
     res.fold(
-      (err) => _snack(context, 'Failed: ${err.runtimeType}'),
+      (err) => _snack(
+        context,
+        '${localized(ref, AdminStrings.failedPrefix, AdminStrings.failedPrefixAr)} ${err.runtimeType}',
+      ),
       (_) {
-        _snack(context, 'Marked paid');
+        _snack(
+          context,
+          localized(ref, AdminStrings.markedPaidSnack, AdminStrings.markedPaidSnackAr),
+        );
         onChanged();
       },
     );
@@ -176,16 +250,34 @@ class _PayoutRow extends ConsumerWidget {
   Future<void> _void(BuildContext context, WidgetRef ref, String id) async {
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Void commission?'),
-        content: const Text('This cannot be undone.'),
+      builder: (ctx) => AlertDialog(
+        title: Text(
+          localized(
+            ref,
+            AdminStrings.voidCommissionTitle,
+            AdminStrings.voidCommissionTitleAr,
+          ),
+        ),
+        content: Text(
+          localized(ref, AdminStrings.cannotUndo, AdminStrings.cannotUndoAr),
+        ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel')),
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(
+              localizedFromContext(ctx, AppStrings.cancel, AppStrings.cancelAr),
+            ),
+          ),
           FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Void')),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(
+              localized(
+                ref,
+                AdminStrings.voidAction,
+                AdminStrings.voidActionAr,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -194,9 +286,15 @@ class _PayoutRow extends ConsumerWidget {
         .read(adminRepositoryProvider)
         .patchPayout(id: id, status: 'void');
     res.fold(
-      (err) => _snack(context, 'Failed: ${err.runtimeType}'),
+      (err) => _snack(
+        context,
+        '${localized(ref, AdminStrings.failedPrefix, AdminStrings.failedPrefixAr)} ${err.runtimeType}',
+      ),
       (_) {
-        _snack(context, 'Voided');
+        _snack(
+          context,
+          localized(ref, AdminStrings.voidedSnack, AdminStrings.voidedSnackAr),
+        );
         onChanged();
       },
     );
@@ -209,15 +307,16 @@ class _PayoutRow extends ConsumerWidget {
   }
 }
 
-class _TextDialog extends StatefulWidget {
-  const _TextDialog({required this.title});
-  final String title;
+class _TextDialog extends ConsumerStatefulWidget {
+  const _TextDialog({required this.titleEn, required this.titleAr});
+  final String titleEn;
+  final String titleAr;
 
   @override
-  State<_TextDialog> createState() => _TextDialogState();
+  ConsumerState<_TextDialog> createState() => _TextDialogState();
 }
 
-class _TextDialogState extends State<_TextDialog> {
+class _TextDialogState extends ConsumerState<_TextDialog> {
   final _ctrl = TextEditingController();
 
   @override
@@ -229,15 +328,17 @@ class _TextDialogState extends State<_TextDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text(widget.title),
+      title: Text(localized(ref, widget.titleEn, widget.titleAr)),
       content: TextField(controller: _ctrl, autofocus: true),
       actions: [
         TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Skip')),
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(localized(ref, AdminStrings.skip, AdminStrings.skipAr)),
+        ),
         FilledButton(
-            onPressed: () => Navigator.of(context).pop(_ctrl.text),
-            child: const Text('Save')),
+          onPressed: () => Navigator.of(context).pop(_ctrl.text),
+          child: Text(localized(ref, AdminStrings.save, AdminStrings.saveAr)),
+        ),
       ],
     );
   }

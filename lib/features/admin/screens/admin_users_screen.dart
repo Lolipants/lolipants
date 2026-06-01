@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lolipants/core/constants/admin_strings.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
+import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/features/admin/providers/admin_providers.dart';
 import 'package:lolipants/features/auth/models/user.dart';
 
@@ -44,37 +47,97 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                 child: TextField(
                   controller: _searchCtrl,
                   onSubmitted: (_) => setState(() {}),
-                  decoration: const InputDecoration(
-                    hintText: 'Search name/email',
-                    prefixIcon: Icon(Icons.search),
+                  decoration: InputDecoration(
+                    hintText: localized(
+                      ref,
+                      AdminStrings.searchNameEmail,
+                      AdminStrings.searchNameEmailAr,
+                    ),
+                    prefixIcon: const Icon(Icons.search),
                   ),
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
               DropdownButton<String?>(
                 value: _roleFilter,
-                hint: const Text('role'),
-                items: const [
-                  DropdownMenuItem(value: null, child: Text('any role')),
+                hint: Text(
+                  localized(ref, AdminStrings.roleLabel, AdminStrings.roleLabelAr),
+                ),
+                items: [
                   DropdownMenuItem(
-                      value: UserRoles.user, child: Text('user')),
+                    value: null,
+                    child: Text(
+                      localized(ref, AdminStrings.anyRole, AdminStrings.anyRoleAr),
+                    ),
+                  ),
                   DropdownMenuItem(
-                      value: UserRoles.tailor, child: Text('tailor')),
+                    value: UserRoles.user,
+                    child: Text(
+                      localized(ref, AdminStrings.roleUser, AdminStrings.roleUserAr),
+                    ),
+                  ),
                   DropdownMenuItem(
-                      value: UserRoles.delivery, child: Text('delivery')),
+                    value: UserRoles.tailor,
+                    child: Text(
+                      localized(ref, AdminStrings.roleTailor, AdminStrings.roleTailorAr),
+                    ),
+                  ),
                   DropdownMenuItem(
-                      value: UserRoles.admin, child: Text('admin')),
+                    value: UserRoles.delivery,
+                    child: Text(
+                      localized(
+                        ref,
+                        AdminStrings.roleDelivery,
+                        AdminStrings.roleDeliveryAr,
+                      ),
+                    ),
+                  ),
+                  DropdownMenuItem(
+                    value: UserRoles.admin,
+                    child: Text(
+                      localized(ref, AdminStrings.roleAdmin, AdminStrings.roleAdminAr),
+                    ),
+                  ),
                 ],
                 onChanged: (v) => setState(() => _roleFilter = v),
               ),
               const SizedBox(width: AppSpacing.sm),
               DropdownButton<bool?>(
                 value: _bannedFilter,
-                hint: const Text('status'),
-                items: const [
-                  DropdownMenuItem(value: null, child: Text('any')),
-                  DropdownMenuItem(value: false, child: Text('active')),
-                  DropdownMenuItem(value: true, child: Text('banned')),
+                hint: Text(
+                  localized(
+                    ref,
+                    AdminStrings.statusFilter,
+                    AdminStrings.statusFilterAr,
+                  ),
+                ),
+                items: [
+                  DropdownMenuItem(
+                    value: null,
+                    child: Text(
+                      localized(ref, AdminStrings.filterAny, AdminStrings.filterAnyAr),
+                    ),
+                  ),
+                  DropdownMenuItem(
+                    value: false,
+                    child: Text(
+                      localized(
+                        ref,
+                        AdminStrings.statusActive,
+                        AdminStrings.statusActiveAr,
+                      ),
+                    ),
+                  ),
+                  DropdownMenuItem(
+                    value: true,
+                    child: Text(
+                      localized(
+                        ref,
+                        AdminStrings.statusBanned,
+                        AdminStrings.statusBannedAr,
+                      ),
+                    ),
+                  ),
                 ],
                 onChanged: (v) => setState(() => _bannedFilter = v),
               ),
@@ -91,8 +154,14 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                 children: [
                   const Icon(Icons.error_outline, size: 32),
                   const SizedBox(height: AppSpacing.sm),
-                  Text('Could not load users.',
-                      style: AppTextStyles.bodyMedium),
+                  Text(
+                    localized(
+                      ref,
+                      AdminStrings.couldNotLoadUsers,
+                      AdminStrings.couldNotLoadUsersAr,
+                    ),
+                    style: AppTextStyles.bodyMedium,
+                  ),
                   Text(
                     formatAdminProviderError(error),
                     style: AppTextStyles.bodySmall,
@@ -105,8 +174,14 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                     padding: const EdgeInsets.all(AppSpacing.xl),
                     children: [
                       Center(
-                        child: Text('No users match the filter.',
-                            style: AppTextStyles.bodyMedium),
+                        child: Text(
+                          localized(
+                            ref,
+                            AdminStrings.noUsersMatch,
+                            AdminStrings.noUsersMatchAr,
+                          ),
+                          style: AppTextStyles.bodyMedium,
+                        ),
                       ),
                     ],
                   );
@@ -172,7 +247,15 @@ class _UserTile extends ConsumerWidget {
                 ),
                 if (banned) ...[
                   const SizedBox(width: AppSpacing.xs),
-                  const Chip(label: Text('banned')),
+                  Chip(
+                    label: Text(
+                      localized(
+                        ref,
+                        AdminStrings.statusBanned,
+                        AdminStrings.statusBannedAr,
+                      ),
+                    ),
+                  ),
                 ],
               ],
             ),
@@ -193,13 +276,19 @@ class _UserTile extends ConsumerWidget {
                 TextButton.icon(
                   onPressed: () => _editRole(context, ref, id, role, scopes),
                   icon: const Icon(Icons.badge_outlined, size: 18),
-                  label: const Text('Edit role'),
+                  label: Text(
+                    localized(ref, AdminStrings.editRole, AdminStrings.editRoleAr),
+                  ),
                 ),
                 const Spacer(),
                 TextButton.icon(
                   onPressed: () => _toggleBan(context, ref, id, banned),
                   icon: Icon(banned ? Icons.lock_open : Icons.block, size: 18),
-                  label: Text(banned ? 'Unban' : 'Ban'),
+                  label: Text(
+                    banned
+                        ? localized(ref, AdminStrings.unban, AdminStrings.unbanAr)
+                        : localized(ref, AdminStrings.ban, AdminStrings.banAr),
+                  ),
                 ),
               ],
             ),
@@ -255,9 +344,15 @@ class _UserTile extends ConsumerWidget {
           adminScopes: result.scopes,
         );
     res.fold(
-      (err) => _snack(context, 'Failed: ${err.runtimeType}'),
+      (err) => _snack(
+        context,
+        '${localized(ref, AdminStrings.failedPrefix, AdminStrings.failedPrefixAr)} ${err.runtimeType}',
+      ),
       (_) {
-        _snack(context, 'Updated');
+        _snack(
+          context,
+          localized(ref, AdminStrings.updatedSnack, AdminStrings.updatedSnackAr),
+        );
         onChanged();
       },
     );
@@ -273,9 +368,17 @@ class _UserTile extends ConsumerWidget {
         .read(adminRepositoryProvider)
         .patchUser(id: id, banned: !currentlyBanned);
     res.fold(
-      (err) => _snack(context, 'Failed: ${err.runtimeType}'),
+      (err) => _snack(
+        context,
+        '${localized(ref, AdminStrings.failedPrefix, AdminStrings.failedPrefixAr)} ${err.runtimeType}',
+      ),
       (_) {
-        _snack(context, currentlyBanned ? 'User unbanned' : 'User banned');
+        _snack(
+          context,
+          currentlyBanned
+              ? localized(ref, AdminStrings.userUnbanned, AdminStrings.userUnbannedAr)
+              : localized(ref, AdminStrings.userBanned, AdminStrings.userBannedAr),
+        );
         onChanged();
       },
     );
@@ -294,16 +397,16 @@ class _RoleEdit {
   final List<String> scopes;
 }
 
-class _RoleEditDialog extends StatefulWidget {
+class _RoleEditDialog extends ConsumerStatefulWidget {
   const _RoleEditDialog({required this.initialRole, required this.initialScopes});
   final String initialRole;
   final List<String> initialScopes;
 
   @override
-  State<_RoleEditDialog> createState() => _RoleEditDialogState();
+  ConsumerState<_RoleEditDialog> createState() => _RoleEditDialogState();
 }
 
-class _RoleEditDialogState extends State<_RoleEditDialog> {
+class _RoleEditDialogState extends ConsumerState<_RoleEditDialog> {
   late String _role = widget.initialRole;
   late final Set<String> _scopes = widget.initialScopes.toSet();
 
@@ -323,29 +426,66 @@ class _RoleEditDialogState extends State<_RoleEditDialog> {
   Widget build(BuildContext context) {
     final isAdmin = _role == UserRoles.admin;
     return AlertDialog(
-      title: const Text('Edit role + scopes'),
+      title: Text(
+        localized(
+          ref,
+          AdminStrings.editRoleScopes,
+          AdminStrings.editRoleScopesAr,
+        ),
+      ),
       content: SizedBox(
         width: 360,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Role'),
+            Text(
+              localized(ref, AdminStrings.roleHeading, AdminStrings.roleHeadingAr),
+            ),
             DropdownButton<String>(
               value: _role,
               isExpanded: true,
-              items: const [
-                DropdownMenuItem(value: UserRoles.user, child: Text('user')),
-                DropdownMenuItem(value: UserRoles.tailor, child: Text('tailor')),
+              items: [
                 DropdownMenuItem(
-                    value: UserRoles.delivery, child: Text('delivery')),
-                DropdownMenuItem(value: UserRoles.admin, child: Text('admin')),
+                  value: UserRoles.user,
+                  child: Text(
+                    localized(ref, AdminStrings.roleUser, AdminStrings.roleUserAr),
+                  ),
+                ),
+                DropdownMenuItem(
+                  value: UserRoles.tailor,
+                  child: Text(
+                    localized(ref, AdminStrings.roleTailor, AdminStrings.roleTailorAr),
+                  ),
+                ),
+                DropdownMenuItem(
+                  value: UserRoles.delivery,
+                  child: Text(
+                    localized(
+                      ref,
+                      AdminStrings.roleDelivery,
+                      AdminStrings.roleDeliveryAr,
+                    ),
+                  ),
+                ),
+                DropdownMenuItem(
+                  value: UserRoles.admin,
+                  child: Text(
+                    localized(ref, AdminStrings.roleAdmin, AdminStrings.roleAdminAr),
+                  ),
+                ),
               ],
               onChanged: (v) => setState(() => _role = v ?? _role),
             ),
             const SizedBox(height: AppSpacing.md),
             if (isAdmin) ...[
-              const Text('Admin scopes'),
+              Text(
+                localized(
+                  ref,
+                  AdminStrings.adminScopes,
+                  AdminStrings.adminScopesAr,
+                ),
+              ),
               const SizedBox(height: AppSpacing.xs),
               Wrap(
                 spacing: 6,
@@ -368,7 +508,9 @@ class _RoleEditDialogState extends State<_RoleEditDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: Text(
+            localizedFromContext(context, AppStrings.cancel, AppStrings.cancelAr),
+          ),
         ),
         FilledButton(
           onPressed: () => Navigator.of(context).pop(
@@ -377,7 +519,7 @@ class _RoleEditDialogState extends State<_RoleEditDialog> {
               isAdmin ? _scopes.toList(growable: false) : const <String>[],
             ),
           ),
-          child: const Text('Save'),
+          child: Text(localized(ref, AdminStrings.save, AdminStrings.saveAr)),
         ),
       ],
     );

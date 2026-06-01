@@ -2,10 +2,14 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:lolipants/core/constants/admin_strings.dart';
 import 'package:lolipants/core/permissions/device_permission_prompt.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
+import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
+import 'package:lolipants/features/settings/providers/settings_provider.dart';
 import 'package:lolipants/features/admin/providers/admin_providers.dart';
 import 'package:lolipants/features/admin/utils/admin_cms_helpers.dart';
 import 'package:lolipants/features/editor/providers/designs_providers.dart';
@@ -115,9 +119,11 @@ class _AdminConfiguratorCmsTabState extends ConsumerState<AdminConfiguratorCmsTa
               AppSpacing.xs,
             ),
             child: Text(
-              'Configurator layers: add templates, slots, then options. '
-              'Upload option PNGs here or set metadata_json.assetPath to '
-              'assets/images/configurator/… and run pnpm upload:catalog-assets.',
+              localized(
+                ref,
+                AdminStrings.configuratorHelpBanner,
+                AdminStrings.configuratorHelpBannerAr,
+              ),
               style: AppTextStyles.bodySmall.copyWith(color: AppColors.fog),
             ),
           ),
@@ -125,10 +131,20 @@ class _AdminConfiguratorCmsTabState extends ConsumerState<AdminConfiguratorCmsTa
         TabBar(
           controller: _tabs,
           isScrollable: true,
-          tabs: const [
-            Tab(text: 'Templates'),
-            Tab(text: 'Slots'),
-            Tab(text: 'Options'),
+          tabs: [
+            Tab(
+              text: localized(
+                ref,
+                AdminStrings.tabTemplates,
+                AdminStrings.tabTemplatesAr,
+              ),
+            ),
+            Tab(
+              text: localized(ref, AdminStrings.tabSlot, AdminStrings.tabSlotAr),
+            ),
+            Tab(
+              text: localized(ref, AdminStrings.tabOptions, AdminStrings.tabOptionsAr),
+            ),
           ],
         ),
         Expanded(
@@ -149,7 +165,7 @@ class _AdminConfiguratorCmsTabState extends ConsumerState<AdminConfiguratorCmsTa
               slots: slots,
             ),
             icon: const Icon(Icons.add),
-            label: const Text('New'),
+            label: Text(localized(ref, AdminStrings.newItem, AdminStrings.newItemAr)),
           ),
         ),
       ],
@@ -181,14 +197,16 @@ class _AdminConfiguratorCmsTabState extends ConsumerState<AdminConfiguratorCmsTa
       children: [
         if (resource == 'configurator_slots')
           _ParentFilterBar(
-            label: 'Template',
+            labelEn: AdminStrings.filterTemplate,
+            labelAr: AdminStrings.filterTemplateAr,
             value: _filterTemplateId,
             options: _templateOptions(templatesAsync.valueOrNull ?? const []),
             onChanged: (v) => setState(() => _filterTemplateId = v),
           ),
         if (resource == 'configurator_options') ...[
           _ParentFilterBar(
-            label: 'Template',
+            labelEn: AdminStrings.filterTemplate,
+            labelAr: AdminStrings.filterTemplateAr,
             value: _filterTemplateId,
             options: _templateOptions(templatesAsync.valueOrNull ?? const []),
             onChanged: (v) => setState(() {
@@ -197,7 +215,8 @@ class _AdminConfiguratorCmsTabState extends ConsumerState<AdminConfiguratorCmsTa
             }),
           ),
           _ParentFilterBar(
-            label: 'Slot',
+            labelEn: AdminStrings.tabSlot,
+            labelAr: AdminStrings.tabSlotAr,
             value: _filterSlotId,
             options: _slotOptions(slotsAsync.valueOrNull ?? const []),
             onChanged: (v) => setState(() => _filterSlotId = v),
@@ -221,8 +240,10 @@ class _AdminConfiguratorCmsTabState extends ConsumerState<AdminConfiguratorCmsTa
                     padding: const EdgeInsets.all(AppSpacing.xl),
                     children: [
                       Center(
-                        child: Text('No $resource yet.',
-                            style: AppTextStyles.bodyMedium),
+                        child: Text(
+                          '${localized(ref, AdminStrings.noResourcePrefix, AdminStrings.noResourcePrefixAr)}$resource${localized(ref, AdminStrings.noResourceSuffix, AdminStrings.noResourceSuffixAr)}',
+                          style: AppTextStyles.bodyMedium,
+                        ),
                       ),
                     ],
                   );
@@ -288,10 +309,18 @@ class _AdminConfiguratorCmsTabState extends ConsumerState<AdminConfiguratorCmsTa
             saved,
           );
     if (!context.mounted) return;
+    final locale = ref.read(settingsLocaleProvider);
     result.fold(
-      (err) => _snack(context, formatAdminCmsError(err)),
+      (err) => _snack(context, formatAdminCmsError(err, locale: locale)),
       (_) {
-        _snack(context, existing == null ? 'Created' : 'Updated');
+        _snack(
+          context,
+          localized(
+            ref,
+            existing == null ? AdminStrings.created : AdminStrings.updated,
+            existing == null ? AdminStrings.createdAr : AdminStrings.updatedAr,
+          ),
+        );
         ref.invalidate(adminConfiguratorListProvider(filter));
         invalidatePublicCmsCache(ref, resource);
       },
@@ -304,21 +333,23 @@ class _AdminConfiguratorCmsTabState extends ConsumerState<AdminConfiguratorCmsTa
   }
 }
 
-class _ParentFilterBar extends StatelessWidget {
+class _ParentFilterBar extends ConsumerWidget {
   const _ParentFilterBar({
-    required this.label,
+    required this.labelEn,
+    required this.labelAr,
     required this.value,
     required this.options,
     required this.onChanged,
   });
 
-  final String label;
+  final String labelEn;
+  final String labelAr;
   final String? value;
   final List<_ParentOption> options;
   final ValueChanged<String?> onChanged;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final ids = options.map((o) => o.id).toList(growable: false);
     return Padding(
       padding: const EdgeInsets.symmetric(
@@ -327,15 +358,25 @@ class _ParentFilterBar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Text(label, style: AppTextStyles.bodySmall),
+          Text(
+            localized(ref, labelEn, labelAr),
+            style: AppTextStyles.bodySmall,
+          ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: DropdownButton<String?>(
               isExpanded: true,
               value: value != null && ids.contains(value) ? value : null,
-              hint: const Text('All'),
+              hint: Text(
+                localized(ref, AdminStrings.filterAll, AdminStrings.filterAllAr),
+              ),
               items: [
-                const DropdownMenuItem<String?>(value: null, child: Text('All')),
+                DropdownMenuItem<String?>(
+                  value: null,
+                  child: Text(
+                    localized(ref, AdminStrings.filterAll, AdminStrings.filterAllAr),
+                  ),
+                ),
                 for (final option in options)
                   DropdownMenuItem(
                     value: option.id,
@@ -414,33 +455,51 @@ class _ConfiguratorRow extends ConsumerWidget {
   ) async {
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Delete?'),
-        content: const Text('This removes the row from the configurator tables.'),
+      builder: (ctx) => AlertDialog(
+        title: Text(
+          localizedFromContext(ctx, AdminStrings.deleteTitle, AdminStrings.deleteTitleAr),
+        ),
+        content: Text(
+          localizedFromContext(
+            ctx,
+            AdminStrings.configuratorDeleteBody,
+            AdminStrings.configuratorDeleteBodyAr,
+          ),
+        ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(
+              localizedFromContext(ctx, AppStrings.cancel, AppStrings.cancelAr),
+            ),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete'),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(
+              localizedFromContext(ctx, AdminStrings.delete, AdminStrings.deleteAr),
+            ),
           ),
         ],
       ),
     );
     if (confirm != true || !context.mounted) return;
+    final locale = ref.read(settingsLocaleProvider);
     final res = await ref
         .read(adminRepositoryProvider)
         .deleteConfiguratorCms(resource, id);
     if (!context.mounted) return;
     res.fold(
       (err) => ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(formatAdminCmsError(err))),
+        SnackBar(content: Text(formatAdminCmsError(err, locale: locale))),
       ),
       (_) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Deleted')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              localized(ref, AdminStrings.deleted, AdminStrings.deletedAr),
+            ),
+          ),
+        );
         onChanged();
         invalidatePublicCmsCache(ref, resource);
       },
@@ -550,8 +609,13 @@ class _ConfiguratorFormDialogState
 
   @override
   Widget build(BuildContext context) {
+    final isNew = widget.initial == null;
     return AlertDialog(
-      title: Text(widget.initial == null ? 'New' : 'Edit'),
+      title: Text(
+        isNew
+            ? localized(ref, AdminStrings.newItem, AdminStrings.newItemAr)
+            : localized(ref, AdminStrings.editLabel, AdminStrings.editLabelAr),
+      ),
       content: SizedBox(
         width: 400,
         child: SingleChildScrollView(
@@ -588,7 +652,17 @@ class _ConfiguratorFormDialogState
                                   : () => _pickImage(toCatalog: true),
                               icon: const Icon(Icons.cloud_upload_outlined),
                               label: Text(
-                                _uploading ? 'Uploading...' : 'Upload to catalog',
+                                _uploading
+                                    ? localized(
+                                        ref,
+                                        AdminStrings.uploading,
+                                        AdminStrings.uploadingAr,
+                                      )
+                                    : localized(
+                                        ref,
+                                        AdminStrings.uploadToCatalog,
+                                        AdminStrings.uploadToCatalogAr,
+                                      ),
                               ),
                             ),
                           if (widget.resource == 'configurator_options')
@@ -608,9 +682,21 @@ class _ConfiguratorFormDialogState
                             label: Text(
                               widget.resource == 'configurator_options'
                                   ? (_uploading
-                                      ? 'Uploading...'
-                                      : 'Upload (general)')
-                                  : 'Upload image',
+                                      ? localized(
+                                          ref,
+                                          AdminStrings.uploading,
+                                          AdminStrings.uploadingAr,
+                                        )
+                                      : localized(
+                                          ref,
+                                          AdminStrings.uploadGeneral,
+                                          AdminStrings.uploadGeneralAr,
+                                        ))
+                                  : localized(
+                                      ref,
+                                      AdminStrings.uploadImage,
+                                      AdminStrings.uploadImageAr,
+                                    ),
                             ),
                           ),
                         ],
@@ -672,9 +758,14 @@ class _ConfiguratorFormDialogState
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
+          child: Text(
+            localizedFromContext(context, AppStrings.cancel, AppStrings.cancelAr),
+          ),
         ),
-        FilledButton(onPressed: _submit, child: const Text('Save')),
+        FilledButton(
+          onPressed: _submit,
+          child: Text(localized(ref, AdminStrings.save, AdminStrings.saveAr)),
+        ),
       ],
     );
   }
@@ -719,9 +810,10 @@ class _ConfiguratorFormDialogState
               filename: file.name,
             );
         if (!mounted) return;
+        final locale = ref.read(settingsLocaleProvider);
         res.fold(
           (err) => ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(formatAdminCmsError(err))),
+            SnackBar(content: Text(formatAdminCmsError(err, locale: locale))),
           ),
           (url) => setState(() => _imageUrl = url),
         );
@@ -730,9 +822,10 @@ class _ConfiguratorFormDialogState
             .read(designsRepositoryProvider)
             .uploadPrintImage(filePath: file.path);
         if (!mounted) return;
+        final locale = ref.read(settingsLocaleProvider);
         res.fold(
           (err) => ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(formatAdminCmsError(err))),
+            SnackBar(content: Text(formatAdminCmsError(err, locale: locale))),
           ),
           (url) => setState(() => _imageUrl = url),
         );

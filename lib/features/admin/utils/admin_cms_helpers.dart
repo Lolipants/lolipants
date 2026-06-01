@@ -1,6 +1,10 @@
+import 'dart:ui' show Locale;
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lolipants/core/constants/admin_strings.dart';
 import 'package:lolipants/core/errors/app_exception.dart';
 import 'package:lolipants/core/errors/app_exception_message_mapper.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/features/browse/providers/preset_providers.dart';
 import 'package:lolipants/features/editor/providers/configurator_providers.dart';
 import 'package:lolipants/features/editor/providers/design_catalog_providers.dart';
@@ -10,16 +14,21 @@ import 'package:lolipants/features/wedding/models/wedding_dress.dart';
 import 'package:lolipants/features/wedding/providers/wedding_providers.dart';
 
 /// User-facing text for CMS save/delete/upload failures.
-String formatAdminCmsError(AppException error) {
+String formatAdminCmsError(AppException error, {Locale? locale}) {
+  final loc = locale ?? const Locale('en');
+  String l(String en, String ar) => localizedFromLocale(loc, en, ar);
   return mapAppExceptionMessage(
     error,
-    fallback: 'Could not save changes. Please try again.',
-    networkMessage: 'Network issue. Check your connection and try again.',
-    authMessage: 'Session expired or you do not have CMS access. Sign in again.',
+    fallback: l(AdminStrings.cmsSaveFailed, AdminStrings.cmsSaveFailedAr),
+    networkMessage: l(AdminStrings.cmsNetworkError, AdminStrings.cmsNetworkErrorAr),
+    authMessage: l(AdminStrings.cmsSessionExpired, AdminStrings.cmsSessionExpiredAr),
     statusMessages: {
-      400: 'Some required fields are missing or invalid.',
-      403: 'You do not have permission to change this content.',
-      503: 'File storage is not configured on the server.',
+      400: l(AdminStrings.cmsInvalidFields, AdminStrings.cmsInvalidFieldsAr),
+      403: l(AdminStrings.cmsNoPermission, AdminStrings.cmsNoPermissionAr),
+      503: l(
+        AdminStrings.cmsStorageNotConfigured,
+        AdminStrings.cmsStorageNotConfiguredAr,
+      ),
     },
   );
 }

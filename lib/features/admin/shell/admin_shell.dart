@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lolipants/core/constants/admin_strings.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/features/admin/widgets/admin_nav_menu.dart';
 import 'package:lolipants/features/auth/providers/auth_providers.dart';
+import 'package:lolipants/features/settings/providers/settings_provider.dart';
 
 export 'package:lolipants/features/admin/widgets/admin_nav_menu.dart'
     show AdminNavItem, kAdminNavItems;
@@ -32,6 +35,7 @@ class _AdminShellState extends ConsumerState<AdminShell> {
 
   @override
   Widget build(BuildContext context) {
+    final localeKey = ref.watch(settingsLocaleProvider).languageCode;
     final auth = ref.watch(authProvider).value;
     final user = auth is AuthAuthenticated ? auth.user : null;
     final items = visibleAdminNavItems(user);
@@ -69,12 +73,13 @@ class _AdminShellState extends ConsumerState<AdminShell> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              current?.label ?? 'Admin',
+              current?.label(context) ??
+                  localized(ref, AdminStrings.adminTitle, AdminStrings.adminTitleAr),
               style: AppTextStyles.titleMedium,
             ),
             if (current != null)
               Text(
-                _sectionLabelFor(current),
+                _sectionLabelFor(ref, current),
                 style: AppTextStyles.bodySmall.copyWith(color: AppColors.fog),
               ),
           ],
@@ -83,7 +88,11 @@ class _AdminShellState extends ConsumerState<AdminShell> {
             ? null
             : IconButton(
                 icon: const Icon(Icons.menu),
-                tooltip: 'Open menu',
+                tooltip: localized(
+                  ref,
+                  AdminStrings.openMenu,
+                  AdminStrings.openMenuAr,
+                ),
                 onPressed: () => _scaffoldKey.currentState?.openDrawer(),
               ),
         automaticallyImplyLeading: !isWide,
@@ -92,7 +101,11 @@ class _AdminShellState extends ConsumerState<AdminShell> {
             IconButton(
               onPressed: signOut,
               icon: const Icon(Icons.logout),
-              tooltip: 'Sign out',
+              tooltip: localized(
+                ref,
+                AdminStrings.signOut,
+                AdminStrings.signOutAr,
+              ),
             ),
         ],
       ),
@@ -102,17 +115,42 @@ class _AdminShellState extends ConsumerState<AdminShell> {
               children: [
                 SizedBox(width: _sidebarWidth, child: menu),
                 const VerticalDivider(width: 1, thickness: 1),
-                Expanded(child: widget.child),
+                Expanded(
+                  child: KeyedSubtree(
+                    key: ValueKey<String>('admin_body_$localeKey'),
+                    child: widget.child,
+                  ),
+                ),
               ],
             )
-          : widget.child,
+          : KeyedSubtree(
+              key: ValueKey<String>('admin_body_$localeKey'),
+              child: widget.child,
+            ),
     );
   }
 
-  String _sectionLabelFor(AdminNavItem item) => switch (item.group) {
-        AdminNavGroup.overview => 'Overview',
-        AdminNavGroup.people => 'People',
-        AdminNavGroup.operations => 'Operations',
-        AdminNavGroup.platform => 'Platform',
+  String _sectionLabelFor(WidgetRef ref, AdminNavItem item) =>
+      switch (item.group) {
+        AdminNavGroup.overview => localized(
+            ref,
+            AdminStrings.navOverview,
+            AdminStrings.navOverviewAr,
+          ),
+        AdminNavGroup.people => localized(
+            ref,
+            AdminStrings.sectionPeople,
+            AdminStrings.sectionPeopleAr,
+          ),
+        AdminNavGroup.operations => localized(
+            ref,
+            AdminStrings.sectionOperations,
+            AdminStrings.sectionOperationsAr,
+          ),
+        AdminNavGroup.platform => localized(
+            ref,
+            AdminStrings.sectionPlatform,
+            AdminStrings.sectionPlatformAr,
+          ),
       };
 }

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lolipants/core/constants/admin_strings.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
+import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/features/admin/providers/admin_providers.dart';
 
 /// Admin view of user-submitted complaints.
@@ -26,15 +29,41 @@ class _AdminComplaintsScreenState extends ConsumerState<AdminComplaintsScreen> {
           padding: const EdgeInsets.all(AppSpacing.md),
           child: Row(
             children: [
-              const Text('Status: '),
+              Text(
+                '${localized(ref, AdminStrings.statusLabel, AdminStrings.statusLabelAr)} ',
+              ),
               const SizedBox(width: AppSpacing.sm),
               DropdownButton<String?>(
                 value: _status,
-                items: const [
-                  DropdownMenuItem(value: null, child: Text('any')),
-                  DropdownMenuItem(value: 'open', child: Text('open')),
-                  DropdownMenuItem(value: 'resolved', child: Text('resolved')),
-                  DropdownMenuItem(value: 'rejected', child: Text('rejected')),
+                items: [
+                  DropdownMenuItem(
+                    value: null,
+                    child: Text(
+                      localized(ref, AdminStrings.filterAny, AdminStrings.filterAnyAr),
+                    ),
+                  ),
+                  DropdownMenuItem(
+                    value: 'open',
+                    child: Text(
+                      localized(ref, AdminStrings.filterOpen, AdminStrings.filterOpenAr),
+                    ),
+                  ),
+                  DropdownMenuItem(
+                    value: 'resolved',
+                    child: Text(
+                      localized(ref, AdminStrings.resolved, AdminStrings.resolvedAr),
+                    ),
+                  ),
+                  DropdownMenuItem(
+                    value: 'rejected',
+                    child: Text(
+                      localized(
+                        ref,
+                        AdminStrings.filterRejected,
+                        AdminStrings.filterRejectedAr,
+                      ),
+                    ),
+                  ),
                 ],
                 onChanged: (v) => setState(() => _status = v),
               ),
@@ -62,8 +91,14 @@ class _AdminComplaintsScreenState extends ConsumerState<AdminComplaintsScreen> {
                     padding: const EdgeInsets.all(AppSpacing.xl),
                     children: [
                       Center(
-                        child: Text('No complaints in this bucket.',
-                            style: AppTextStyles.bodyMedium),
+                        child: Text(
+                          localized(
+                            ref,
+                            AdminStrings.noComplaints,
+                            AdminStrings.noComplaintsAr,
+                          ),
+                          style: AppTextStyles.bodyMedium,
+                        ),
                       ),
                     ],
                   );
@@ -121,13 +156,18 @@ class _ComplaintCard extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: 2),
-            Text('From: $userId · $target', style: AppTextStyles.bodySmall),
+            Text(
+              '${localized(ref, AdminStrings.fromLabel, AdminStrings.fromLabelAr)} $userId · $target',
+              style: AppTextStyles.bodySmall,
+            ),
             const SizedBox(height: AppSpacing.sm),
             Text(body, style: AppTextStyles.bodyMedium),
             if (resolution != null && resolution.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.sm),
-              Text('Resolution: $resolution',
-                  style: AppTextStyles.bodySmall),
+              Text(
+                '${localized(ref, AdminStrings.resolutionPrefix, AdminStrings.resolutionPrefixAr)} $resolution',
+                style: AppTextStyles.bodySmall,
+              ),
             ],
             if (status == 'open') ...[
               const SizedBox(height: AppSpacing.sm),
@@ -138,12 +178,16 @@ class _ComplaintCard extends ConsumerWidget {
                   FilledButton(
                     onPressed: () =>
                         _respond(context, ref, id, 'resolved'),
-                    child: const Text('Resolve'),
+                    child: Text(
+                      localized(ref, AdminStrings.resolve, AdminStrings.resolveAr),
+                    ),
                   ),
                   OutlinedButton(
                     onPressed: () =>
                         _respond(context, ref, id, 'rejected'),
-                    child: const Text('Reject'),
+                    child: Text(
+                      localized(ref, AdminStrings.reject, AdminStrings.rejectAr),
+                    ),
                   ),
                 ],
               ),
@@ -171,9 +215,17 @@ class _ComplaintCard extends ConsumerWidget {
           resolution: note.trim().isEmpty ? null : note.trim(),
         );
     res.fold(
-      (err) => _snack(context, 'Failed: ${err.runtimeType}'),
+      (err) => _snack(
+        context,
+        '${localized(ref, AdminStrings.failedPrefix, AdminStrings.failedPrefixAr)} ${err.runtimeType}',
+      ),
       (_) {
-        _snack(context, status == 'resolved' ? 'Resolved' : 'Rejected');
+        _snack(
+          context,
+          status == 'resolved'
+              ? localized(ref, AdminStrings.resolved, AdminStrings.resolvedAr)
+              : localized(ref, AdminStrings.rejectedSnack, AdminStrings.rejectedSnackAr),
+        );
         onChanged();
       },
     );
@@ -186,15 +238,15 @@ class _ComplaintCard extends ConsumerWidget {
   }
 }
 
-class _ResolutionDialog extends StatefulWidget {
+class _ResolutionDialog extends ConsumerStatefulWidget {
   const _ResolutionDialog({required this.status});
   final String status;
 
   @override
-  State<_ResolutionDialog> createState() => _ResolutionDialogState();
+  ConsumerState<_ResolutionDialog> createState() => _ResolutionDialogState();
 }
 
-class _ResolutionDialogState extends State<_ResolutionDialog> {
+class _ResolutionDialogState extends ConsumerState<_ResolutionDialog> {
   final _ctrl = TextEditingController();
 
   @override
@@ -205,23 +257,42 @@ class _ResolutionDialogState extends State<_ResolutionDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final isResolved = widget.status == 'resolved';
     return AlertDialog(
-      title: Text(widget.status == 'resolved'
-          ? 'Resolution note (optional)'
-          : 'Rejection reason (optional)'),
+      title: Text(
+        localized(
+          ref,
+          isResolved
+              ? AdminStrings.resolutionNoteOptional
+              : AdminStrings.rejectionReasonOptional,
+          isResolved
+              ? AdminStrings.resolutionNoteOptionalAr
+              : AdminStrings.rejectionReasonOptionalAr,
+        ),
+      ),
       content: TextField(
         controller: _ctrl,
         maxLines: 3,
-        decoration: const InputDecoration(hintText: 'Internal note'),
+        decoration: InputDecoration(
+          hintText: localized(
+            ref,
+            AdminStrings.internalNote,
+            AdminStrings.internalNoteAr,
+          ),
+        ),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: Text(
+            localizedFromContext(context, AppStrings.cancel, AppStrings.cancelAr),
+          ),
         ),
         FilledButton(
           onPressed: () => Navigator.of(context).pop(_ctrl.text),
-          child: const Text('Submit'),
+          child: Text(
+            localized(ref, AdminStrings.submit, AdminStrings.submitAr),
+          ),
         ),
       ],
     );

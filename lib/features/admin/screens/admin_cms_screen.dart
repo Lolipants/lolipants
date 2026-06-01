@@ -3,10 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:lolipants/core/config/app_features.dart';
+import 'package:lolipants/core/constants/admin_strings.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
+import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/permissions/device_permission_prompt.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
+import 'package:lolipants/features/settings/providers/settings_provider.dart';
 import 'package:lolipants/features/admin/providers/admin_providers.dart';
 import 'package:lolipants/features/admin/screens/admin_configurator_cms_tab.dart';
 import 'package:lolipants/features/admin/utils/admin_cms_helpers.dart';
@@ -48,11 +52,27 @@ class _AdminCmsScreenState extends ConsumerState<AdminCmsScreen>
       children: [
         TabBar(
           controller: _sectionTabs,
-          tabs: const [
-            Tab(text: 'Assets'),
-            Tab(text: 'Configurator'),
-            Tab(text: 'Wedding'),
-            Tab(text: 'Accessories'),
+          tabs: [
+            Tab(
+              text: localized(ref, AdminStrings.tabAssets, AdminStrings.tabAssetsAr),
+            ),
+            Tab(
+              text: localized(
+                ref,
+                AdminStrings.tabConfigurator,
+                AdminStrings.tabConfiguratorAr,
+              ),
+            ),
+            Tab(
+              text: localized(ref, AdminStrings.tabWedding, AdminStrings.tabWeddingAr),
+            ),
+            Tab(
+              text: localized(
+                ref,
+                AdminStrings.tabAccessories,
+                AdminStrings.tabAccessoriesAr,
+              ),
+            ),
           ],
         ),
         Expanded(
@@ -91,38 +111,36 @@ class _AdminCmsScreenState extends ConsumerState<AdminCmsScreen>
 bool _isMannequinCmsReadOnly(String resource) =>
     resource == 'mannequins' && !kFeatureAdminMannequinCms;
 
-String? _cmsResourceHelp(String resource) {
+(String, String)? _cmsResourceHelp(String resource) {
   switch (resource) {
     case 'design-catalog':
-      return 'Editor flat-lay designs shown in Design catalog mode. Upload PNGs '
-          'to catalog/designs on R2, or use Upload (general) for a one-off URL. '
-          'Bundled assets in the app are merged automatically.';
+      return (
+        AdminStrings.cmsHelpDesignCatalog,
+        AdminStrings.cmsHelpDesignCatalogAr,
+      );
     case 'mannequins':
-      return 'Mannequin uploads are disabled in v1. The app ships four bundled '
-          'mannequins (assets/images/mannequins). Deploy PNGs with '
-          'pnpm upload:catalog-assets in server/lolipants-api.';
+      return (AdminStrings.cmsHelpMannequins, AdminStrings.cmsHelpMannequinsAr);
     case 'presets':
-      return 'Browse/home style shortcuts. Upload to catalog for CDN-backed images.';
+      return (AdminStrings.cmsHelpPresets, AdminStrings.cmsHelpPresetsAr);
     case 'patterns':
-      return 'Pattern presets for browse. Upload a pattern image when creating '
-          'or editing a row.';
+      return (AdminStrings.cmsHelpPatterns, AdminStrings.cmsHelpPatternsAr);
     case 'fabrics':
-      return 'Fabric catalogue metadata for the editor fabric picker.';
+      return (AdminStrings.cmsHelpFabrics, AdminStrings.cmsHelpFabricsAr);
     case 'accessories':
-      return 'Browse accessories shop and optional garment add-ons. '
-          'Categories: scarf, bag, jewellery, other.';
+      return (AdminStrings.cmsHelpAccessories, AdminStrings.cmsHelpAccessoriesAr);
     default:
       return null;
   }
 }
 
-class _CmsHelpBanner extends StatelessWidget {
-  const _CmsHelpBanner({required this.message});
+class _CmsHelpBanner extends ConsumerWidget {
+  const _CmsHelpBanner({required this.messageEn, required this.messageAr});
 
-  final String message;
+  final String messageEn;
+  final String messageAr;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Material(
       color: AppColors.smoke,
       child: Padding(
@@ -133,7 +151,7 @@ class _CmsHelpBanner extends StatelessWidget {
           AppSpacing.xs,
         ),
         child: Text(
-          message,
+          localized(ref, messageEn, messageAr),
           style: AppTextStyles.bodySmall.copyWith(color: AppColors.fog),
         ),
       ),
@@ -154,7 +172,8 @@ class _ResourceList extends ConsumerWidget {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (help != null) _CmsHelpBanner(message: help),
+          if (help != null)
+            _CmsHelpBanner(messageEn: help.$1, messageAr: help.$2),
           Expanded(
             child: RefreshIndicator(
         onRefresh: () async => ref.invalidate(adminCmsListProvider(resource)),
@@ -175,8 +194,10 @@ class _ResourceList extends ConsumerWidget {
                 padding: const EdgeInsets.all(AppSpacing.xl),
                 children: [
                   Center(
-                    child: Text('No $resource yet.',
-                        style: AppTextStyles.bodyMedium),
+                    child: Text(
+                      '${localized(ref, AdminStrings.noResourcePrefix, AdminStrings.noResourcePrefixAr)}$resource${localized(ref, AdminStrings.noResourceSuffix, AdminStrings.noResourceSuffixAr)}',
+                      style: AppTextStyles.bodyMedium,
+                    ),
                   ),
                 ],
               );
@@ -206,7 +227,7 @@ class _ResourceList extends ConsumerWidget {
         heroTag: 'cms-add-$resource',
         onPressed: () => _openForm(context, ref, null),
         icon: const Icon(Icons.add),
-        label: const Text('New'),
+        label: Text(localized(ref, AdminStrings.newItem, AdminStrings.newItemAr)),
       ),
     );
   }
@@ -229,10 +250,18 @@ class _ResourceList extends ConsumerWidget {
             existing['id'].toString(),
             saved,
           );
+    final locale = ref.read(settingsLocaleProvider);
     res.fold(
-      (err) => _snack(context, formatAdminCmsError(err)),
+      (err) => _snack(context, formatAdminCmsError(err, locale: locale)),
       (_) {
-        _snack(context, existing == null ? 'Created' : 'Updated');
+        _snack(
+          context,
+          localized(
+            ref,
+            existing == null ? AdminStrings.created : AdminStrings.updated,
+            existing == null ? AdminStrings.createdAr : AdminStrings.updatedAr,
+          ),
+        );
         ref.invalidate(adminCmsListProvider(resource));
         invalidatePublicCmsCache(ref, resource);
         if (resource == 'patterns') {
@@ -264,7 +293,7 @@ class _ResourceRow extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final id = data['id']?.toString() ?? '';
-    final name = _displayName();
+    final name = _displayName(ref);
     final preview = data['preview_url']?.toString() ??
         data['image_url']?.toString() ??
         '';
@@ -316,7 +345,7 @@ class _ResourceRow extends ConsumerWidget {
     );
   }
 
-  String _displayName() {
+  String _displayName(WidgetRef ref) {
     if (resource == 'design-catalog') {
       final section = data['section_title']?.toString();
       final label = data['label_en']?.toString();
@@ -334,32 +363,55 @@ class _ResourceRow extends ConsumerWidget {
       final s = c?.toString();
       if (s != null && s.isNotEmpty) return s;
     }
-    return data['id']?.toString() ?? '(unnamed)';
+    return data['id']?.toString() ??
+        localized(ref, AdminStrings.unnamed, AdminStrings.unnamedAr);
   }
 
   Future<void> _delete(BuildContext context, WidgetRef ref, String id) async {
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Delete?'),
-        content: const Text('This removes the row from the CMS table.'),
+      builder: (ctx) => AlertDialog(
+        title: Text(
+          localizedFromContext(ctx, AdminStrings.deleteTitle, AdminStrings.deleteTitleAr),
+        ),
+        content: Text(
+          localizedFromContext(
+            ctx,
+            AdminStrings.deleteCmsBody,
+            AdminStrings.deleteCmsBodyAr,
+          ),
+        ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel')),
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(
+              localizedFromContext(ctx, AppStrings.cancel, AppStrings.cancelAr),
+            ),
+          ),
           FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Delete')),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(
+              localizedFromContext(ctx, AdminStrings.delete, AdminStrings.deleteAr),
+            ),
+          ),
         ],
       ),
     );
     if (confirm != true) return;
+    final locale = ref.read(settingsLocaleProvider);
     final res =
         await ref.read(adminRepositoryProvider).deleteCms(resource, id);
     res.fold(
-      (err) => _snack(context, formatAdminCmsError(err)),
+      (err) => _snack(context, formatAdminCmsError(err, locale: locale)),
       (_) {
-        _snack(context, 'Deleted');
+        _snack(
+          context,
+          localizedFromContext(
+            context,
+            AdminStrings.deleted,
+            AdminStrings.deletedAr,
+          ),
+        );
         onChanged();
         invalidatePublicCmsCache(ref, resource);
         if (resource == 'patterns') {
@@ -514,10 +566,13 @@ class _CmsFormDialogState extends ConsumerState<_CmsFormDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final isNew = widget.initial == null;
     return AlertDialog(
-      title: Text(widget.initial == null
-          ? 'New ${widget.resource}'
-          : 'Edit ${widget.resource}'),
+      title: Text(
+        isNew
+            ? '${localized(ref, AdminStrings.newItem, AdminStrings.newItemAr)} ${widget.resource}'
+            : '${localized(ref, AdminStrings.editLabel, AdminStrings.editLabelAr)} ${widget.resource}',
+      ),
       content: SizedBox(
         width: 420,
         child: SingleChildScrollView(
@@ -533,11 +588,13 @@ class _CmsFormDialogState extends ConsumerState<_CmsFormDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: Text(
+            localizedFromContext(context, AppStrings.cancel, AppStrings.cancelAr),
+          ),
         ),
         FilledButton(
           onPressed: _uploading ? null : _submit,
-          child: const Text('Save'),
+          child: Text(localized(ref, AdminStrings.save, AdminStrings.saveAr)),
         ),
       ],
     );
@@ -578,19 +635,37 @@ class _CmsFormDialogState extends ConsumerState<_CmsFormDialog> {
                 OutlinedButton.icon(
                   onPressed: _uploading ? null : () => _pickImage(toCatalog: true),
                   icon: const Icon(Icons.cloud_upload_outlined),
-                  label: Text(_uploading ? 'Uploading...' : 'Upload to catalog'),
+                  label: Text(
+                    _uploading
+                        ? localized(ref, AdminStrings.uploading, AdminStrings.uploadingAr)
+                        : localized(
+                            ref,
+                            AdminStrings.uploadToCatalog,
+                            AdminStrings.uploadToCatalogAr,
+                          ),
+                  ),
                 ),
               if (_supportsCatalogUpload) const SizedBox(width: 8),
               OutlinedButton.icon(
                 onPressed: _uploading ? null : () => _pickImage(toCatalog: false),
                 icon: const Icon(Icons.upload),
-                label: Text(_uploading ? 'Uploading...' : 'Upload (general)'),
+                label: Text(
+                  _uploading
+                      ? localized(ref, AdminStrings.uploading, AdminStrings.uploadingAr)
+                      : localized(
+                          ref,
+                          AdminStrings.uploadGeneral,
+                          AdminStrings.uploadGeneralAr,
+                        ),
+                ),
               ),
               if (_imageUrl != null && _imageUrl!.isNotEmpty)
                 TextButton.icon(
                   onPressed: () => setState(() => _imageUrl = null),
                   icon: const Icon(Icons.close),
-                  label: const Text('Remove'),
+                  label: Text(
+                    localized(ref, AdminStrings.remove, AdminStrings.removeAr),
+                  ),
                 ),
             ],
           ),
@@ -656,9 +731,10 @@ class _CmsFormDialogState extends ConsumerState<_CmsFormDialog> {
           filename: file.name,
         );
         if (!mounted) return;
+        final locale = ref.read(settingsLocaleProvider);
         res.fold(
           (err) => ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(formatAdminCmsError(err))),
+            SnackBar(content: Text(formatAdminCmsError(err, locale: locale))),
           ),
           (url) => setState(() => _imageUrl = url),
         );
@@ -666,9 +742,10 @@ class _CmsFormDialogState extends ConsumerState<_CmsFormDialog> {
         final repo = ref.read(designsRepositoryProvider);
         final res = await repo.uploadPrintImage(filePath: file.path);
         if (!mounted) return;
+        final locale = ref.read(settingsLocaleProvider);
         res.fold(
           (err) => ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(formatAdminCmsError(err))),
+            SnackBar(content: Text(formatAdminCmsError(err, locale: locale))),
           ),
           (url) => setState(() => _imageUrl = url),
         );

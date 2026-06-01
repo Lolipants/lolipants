@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:lolipants/core/constants/admin_strings.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
+import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/features/auth/models/user.dart';
 
 /// High-level grouping for admin destinations (keeps navigation scannable).
@@ -23,7 +26,8 @@ enum AdminNavGroup {
 class AdminNavItem {
   /// Creates a navigation entry.
   const AdminNavItem({
-    required this.label,
+    required this.labelEn,
+    required this.labelAr,
     required this.icon,
     required this.selectedIcon,
     required this.path,
@@ -31,8 +35,11 @@ class AdminNavItem {
     this.scope,
   });
 
-  /// Visible label.
-  final String label;
+  /// English visible label.
+  final String labelEn;
+
+  /// Arabic visible label.
+  final String labelAr;
 
   /// Icon shown when unselected.
   final IconData icon;
@@ -48,19 +55,25 @@ class AdminNavItem {
 
   /// Admin scope required to see this entry. `null` = always visible.
   final String? scope;
+
+  /// Localized label for [context]'s locale.
+  String label(BuildContext context) =>
+      localizedFromContext(context, labelEn, labelAr);
 }
 
 /// Canonical admin navigation items.
 const List<AdminNavItem> kAdminNavItems = <AdminNavItem>[
   AdminNavItem(
-    label: 'Overview',
+    labelEn: AdminStrings.navOverview,
+    labelAr: AdminStrings.navOverviewAr,
     icon: Icons.dashboard_outlined,
     selectedIcon: Icons.dashboard,
     path: '/admin/stats',
     group: AdminNavGroup.overview,
   ),
   AdminNavItem(
-    label: 'Users',
+    labelEn: AdminStrings.navUsers,
+    labelAr: AdminStrings.navUsersAr,
     icon: Icons.people_outline,
     selectedIcon: Icons.people,
     path: '/admin/users',
@@ -68,7 +81,8 @@ const List<AdminNavItem> kAdminNavItems = <AdminNavItem>[
     scope: AdminScopes.usersMgmt,
   ),
   AdminNavItem(
-    label: 'Role requests',
+    labelEn: AdminStrings.navRoleRequests,
+    labelAr: AdminStrings.navRoleRequestsAr,
     icon: Icons.badge_outlined,
     selectedIcon: Icons.badge,
     path: '/admin/role-requests',
@@ -76,7 +90,8 @@ const List<AdminNavItem> kAdminNavItems = <AdminNavItem>[
     scope: AdminScopes.usersMgmt,
   ),
   AdminNavItem(
-    label: 'Orders',
+    labelEn: AdminStrings.navOrders,
+    labelAr: AdminStrings.navOrdersAr,
     icon: Icons.receipt_long_outlined,
     selectedIcon: Icons.receipt_long,
     path: '/admin/orders',
@@ -84,7 +99,8 @@ const List<AdminNavItem> kAdminNavItems = <AdminNavItem>[
     scope: AdminScopes.ordersOversight,
   ),
   AdminNavItem(
-    label: 'Payouts',
+    labelEn: AdminStrings.navPayouts,
+    labelAr: AdminStrings.navPayoutsAr,
     icon: Icons.payments_outlined,
     selectedIcon: Icons.payments,
     path: '/admin/payouts',
@@ -92,7 +108,8 @@ const List<AdminNavItem> kAdminNavItems = <AdminNavItem>[
     scope: AdminScopes.payouts,
   ),
   AdminNavItem(
-    label: 'Complaints',
+    labelEn: AdminStrings.navComplaints,
+    labelAr: AdminStrings.navComplaintsAr,
     icon: Icons.flag_outlined,
     selectedIcon: Icons.flag,
     path: '/admin/complaints',
@@ -100,7 +117,8 @@ const List<AdminNavItem> kAdminNavItems = <AdminNavItem>[
     scope: AdminScopes.complaints,
   ),
   AdminNavItem(
-    label: 'Moderation',
+    labelEn: AdminStrings.navModeration,
+    labelAr: AdminStrings.navModerationAr,
     icon: Icons.shield_outlined,
     selectedIcon: Icons.shield,
     path: '/admin/moderation',
@@ -108,7 +126,8 @@ const List<AdminNavItem> kAdminNavItems = <AdminNavItem>[
     scope: AdminScopes.moderation,
   ),
   AdminNavItem(
-    label: 'CMS',
+    labelEn: AdminStrings.navCms,
+    labelAr: AdminStrings.navCmsAr,
     icon: Icons.inventory_2_outlined,
     selectedIcon: Icons.inventory_2,
     path: '/admin/cms',
@@ -119,9 +138,14 @@ const List<AdminNavItem> kAdminNavItems = <AdminNavItem>[
 
 /// A labelled group of nav items after scope filtering.
 class AdminNavSection {
-  const AdminNavSection({required this.title, required this.items});
+  const AdminNavSection({
+    required this.titleEn,
+    required this.titleAr,
+    required this.items,
+  });
 
-  final String title;
+  final String titleEn;
+  final String titleAr;
   final List<AdminNavItem> items;
 }
 
@@ -142,18 +166,31 @@ List<AdminNavSection> buildAdminNavSections(List<AdminNavItem> items) {
     final groupItems =
         items.where((i) => i.group == group).toList(growable: false);
     if (groupItems.isEmpty) continue;
+    final (titleEn, titleAr) = _groupTitle(group);
     sections.add(
-      AdminNavSection(title: _groupTitle(group), items: groupItems),
+      AdminNavSection(titleEn: titleEn, titleAr: titleAr, items: groupItems),
     );
   }
   return sections;
 }
 
-String _groupTitle(AdminNavGroup group) => switch (group) {
-      AdminNavGroup.overview => 'Overview',
-      AdminNavGroup.people => 'People',
-      AdminNavGroup.operations => 'Operations',
-      AdminNavGroup.platform => 'Platform',
+(String, String) _groupTitle(AdminNavGroup group) => switch (group) {
+      AdminNavGroup.overview => (
+          AdminStrings.navOverview,
+          AdminStrings.navOverviewAr,
+        ),
+      AdminNavGroup.people => (
+          AdminStrings.sectionPeople,
+          AdminStrings.sectionPeopleAr,
+        ),
+      AdminNavGroup.operations => (
+          AdminStrings.sectionOperations,
+          AdminStrings.sectionOperationsAr,
+        ),
+      AdminNavGroup.platform => (
+          AdminStrings.sectionPlatform,
+          AdminStrings.sectionPlatformAr,
+        ),
     };
 
 /// Resolves the best-matching nav item for [location].
@@ -212,9 +249,13 @@ class AdminNavMenu extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Lolipants', style: AppTextStyles.titleMedium),
+                        Text(AppStrings.appName, style: AppTextStyles.titleMedium),
                         Text(
-                          'Admin console',
+                          localizedFromContext(
+                            context,
+                            AdminStrings.adminConsole,
+                            AdminStrings.adminConsoleAr,
+                          ),
                           style: AppTextStyles.bodySmall.copyWith(
                             color: AppColors.fog,
                           ),
@@ -226,7 +267,11 @@ class AdminNavMenu extends StatelessWidget {
                     IconButton(
                       onPressed: () => Navigator.of(context).pop(),
                       icon: const Icon(Icons.close),
-                      tooltip: 'Close menu',
+                      tooltip: localizedFromContext(
+                        context,
+                        AdminStrings.closeMenu,
+                        AdminStrings.closeMenuAr,
+                      ),
                     ),
                 ],
               ),
@@ -256,7 +301,11 @@ class AdminNavMenu extends StatelessWidget {
                       const SizedBox(width: AppSpacing.xs),
                       Expanded(
                         child: Text(
-                          'Super administrator',
+                          localizedFromContext(
+                            context,
+                            AdminStrings.superAdministrator,
+                            AdminStrings.superAdministratorAr,
+                          ),
                           style: AppTextStyles.bodySmall.copyWith(
                             color: AppColors.goldLight,
                             fontWeight: FontWeight.w600,
@@ -282,7 +331,11 @@ class AdminNavMenu extends StatelessWidget {
                         AppSpacing.xs,
                       ),
                       child: Text(
-                        section.title,
+                        localizedFromContext(
+                          context,
+                          section.titleEn,
+                          section.titleAr,
+                        ),
                         style: AppTextStyles.bodySmall.copyWith(
                           color: AppColors.fog,
                           fontWeight: FontWeight.w600,
@@ -304,7 +357,14 @@ class AdminNavMenu extends StatelessWidget {
             const Divider(height: 1, color: AppColors.borderSubtle),
             ListTile(
               leading: const Icon(Icons.logout, color: AppColors.dust),
-              title: Text('Sign out', style: AppTextStyles.bodyMedium),
+              title: Text(
+                localizedFromContext(
+                  context,
+                  AdminStrings.signOut,
+                  AdminStrings.signOutAr,
+                ),
+                style: AppTextStyles.bodyMedium,
+              ),
               onTap: onSignOut,
             ),
           ],
@@ -355,7 +415,7 @@ class _AdminNavTile extends StatelessWidget {
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
                   child: Text(
-                    item.label,
+                    item.label(context),
                     style: AppTextStyles.bodyMedium.copyWith(
                       color: selected ? AppColors.sand : AppColors.dust,
                       fontWeight:

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lolipants/core/constants/admin_strings.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/features/admin/providers/admin_providers.dart';
 
 /// Dashboard home showing headline counts across users/orders/commissions.
@@ -21,8 +23,10 @@ class AdminStatsScreen extends ConsumerWidget {
           children: [
             const Icon(Icons.error_outline, size: 32),
             const SizedBox(height: AppSpacing.sm),
-            Text('Could not load stats. Pull to retry.',
-                style: AppTextStyles.bodyMedium),
+            Text(
+              localized(ref, AdminStrings.statsLoadError, AdminStrings.statsLoadErrorAr),
+              style: AppTextStyles.bodyMedium,
+            ),
             const SizedBox(height: AppSpacing.sm),
             Text(
               formatAdminProviderError(error),
@@ -39,17 +43,27 @@ class AdminStatsScreen extends ConsumerWidget {
           return ListView(
             padding: const EdgeInsets.all(AppSpacing.lg),
             children: [
-              _Section(title: 'Users by role', values: usersByRole),
-              const SizedBox(height: AppSpacing.xl),
-              _Section(title: 'Orders by status', values: ordersByStatus),
+              _Section(
+                titleEn: AdminStrings.usersByRole,
+                titleAr: AdminStrings.usersByRoleAr,
+                values: usersByRole,
+              ),
               const SizedBox(height: AppSpacing.xl),
               _Section(
-                title: 'Commissions by status',
+                titleEn: AdminStrings.ordersByStatus,
+                titleAr: AdminStrings.ordersByStatusAr,
+                values: ordersByStatus,
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              _Section(
+                titleEn: AdminStrings.commissionsByStatus,
+                titleAr: AdminStrings.commissionsByStatusAr,
                 values: commissionsByStatus,
               ),
               const SizedBox(height: AppSpacing.xl),
               _Section(
-                title: 'Complaints',
+                titleEn: AdminStrings.complaintsTitle,
+                titleAr: AdminStrings.complaintsTitleAr,
                 values: {'open': openComplaints},
               ),
             ],
@@ -81,20 +95,31 @@ class AdminStatsScreen extends ConsumerWidget {
   }
 }
 
-class _Section extends StatelessWidget {
-  const _Section({required this.title, required this.values});
-  final String title;
+class _Section extends ConsumerWidget {
+  const _Section({
+    required this.titleEn,
+    required this.titleAr,
+    required this.values,
+  });
+  final String titleEn;
+  final String titleAr;
   final Map<String, String> values;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: AppTextStyles.titleMedium),
+        Text(
+          localized(ref, titleEn, titleAr),
+          style: AppTextStyles.titleMedium,
+        ),
         const SizedBox(height: AppSpacing.sm),
         if (values.isEmpty)
-          Text('No data yet.', style: AppTextStyles.bodySmall)
+          Text(
+            localized(ref, AdminStrings.noDataYet, AdminStrings.noDataYetAr),
+            style: AppTextStyles.bodySmall,
+          )
         else
           Wrap(
             spacing: AppSpacing.md,

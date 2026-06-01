@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lolipants/core/constants/admin_strings.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
+import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/features/admin/providers/admin_providers.dart';
-
 /// Admin queue for tailor/delivery role requests.
 class AdminRoleRequestsScreen extends ConsumerStatefulWidget {
   /// Creates the screen.
@@ -27,15 +29,49 @@ class _AdminRoleRequestsScreenState
           padding: const EdgeInsets.all(AppSpacing.md),
           child: Row(
             children: [
-              const Text('Status: '),
+              Text(
+                '${localized(ref, AdminStrings.statusLabel, AdminStrings.statusLabelAr)} ',
+              ),
               const SizedBox(width: AppSpacing.sm),
               DropdownButton<String?>(
                 value: _status,
-                items: const [
-                  DropdownMenuItem(value: null, child: Text('any')),
-                  DropdownMenuItem(value: 'pending', child: Text('pending')),
-                  DropdownMenuItem(value: 'approved', child: Text('approved')),
-                  DropdownMenuItem(value: 'rejected', child: Text('rejected')),
+                items: [
+                  DropdownMenuItem(
+                    value: null,
+                    child: Text(
+                      localized(ref, AdminStrings.filterAny, AdminStrings.filterAnyAr),
+                    ),
+                  ),
+                  DropdownMenuItem(
+                    value: 'pending',
+                    child: Text(
+                      localized(
+                        ref,
+                        AdminStrings.filterPending,
+                        AdminStrings.filterPendingAr,
+                      ),
+                    ),
+                  ),
+                  DropdownMenuItem(
+                    value: 'approved',
+                    child: Text(
+                      localized(
+                        ref,
+                        AdminStrings.filterApproved,
+                        AdminStrings.filterApprovedAr,
+                      ),
+                    ),
+                  ),
+                  DropdownMenuItem(
+                    value: 'rejected',
+                    child: Text(
+                      localized(
+                        ref,
+                        AdminStrings.filterRejected,
+                        AdminStrings.filterRejectedAr,
+                      ),
+                    ),
+                  ),
                 ],
                 onChanged: (v) => setState(() => _status = v),
               ),
@@ -64,7 +100,11 @@ class _AdminRoleRequestsScreenState
                     children: [
                       Center(
                         child: Text(
-                          'No role requests in this filter.',
+                          localized(
+                            ref,
+                            AdminStrings.noRoleRequestsInFilter,
+                            AdminStrings.noRoleRequestsInFilterAr,
+                          ),
                           style: AppTextStyles.bodyMedium,
                         ),
                       ),
@@ -143,7 +183,10 @@ class _RoleRequestCard extends ConsumerWidget {
             ],
             if (adminNote.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.sm),
-              Text('Admin: $adminNote', style: AppTextStyles.bodySmall),
+              Text(
+                '${localized(ref, AdminStrings.adminNotePrefix, AdminStrings.adminNotePrefixAr)} $adminNote',
+                style: AppTextStyles.bodySmall,
+              ),
             ],
             if (pending) ...[
               const SizedBox(height: AppSpacing.md),
@@ -156,7 +199,9 @@ class _RoleRequestCard extends ConsumerWidget {
                       id,
                       approved: true,
                     ),
-                    child: const Text('Approve'),
+                    child: Text(
+                      localized(ref, AdminStrings.approve, AdminStrings.approveAr),
+                    ),
                   ),
                   const SizedBox(width: AppSpacing.md),
                   OutlinedButton(
@@ -166,7 +211,9 @@ class _RoleRequestCard extends ConsumerWidget {
                       id,
                       approved: false,
                     ),
-                    child: const Text('Reject'),
+                    child: Text(
+                      localized(ref, AdminStrings.reject, AdminStrings.rejectAr),
+                    ),
                   ),
                 ],
               ),
@@ -187,21 +234,41 @@ class _RoleRequestCard extends ConsumerWidget {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(approved ? 'Approve request?' : 'Reject request?'),
+        title: Text(
+          localized(
+            ref,
+            approved
+                ? AdminStrings.approveRequestTitle
+                : AdminStrings.rejectRequestTitle,
+            approved
+                ? AdminStrings.approveRequestTitleAr
+                : AdminStrings.rejectRequestTitleAr,
+          ),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              approved
-                  ? 'The user will be assigned the requested role and notified on next sign-in.'
-                  : 'They can submit a new request later.',
+              localized(
+                ref,
+                approved
+                    ? AdminStrings.approveRequestBodyAssign
+                    : AdminStrings.rejectRequestBodyResubmit,
+                approved
+                    ? AdminStrings.approveRequestBodyAssignAr
+                    : AdminStrings.rejectRequestBodyResubmitAr,
+              ),
             ),
             const SizedBox(height: AppSpacing.md),
             TextField(
               controller: noteCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Note (optional)',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: localized(
+                  ref,
+                  AdminStrings.noteOptional,
+                  AdminStrings.noteOptionalAr,
+                ),
+                border: const OutlineInputBorder(),
               ),
               maxLines: 2,
             ),
@@ -210,11 +277,19 @@ class _RoleRequestCard extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+            child: Text(
+              localizedFromContext(ctx, AppStrings.cancel, AppStrings.cancelAr),
+            ),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text(approved ? 'Approve' : 'Reject'),
+            child: Text(
+              localized(
+                ref,
+                approved ? AdminStrings.approve : AdminStrings.reject,
+                approved ? AdminStrings.approveAr : AdminStrings.rejectAr,
+              ),
+            ),
           ),
         ],
       ),
@@ -239,7 +314,15 @@ class _RoleRequestCard extends ConsumerWidget {
           onChanged();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(approved ? 'Approved.' : 'Rejected.'),
+              content: Text(
+                localized(
+                  ref,
+                  approved ? AdminStrings.approvedSnack : AdminStrings.rejectedSnack,
+                  approved
+                      ? AdminStrings.approvedSnackAr
+                      : AdminStrings.rejectedSnackAr,
+                ),
+              ),
             ),
           );
         },
