@@ -1,3 +1,5 @@
+import 'dart:ui' show Locale;
+
 /// Bilingual user-facing copy (English + Arabic) for Phase 1–2 screens.
 class AppStrings {
   AppStrings._();
@@ -452,10 +454,10 @@ class AppStrings {
   static const String dontHaveAccountAr = 'ليس لديك حساب؟ ';
 
   /// Create account primary button combined label.
-  static const String createAccountCta = 'Create account / إنشاء حساب';
+  static const String createAccountCta = 'Create account';
 
   /// Log in primary button combined label.
-  static const String logInCta = 'Log in / تسجيل الدخول';
+  static const String logInCta = 'Log in';
 
   /// Forgot password screen title (English).
   static const String resetPasswordTitle = 'Reset password';
@@ -544,6 +546,10 @@ class AppStrings {
   static const String errorPasswordShort =
       'Password must be at least 8 characters';
 
+  /// Validation: password too short (Arabic).
+  static const String errorPasswordShortAr =
+      'يجب أن تكون كلمة المرور ٨ أحرف على الأقل';
+
   /// Validation: password needs digit (English).
   static const String errorPasswordDigit = 'Password must include a number';
 
@@ -557,9 +563,17 @@ class AppStrings {
   static const String errorAuthGeneric =
       'Something went wrong. Please try again.';
 
+  /// Generic auth failure (Arabic).
+  static const String errorAuthGenericAr =
+      'حدث خطأ ما. يرجى المحاولة مرة أخرى.';
+
   /// Sign-in: wrong email or password (English).
   static const String errorInvalidCredentials =
       'Email or password is incorrect.';
+
+  /// Sign-in: wrong email or password (Arabic).
+  static const String errorInvalidCredentialsAr =
+      'البريد الإلكتروني أو كلمة المرور غير صحيحة.';
 
   /// Authenticated action not allowed (English).
   static const String errorForbidden = 'You do not have permission to do that.';
@@ -569,36 +583,71 @@ class AppStrings {
       'Could not reach the server. Check your internet connection and try '
       'again.';
 
+  /// Network: no connection / host unreachable (Arabic).
+  static const String errorNetworkUnreachableAr =
+      'تعذّر الوصول إلى الخادم. تحقق من اتصال الإنترنت وحاول مرة أخرى.';
+
   /// Network: request timed out (English).
   static const String errorNetworkTimeout =
       'The request timed out. Check your connection and try again.';
+
+  /// Network: request timed out (Arabic).
+  static const String errorNetworkTimeoutAr =
+      'انتهت مهلة الطلب. تحقق من الاتصال وحاول مرة أخرى.';
 
   /// HTTP 502 (English).
   static const String errorHttpBadGateway =
       'Could not reach the authentication service. Try again in a moment.';
 
+  /// HTTP 502 (Arabic).
+  static const String errorHttpBadGatewayAr =
+      'تعذّر الوصول إلى خدمة المصادقة. حاول بعد قليل.';
+
   /// HTTP 503 (English).
   static const String errorHttpServiceUnavailable =
       'Sign-in is temporarily unavailable. Please try again shortly.';
+
+  /// HTTP 503 (Arabic).
+  static const String errorHttpServiceUnavailableAr =
+      'تسجيل الدخول غير متاح مؤقتاً. يرجى المحاولة بعد قليل.';
 
   /// HTTP 504 (English).
   static const String errorHttpGatewayTimeout =
       'The server took too long to respond. Please try again.';
 
+  /// HTTP 504 (Arabic).
+  static const String errorHttpGatewayTimeoutAr =
+      'استغرق الخادم وقتاً طويلاً للرد. يرجى المحاولة مرة أخرى.';
+
   /// HTTP 5xx generic (English).
   static const String errorHttpServerError =
       'Something went wrong on our side. Please try again later.';
+
+  /// HTTP 5xx generic (Arabic).
+  static const String errorHttpServerErrorAr =
+      'حدث خطأ من جانبنا. يرجى المحاولة لاحقاً.';
 
   /// `.env` missing `BETTER_AUTH_BASE_URL` (English).
   static const String errorAuthBaseUrlMissing =
       'Sign-in is not configured: add BETTER_AUTH_BASE_URL to your .env '
       'file (see .env.example).';
 
+  /// `.env` missing `BETTER_AUTH_BASE_URL` (Arabic).
+  static const String errorAuthBaseUrlMissingAr =
+      'تسجيل الدخول غير مُعدّ: أضف BETTER_AUTH_BASE_URL إلى ملف .env '
+      '(انظر .env.example).';
+
   /// `.env` missing `GOOGLE_SERVER_CLIENT_ID` (English).
   static const String errorGoogleServerClientIdMissing =
       'Google sign-in is not configured: add GOOGLE_SERVER_CLIENT_ID to your '
       '.env (your Google Web OAuth client ID; must match GOOGLE_CLIENT_ID on '
       'the auth worker). See server/better-auth-worker/GOOGLE_OAUTH_SETUP.md.';
+
+  /// `.env` missing `GOOGLE_SERVER_CLIENT_ID` (Arabic).
+  static const String errorGoogleServerClientIdMissingAr =
+      'تسجيل الدخول عبر Google غير مُعدّ: أضف GOOGLE_SERVER_CLIENT_ID إلى '
+      'ملف .env (معرّف عميل Google OAuth؛ يجب أن يطابق GOOGLE_CLIENT_ID على '
+      'عامل المصادقة).';
 
   /// Onboarding slide 1 body (English).
   static const String onboardingSlide1Body =
@@ -951,6 +1000,10 @@ class AppStrings {
       '3. Stand straight with arms slightly out';
   static const String aiMeasurementStep4 =
       "4. We'll calculate your measurements automatically";
+
+  /// Arabic: [aiMeasurementStep4].
+  static const String aiMeasurementStep4Ar =
+      '٤. سنحسب مقاساتك تلقائياً';
   static const String aiMeasurementStartScan = 'Start scan / بدء المسح';
   static const String aiMeasurementCameraScan = 'Camera scan / مسح الكاميرا';
   static const String aiMeasurementAlignHint =
@@ -1391,4 +1444,639 @@ class AppStrings {
 
   /// Default terms URL.
   static const String settingsDefaultTermsUrl = 'https://lolipants.com/terms';
+  // --- Arabic (pass 2: multiline / missed) ---
+
+  /// Arabic: [chooseYourRegion].
+  static const String chooseYourRegionAr = 'الخليج، الشام، المغرب العربي، عصري، كاجوال';
+
+  /// Arabic: [featuredBody].
+  static const String featuredBodyAr = 'تصاميم مسطّحة من الكلاسيكيات الخليجية إلى الأساسيات العصرية والكاجوال.';
+
+  /// Arabic: [onboardingSlide1Body].
+  static const String onboardingSlide1BodyAr = 'صمّم ملابس مخصصة على مانيكان واقعي';
+
+  /// Arabic: [onboardingSlide2Body].
+  static const String onboardingSlide2BodyAr = 'أزياء خليجية تقليدية بروح عصرية';
+
+  /// Arabic: [onboardingSlide3Body].
+  static const String onboardingSlide3BodyAr = 'اطلب وتابع قطعتك من الخياطة إلى بابك';
+
+  /// Arabic: [partnerLoadingRequests].
+  static const String partnerLoadingRequestsAr = 'جارٍ تحميل طلباتك السابقة…';
+
+  /// Arabic: [partnerError404Hint].
+  static const String partnerError404HintAr = 'غالباً يعني أن API_BASE_URL ليس خادم lolipants-api—راجع ملف .env وأعد تشغيل التطبيق.';
+
+  /// Arabic: [partnerRoleTailorBullets].
+  static const String partnerRoleTailorBulletsAr =
+      '• العمل على طلبات العملاء في التطبيق\n• تحديث حالة الخياطة أثناء التقدم\n• التنسيق مع فريق العمليات';
+
+  /// Arabic: [partnerRoleDeliveryBullets].
+  static const String partnerRoleDeliveryBulletsAr =
+      '• استلام وتسليم الملابس\n• تغطية المناطق المتفق عليها\n• اتباع إرشادات التعامل الآمن';
+
+  /// Arabic: [partnerFieldSpecialties].
+  static const String partnerFieldSpecialtiesAr = 'التخصصات (مثل عرائس، عبايات، تعديلات)';
+
+  /// Arabic: [partnerFieldAvailability].
+  static const String partnerFieldAvailabilityAr = 'ملاحظات التوفر (اختياري)';
+
+  /// Arabic: [partnerDetailsValidation].
+  static const String partnerDetailsValidationAr = 'يرجى تعبئة الحقول المطلوبة قبل المتابعة.';
+
+  /// Arabic: [partnerDoneBody].
+  static const String partnerDoneBodyAr = 'شكراً لك. سيراجع فريقنا طلبك ويتواصل معك إن احتجنا لمزيد من التفاصيل.';
+
+  /// Arabic: [partnerPendingBanner].
+  static const String partnerPendingBannerAr = 'لديك طلب قيد المراجعة. سنُخبرك عند الانتهاء.';
+
+  /// Arabic: [partnerPostApprovalHint].
+  static const String partnerPostApprovalHintAr = 'إذا وُوفق على طلبك، سجّل الخروج ثم ادخل مجدداً لفتح الصفحة المناسبة لدورك.';
+
+  /// Arabic: [partnerErrorPendingExists].
+  static const String partnerErrorPendingExistsAr = 'لديك طلب قيد المراجعة بالفعل. يرجى انتظار مراجعة الفريق.';
+
+  /// Arabic: [weddingSelectDressHint].
+  static const String weddingSelectDressHintAr = 'اختر فستاناً من الكتالوج أدناه';
+
+  /// Arabic: [weddingDepositDisclaimer].
+  static const String weddingDepositDisclaimerAr = 'التأمين قابل للاسترداد عند إعادة الفستان بحالة جيدة.';
+
+  /// Arabic: [editorBuildColorAiHint].
+  static const String editorBuildColorAiHintAr = 'اللون الأساسي يُطبَّق على كل طبقات القطعة. لون التمييز للحواف واللوحات. المعاينة بالذكاء الاصطناعي تستخدم نفس الألوان.';
+
+  /// Arabic: [editorBuildHeroEmpty].
+  static const String editorBuildHeroEmptyAr = 'اختر قالباً وخيارات لمعاينة المانيكان.';
+
+  /// Arabic: [editorBuildResetHint].
+  static const String editorBuildResetHintAr = 'اختر قالباً أعلاه لإضافة أجزاء القطعة، أو أبقِ المانيكان فقط.';
+
+  /// Arabic: [editorStudioPromptSubtitle].
+  static const String editorStudioPromptSubtitleAr = 'نجمع اختيارك وكلماتك ودليل الأسلوب للمعاينة.';
+
+  /// Arabic: [editorAiRenderQuota].
+  static const String editorAiRenderQuotaAr = 'معاينات الذكاء الاصطناعي المتبقية هذا الأسبوع: {remaining}/{limit}';
+
+  /// Arabic: [editorAiRenderQuotaEmpty].
+  static const String editorAiRenderQuotaEmptyAr = 'لا توجد معاينات متبقية هذا الأسبوع. حاول بعد إعادة ضبط الحصة.';
+
+  /// Arabic: [editorLookDisclaimer].
+  static const String editorLookDisclaimerAr = 'المعاينة مُنشأة بالذكاء الاصطناعي وللتوضيح فقط.';
+
+  /// Arabic: [aiMeasurementStep3].
+  static const String aiMeasurementStep3Ar = 'راجع المقاسات المقدّرة وعدّلها إن لزم';
+
+  /// Arabic: [aiMeasurementCameraPermissionDenied].
+  static const String aiMeasurementCameraPermissionDeniedAr = 'يلزم إذن الكاميرا للمسح';
+
+  /// Arabic: [aiMeasurementEstimateFailed].
+  static const String aiMeasurementEstimateFailedAr = 'تعذّر تقدير المقاسات من الصور';
+
+  /// Arabic: [workshopVisitAddress].
+  static const String workshopVisitAddressAr = 'عنوان الورشة';
+
+  /// Arabic: [permissionCameraMessage].
+  static const String permissionCameraMessageAr = 'نستخدم الكاميرا لالتقاط صور القياس والتصميم.';
+
+  /// Arabic: [permissionCameraDeniedMessage].
+  static const String permissionCameraDeniedMessageAr = 'فعّل الكاميرا من إعدادات الجهاز لمتابعة المسح.';
+
+  /// Arabic: [permissionPhotosMessage].
+  static const String permissionPhotosMessageAr = 'نستخدم الصور لاختيار صور من المعرض.';
+
+  /// Arabic: [permissionPhotosDeniedMessage].
+  static const String permissionPhotosDeniedMessageAr = 'فعّل الوصول إلى الصور من إعدادات الجهاز.';
+
+  /// Arabic: [permissionLocationMessage].
+  static const String permissionLocationMessageAr = 'الموقع يساعدنا في إيجاد خياطين وورش قريبة.';
+
+  /// Arabic: [permissionLocationDeniedMessage].
+  static const String permissionLocationDeniedMessageAr = 'فعّل الموقع من إعدادات الجهاز للمتابعة.';
+
+  /// Arabic: [permissionNotificationsMessage].
+  static const String permissionNotificationsMessageAr = 'الإشعارات تُبقيك على اطلاع بحالة طلبك.';
+
+  /// Arabic: [permissionNotificationsDeniedTitle].
+  static const String permissionNotificationsDeniedTitleAr = 'الإشعارات معطّلة';
+
+  /// Arabic: [permissionNotificationsDeniedMessage].
+  static const String permissionNotificationsDeniedMessageAr = 'فعّل الإشعارات من إعدادات الجهاز لمتابعة الطلب.';
+
+  /// Arabic: [permissionAudioMessage].
+  static const String permissionAudioMessageAr = 'الميكروفون يساعد في الأوامر الصوتية.';
+
+  /// Arabic: [permissionAudioDeniedMessage].
+  static const String permissionAudioDeniedMessageAr = 'فعّل الميكروفون من إعدادات الجهاز للمتابعة.';
+
+
+  // ---------------------------------------------------------------------------
+  // Arabic counterparts for strings that previously had English only
+  // ---------------------------------------------------------------------------
+
+  /// Picks [ar] when [locale] language is Arabic, otherwise [en].
+  static String localized(Locale locale, String en, String ar) {
+    return locale.languageCode == 'ar' ? ar : en;
+  }
+
+  /// Picks EN or AR half from `"English / عربي"` or `"Featured · مميز"`.
+  static String pickEmbedded(Locale locale, String combined) {
+    for (final sep in [' / ', ' · ']) {
+      final i = combined.indexOf(sep);
+      if (i >= 0) {
+        return localized(
+          locale,
+          combined.substring(0, i).trim(),
+          combined.substring(i + sep.length).trim(),
+        );
+      }
+    }
+    return combined;
+  }
+
+  /// Featured strip subtitle (Arabic) by profile gender.
+  static String homeFeaturedSubtitleForGenderAr(String? gender) {
+    switch (gender) {
+      case 'men':
+        return 'مختارات رجالية لك';
+      case 'women':
+        return 'مختارات نسائية لك';
+      default:
+        return 'مختارات مُختارة لك';
+    }
+  }
+
+  /// Featured strip subtitle for [locale] and profile gender.
+  static String homeFeaturedSubtitle(Locale locale, String? gender) {
+    return localized(
+      locale,
+      homeFeaturedSubtitleForGender(gender),
+      homeFeaturedSubtitleForGenderAr(gender),
+    );
+  }
+
+  /// Arabic: [brandLatin].
+  static const String brandLatinAr = 'LOLIPANTS';
+
+  /// Arabic: [heroTryNow].
+  static const String heroTryNowAr = 'جرّب الآن ←';
+
+  /// Arabic: [categoryAll].
+  static const String categoryAllAr = 'الكل';
+
+  /// Arabic: [styleQatariThobe].
+  static const String styleQatariThobeAr = 'ثوب قطري';
+
+  /// Arabic: [styleSaudiBisht].
+  static const String styleSaudiBishtAr = 'بشت سعودي';
+
+  /// Arabic: [styleUaeKandura].
+  static const String styleUaeKanduraAr = 'كندورة إماراتية';
+
+  /// Arabic: [styleOmaniDishdasha].
+  static const String styleOmaniDishdashaAr = 'دشداشة عمانية';
+
+  /// Arabic: [originGulf].
+  static const String originGulfAr = 'الخليج';
+
+  /// Arabic: [musicPlayerLabel].
+  static const String musicPlayerLabelAr = 'مشغّل الموسيقى';
+
+  /// Arabic: [homeExploreAll].
+  static const String homeExploreAllAr = 'استكشف الكل';
+
+  /// Arabic: [signupGenderRequired].
+  static const String signupGenderRequiredAr = 'يرجى اختيار الجنس';
+
+  /// Arabic: [designGenderDialogTitle].
+  static const String designGenderDialogTitleAr = 'لمن تصمّم اليوم؟';
+
+  /// Arabic: [comingPhase3].
+  static const String comingPhase3Ar = 'قريباً — المرحلة ٣';
+
+  /// Arabic: [comingPhase4].
+  static const String comingPhase4Ar = 'قريباً — المرحلة ٤';
+
+  /// Arabic: [createAccountCta].
+  static const String createAccountCtaAr = 'إنشاء حساب';
+
+  /// Arabic: [logInCta].
+  static const String logInCtaAr = 'تسجيل الدخول';
+
+  /// Arabic: [resetEmailSentPrefix].
+  static const String resetEmailSentPrefixAr = 'أرسلنا رابط إعادة التعيين إلى';
+
+  /// Arabic: [filter].
+  static const String filterAr = 'تصفية';
+
+  /// Arabic: [featuredEyebrow].
+  static const String featuredEyebrowAr = 'مختارات';
+
+  /// Arabic: [featuredCollection].
+  static const String featuredCollectionAr = 'المجموعة المميزة';
+
+  /// Arabic: [errorInvalidEmail].
+  static const String errorInvalidEmailAr = 'أدخل بريداً إلكترونياً صالحاً';
+
+  /// Arabic: [errorPasswordDigit].
+  static const String errorPasswordDigitAr = 'يجب أن تتضمن كلمة المرور رقماً';
+
+  /// Arabic: [errorPasswordMismatch].
+  static const String errorPasswordMismatchAr = 'كلمتا المرور غير متطابقتين';
+
+  /// Arabic: [errorNameShort].
+  static const String errorNameShortAr = 'يجب أن يكون الاسم حرفين على الأقل';
+
+  /// Arabic: [errorForbidden].
+  static const String errorForbiddenAr = 'ليس لديك صلاحية لتنفيذ هذا الإجراء';
+
+  /// Arabic: [partnerTitleEn].
+  static const String partnerTitleEnAr = 'كن شريكاً مع Lolipants';
+
+  /// Arabic: [partnerRetry].
+  static const String partnerRetryAr = 'إعادة المحاولة';
+
+  /// Arabic: [partnerRoleTailorTitle].
+  static const String partnerRoleTailorTitleAr = 'شريك خياطة';
+
+  /// Arabic: [partnerRoleDeliveryTitle].
+  static const String partnerRoleDeliveryTitleAr = 'شريك توصيل';
+
+  /// Arabic: [partnerFieldCityRegion].
+  static const String partnerFieldCityRegionAr = 'المدينة أو المنطقة التي تخدمها';
+
+  /// Arabic: [partnerFieldYearsExperience].
+  static const String partnerFieldYearsExperienceAr = 'سنوات الخبرة';
+
+  /// Arabic: [partnerFieldWorkshopName].
+  static const String partnerFieldWorkshopNameAr = 'اسم الورشة أو الاستوديو (اختياري)';
+
+  /// Arabic: [partnerFieldVehicle].
+  static const String partnerFieldVehicleAr = 'نوع المركبة';
+
+  /// Arabic: [partnerFieldCoverage].
+  static const String partnerFieldCoverageAr = 'مناطق / نطاقات التغطية';
+
+  /// Arabic: [partnerReviewNoteLabel].
+  static const String partnerReviewNoteLabelAr = 'ملاحظات إضافية؟ (اختياري)';
+
+  /// Arabic: [partnerWizardBack].
+  static const String partnerWizardBackAr = 'رجوع';
+
+  /// Arabic: [partnerWizardNext].
+  static const String partnerWizardNextAr = 'التالي';
+
+  /// Arabic: [partnerWizardSubmit].
+  static const String partnerWizardSubmitAr = 'إرسال الطلب';
+
+  /// Arabic: [partnerDoneTitle].
+  static const String partnerDoneTitleAr = 'تم إرسال الطلب';
+
+  /// Arabic: [partnerDoneBackToProfile].
+  static const String partnerDoneBackToProfileAr = 'العودة إلى الملف الشخصي';
+
+  /// Arabic: [partnerPreviousRequests].
+  static const String partnerPreviousRequestsAr = 'الطلبات السابقة';
+
+  /// Arabic: [partnerNoRequestsYet].
+  static const String partnerNoRequestsYetAr = 'لا توجد طلبات بعد.';
+
+  /// Arabic: [aiDesigner].
+  static const String aiDesignerAr = 'مصمّم بالذكاء الاصطناعي';
+
+  /// Arabic: [describeOutfit].
+  static const String describeOutfitAr = 'صف زيّك المثالي';
+
+  /// Arabic: [tryNow].
+  static const String tryNowAr = 'جرّب الآن ←';
+
+  /// Arabic: [trackOrder].
+  static const String trackOrderAr = 'تتبع الطلب';
+
+  /// Arabic: [inProgress].
+  static const String inProgressAr = 'قيد التنفيذ';
+
+  /// Arabic: [orderPrefix].
+  static const String orderPrefixAr = 'طلب';
+
+  /// Arabic: [designLabel].
+  static const String designLabelAr = 'التصميم';
+
+  /// Arabic: [tailorLabel].
+  static const String tailorLabelAr = 'الخياط';
+
+  /// Arabic: [countryQatar].
+  static const String countryQatarAr = 'قطر';
+
+  /// Arabic: [countrySaudi].
+  static const String countrySaudiAr = 'السعودية';
+
+  /// Arabic: [countryUae].
+  static const String countryUaeAr = 'الإمارات';
+
+  /// Arabic: [countryOman].
+  static const String countryOmanAr = 'عُمان';
+
+  /// Arabic: [countryCodeQa].
+  static const String countryCodeQaAr = 'QA';
+
+  /// Arabic: [countryCodeSa].
+  static const String countryCodeSaAr = 'SA';
+
+  /// Arabic: [countryCodeAe].
+  static const String countryCodeAeAr = 'AE';
+
+  /// Arabic: [countryCodeOm].
+  static const String countryCodeOmAr = 'OM';
+
+  /// Arabic: [tailorStripMeta].
+  static const String tailorStripMetaAr = 'خياطون معتمدون في منطقتك';
+
+  /// Arabic: [countryGarmentsQa].
+  static const String countryGarmentsQaAr = 'أزياء قطرية';
+
+  /// Arabic: [countryGarmentsSa].
+  static const String countryGarmentsSaAr = 'أزياء سعودية';
+
+  /// Arabic: [countryGarmentsAe].
+  static const String countryGarmentsAeAr = 'أزياء إماراتية';
+
+  /// Arabic: [countryGarmentsOm].
+  static const String countryGarmentsOmAr = 'أزياء عُمانية';
+
+  /// Arabic: [startDesigningCta].
+  static const String startDesigningCtaAr = 'ابدأ التصميم';
+
+  /// Arabic: [editorTitle].
+  static const String editorTitleAr = 'المحرّر';
+
+  /// Arabic: [editorSave].
+  static const String editorSaveAr = 'حفظ';
+
+  /// Arabic: [editorSaved].
+  static const String editorSavedAr = 'تم الحفظ';
+
+  /// Arabic: [editorTabDesigns].
+  static const String editorTabDesignsAr = 'التصاميم';
+
+  /// Arabic: [weddingFilterAll].
+  static const String weddingFilterAllAr = 'الكل';
+
+  /// Arabic: [weddingFilterBridal].
+  static const String weddingFilterBridalAr = 'عروس';
+
+  /// Arabic: [weddingFilterBridesmaids].
+  static const String weddingFilterBridesmaidsAr = 'وصيفات';
+
+  /// Arabic: [weddingRent].
+  static const String weddingRentAr = 'إيجار';
+
+  /// Arabic: [weddingBuy].
+  static const String weddingBuyAr = 'شراء';
+
+  /// Arabic: [weddingRentalDays].
+  static const String weddingRentalDaysAr = 'أيام الإيجار';
+
+  /// Arabic: [weddingCatalogEmpty].
+  static const String weddingCatalogEmptyAr = 'لا توجد فساتين في هذا التصنيف بعد.';
+
+  /// Arabic: [weddingCatalogError].
+  static const String weddingCatalogErrorAr = 'تعذّر تحميل كتالوج الأعراس.';
+
+  /// Arabic: [weddingRentDress].
+  static const String weddingRentDressAr = 'استئجار الفستان';
+
+  /// Arabic: [weddingBuyDress].
+  static const String weddingBuyDressAr = 'شراء الفستان';
+
+  /// Arabic: [weddingOrderSummaryTitle].
+  static const String weddingOrderSummaryTitleAr = 'ملخص الطلب';
+
+  /// Arabic: [editorBuildSummaryTitle].
+  static const String editorBuildSummaryTitleAr = 'ملخص التصميم';
+
+  /// Arabic: [editorBuildPickTemplate].
+  static const String editorBuildPickTemplateAr = 'اختر قالباً';
+
+  /// Arabic: [editorBuildTemplate].
+  static const String editorBuildTemplateAr = 'القالب';
+
+  /// Arabic: [editorBuildSelectSlot].
+  static const String editorBuildSelectSlotAr = 'اختر القطعة';
+
+  /// Arabic: [editorBuildChangeStyle].
+  static const String editorBuildChangeStyleAr = 'تغيير النمط';
+
+  /// Arabic: [editorBuildReset].
+  static const String editorBuildResetAr = 'إعادة ضبط';
+
+  /// Arabic: [editorStyleCatalogMode].
+  static const String editorStyleCatalogModeAr = 'من الكتالوج';
+
+  /// Arabic: [editorTabFabric].
+  static const String editorTabFabricAr = 'القماش';
+
+  /// Arabic: [editorAddText].
+  static const String editorAddTextAr = 'إضافة نص';
+
+  /// Arabic: [editorAddImage].
+  static const String editorAddImageAr = 'إضافة صورة';
+
+  /// Arabic: [editorTabPattern].
+  static const String editorTabPatternAr = 'النقش';
+
+  /// Arabic: [editorTabEmbroidery].
+  static const String editorTabEmbroideryAr = 'التطريز';
+
+  /// Arabic: [editorTabText].
+  static const String editorTabTextAr = 'النص';
+
+  /// Arabic: [editorTabAi].
+  static const String editorTabAiAr = 'ذكاء اصطناعي';
+
+  /// Arabic: [editorHeroCompose].
+  static const String editorHeroComposeAr = 'كوّن إطلالتك';
+
+  /// Arabic: [editorHeroAiLook].
+  static const String editorHeroAiLookAr = 'إطلالة بالذكاء الاصطناعي';
+
+  /// Arabic: [editorGenerateLook].
+  static const String editorGenerateLookAr = 'إنشاء إطلالة';
+
+  /// Arabic: [editorLookGenerating].
+  static const String editorLookGeneratingAr = 'جارٍ إنشاء الإطلالة…';
+
+  /// Arabic: [editorSketchClear].
+  static const String editorSketchClearAr = 'مسح الرسم';
+
+  /// Arabic: [sizingOptions].
+  static const String sizingOptionsAr = 'خيارات المقاسات';
+
+  /// Arabic: [sizingAiOption].
+  static const String sizingAiOptionAr = 'قياس بالذكاء الاصطناعي';
+
+  /// Arabic: [sizingManualOption].
+  static const String sizingManualOptionAr = 'إدخال يدوي';
+
+  /// Arabic: [sizingWorkshopOption].
+  static const String sizingWorkshopOptionAr = 'زيارة ورشة';
+
+  /// Arabic: [sizingAiSubtitle].
+  static const String sizingAiSubtitleAr = 'التقط صوراً ونحسب مقاساتك';
+
+  /// Arabic: [sizingManualSubtitle].
+  static const String sizingManualSubtitleAr = 'أدخل المقاسات بنفسك';
+
+  /// Arabic: [sizingWorkshopSubtitle].
+  static const String sizingWorkshopSubtitleAr = 'احجز موعداً في ورشة شريكة';
+
+  /// Arabic: [aiMeasurementTitle].
+  static const String aiMeasurementTitleAr = 'قياس بالذكاء الاصطناعي';
+
+  /// Arabic: [aiMeasurementInstructions].
+  static const String aiMeasurementInstructionsAr = 'اتبع الخطوات للحصول على مقاسات دقيقة';
+
+  /// Arabic: [aiMeasurementStep1].
+  static const String aiMeasurementStep1Ar = 'قف بشكل مستقيم أمام الكاميرا';
+
+  /// Arabic: [aiMeasurementStep2].
+  static const String aiMeasurementStep2Ar = 'التقط صوراً من الأمام والجانب';
+
+  /// Arabic: [aiMeasurementStartScan].
+  static const String aiMeasurementStartScanAr = 'بدء المسح';
+
+  /// Arabic: [aiMeasurementCameraScan].
+  static const String aiMeasurementCameraScanAr = 'مسح بالكاميرا';
+
+  /// Arabic: [aiMeasurementAnalyse].
+  static const String aiMeasurementAnalyseAr = 'تحليل الصور';
+
+  /// Arabic: [aiMeasurementSave].
+  static const String aiMeasurementSaveAr = 'حفظ المقاسات';
+
+  /// Arabic: [aiMeasurementSaveFailed].
+  static const String aiMeasurementSaveFailedAr = 'تعذّر حفظ المقاسات';
+
+  /// Arabic: [aiMeasurementAnalysing].
+  static const String aiMeasurementAnalysingAr = 'جارٍ التحليل…';
+
+  /// Arabic: [manualSave].
+  static const String manualSaveAr = 'حفظ';
+
+  /// Arabic: [manualSaved].
+  static const String manualSavedAr = 'تم حفظ المقاسات';
+
+  /// Arabic: [workshopTitle].
+  static const String workshopTitleAr = 'زيارة الورشة';
+
+  /// Arabic: [workshopVisitOption].
+  static const String workshopVisitOptionAr = 'زيارة الورشة';
+
+  /// Arabic: [workshopHomeOption].
+  static const String workshopHomeOptionAr = 'قياس منزلي';
+
+  /// Arabic: [workshopAddressLabel].
+  static const String workshopAddressLabelAr = 'العنوان';
+
+  /// Arabic: [workshopCityLabel].
+  static const String workshopCityLabelAr = 'المدينة';
+
+  /// Arabic: [workshopPickDate].
+  static const String workshopPickDateAr = 'اختر التاريخ';
+
+  /// Arabic: [workshopConfirm].
+  static const String workshopConfirmAr = 'تأكيد الموعد';
+
+  /// Arabic: [workshopConfirmedPrefix].
+  static const String workshopConfirmedPrefixAr = 'تم تأكيد موعدك في';
+
+  /// Arabic: [workshopConfirmedArPrefix].
+  static const String workshopConfirmedArPrefixAr = 'تم تأكيد موعدك في';
+
+  /// Arabic: [myMeasurementsSummaryTitle].
+  static const String myMeasurementsSummaryTitleAr = 'ملخص مقاساتي';
+
+  /// Arabic: [measurementUnknown].
+  static const String measurementUnknownAr = 'غير محدد';
+
+  /// Arabic: [measurementChest].
+  static const String measurementChestAr = 'الصدر';
+
+  /// Arabic: [measurementWaist].
+  static const String measurementWaistAr = 'الخصر';
+
+  /// Arabic: [measurementHips].
+  static const String measurementHipsAr = 'الورك';
+
+  /// Arabic: [measurementShoulderWidth].
+  static const String measurementShoulderWidthAr = 'عرض الكتف';
+
+  /// Arabic: [measurementHeight].
+  static const String measurementHeightAr = 'الطول';
+
+  /// Arabic: [measurementArmLength].
+  static const String measurementArmLengthAr = 'طول الذراع';
+
+  /// Arabic: [measurementPreferredSize].
+  static const String measurementPreferredSizeAr = 'المقاس المفضل';
+
+  /// Arabic: [measurementUnitCm].
+  static const String measurementUnitCmAr = 'سم';
+
+  /// Arabic: [myMeasurementsLastUpdatedPrefix].
+  static const String myMeasurementsLastUpdatedPrefixAr = 'آخر تحديث:';
+
+  /// Arabic: [myMeasurementsEdit].
+  static const String myMeasurementsEditAr = 'تعديل';
+
+  /// Arabic: [myMeasurementsTakeNow].
+  static const String myMeasurementsTakeNowAr = 'خذ مقاساتك الآن';
+
+  /// Arabic: [sizingOptionsTooltip].
+  static const String sizingOptionsTooltipAr = 'اختر طريقة أخذ المقاسات';
+
+  /// Arabic: [aiPromptLabel].
+  static const String aiPromptLabelAr = 'صف الإطلالة التي تريدها';
+
+  /// Arabic: [aiApply].
+  static const String aiApplyAr = 'تطبيق';
+
+  /// Arabic: [aiTryAgain].
+  static const String aiTryAgainAr = 'حاول مرة أخرى';
+
+  /// Arabic: [permissionNotNow].
+  static const String permissionNotNowAr = 'ليس الآن';
+
+  /// Arabic: [permissionContinue].
+  static const String permissionContinueAr = 'متابعة';
+
+  /// Arabic: [permissionOpenSettings].
+  static const String permissionOpenSettingsAr = 'فتح الإعدادات';
+
+  /// Arabic: [permissionCameraTitle].
+  static const String permissionCameraTitleAr = 'الكاميرا مطلوبة لالتقاط الصور والقياس';
+
+  /// Arabic: [permissionCameraDeniedTitle].
+  static const String permissionCameraDeniedTitleAr = 'تم رفض إذن الكاميرا';
+
+  /// Arabic: [permissionPhotosTitle].
+  static const String permissionPhotosTitleAr = 'الصور مطلوبة لاختيار صور من المعرض';
+
+  /// Arabic: [permissionPhotosDeniedTitle].
+  static const String permissionPhotosDeniedTitleAr = 'تم رفض إذن الصور';
+
+  /// Arabic: [permissionLocationTitle].
+  static const String permissionLocationTitleAr = 'الموقع يساعدنا في إيجاد خياطين قريبين';
+
+  /// Arabic: [permissionLocationDeniedTitle].
+  static const String permissionLocationDeniedTitleAr = 'تم رفض إذن الموقع';
+
+  /// Arabic: [permissionNotificationsTitle].
+  static const String permissionNotificationsTitleAr = 'الإشعارات تُبقيك على اطلاع بطلبك';
+
+  /// Arabic: [permissionAudioTitle].
+  static const String permissionAudioTitleAr = 'الميكروفون مطلوب للأوامر الصوتية';
+
+  /// Arabic: [permissionAudioDeniedTitle].
+  static const String permissionAudioDeniedTitleAr = 'تم رفض إذن الميكروفون';
+
 }
