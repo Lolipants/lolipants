@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:lolipants/core/config/app_features.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
-import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/features/browse/data/preset_gender_filter.dart';
 import 'package:lolipants/features/browse/data/region_presets.dart';
@@ -14,6 +13,7 @@ import 'package:lolipants/features/editor/models/editor_preset_args.dart';
 import 'package:lolipants/features/accessories/screens/accessories_browse_section.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 
 /// Phase 3 `/browse/:category` screen. Filters the regional preset catalogue
 /// by a high-level category slug (men, women, kids, wedding, accessories) and
@@ -92,7 +92,10 @@ class CategoryDetailScreen extends ConsumerWidget {
             }
           },
         ),
-        title: Text(titleEn, style: AppTextStyles.titleLarge),
+        title: Text(
+          localizedFromContext(context, titleEn, titleAr.isNotEmpty ? titleAr : titleEn),
+          style: AppTextStyles.titleLarge,
+        ),
         backgroundColor: AppColors.ink,
         elevation: 0,
       ),
@@ -118,18 +121,6 @@ class CategoryDetailScreen extends ConsumerWidget {
                       AppSpacing.xxl,
                     ),
                     children: [
-                      if (titleAr.isNotEmpty)
-                        Directionality(
-                          textDirection: TextDirection.rtl,
-                          child: Text(
-                            titleAr,
-                            style: AppTextStyles.arabicLabel.copyWith(
-                              fontSize: 13,
-                              color: AppColors.gold,
-                            ),
-                          ),
-                        ),
-                      const SizedBox(height: AppSpacing.md),
                       if (key == 'wedding' && kFeatureWeddingTab) ...[
                         LolipantsButton(
                           label: 'Wedding & bridesmaid dresses',

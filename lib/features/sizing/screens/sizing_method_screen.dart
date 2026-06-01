@@ -7,6 +7,7 @@ import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/features/sizing/providers/sizing_providers.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 
 /// Entry screen for choosing sizing method.
 class SizingMethodScreen extends ConsumerWidget {
@@ -19,7 +20,7 @@ class SizingMethodScreen extends ConsumerWidget {
     final hasSaved = measurementState.valueOrNull != null;
 
     return Scaffold(
-      appBar: AppBar(title: const Text(AppStrings.sizingOptions)),
+      appBar: AppBar(title: Text(pickSlashFromContext(context, AppStrings.sizingOptions))),
       body: Stack(
         children: [
           const ArabesqueBackground(),

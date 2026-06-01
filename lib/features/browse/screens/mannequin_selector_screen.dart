@@ -18,6 +18,7 @@ import 'package:lolipants/features/editor/widgets/bundled_mannequin_image.dart';
 import 'package:lolipants/features/editor/widgets/mannequin_viewer.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 
 /// Selects mannequin shape before opening the editor.
 class MannequinSelectorScreen extends ConsumerStatefulWidget {
@@ -118,7 +119,7 @@ class _MannequinSelectorScreenState
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(AppStrings.chooseMannequin),
+        title: Text(pickSlashFromContext(context, AppStrings.chooseMannequin)),
       ),
       body: Stack(
         children: [

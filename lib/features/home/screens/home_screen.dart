@@ -13,6 +13,7 @@ import 'package:lolipants/features/home/widgets/hero_banner.dart';
 import 'package:lolipants/features/home/widgets/home_browse_shortcuts.dart';
 import 'package:lolipants/features/home/widgets/home_featured_sliver_grid.dart';
 import 'package:lolipants/features/home/widgets/home_header.dart';
+import 'package:lolipants/features/settings/providers/settings_provider.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
 
 /// Authenticated home: greeting, AI hero, browse shortcuts, featured grid.
@@ -48,6 +49,7 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(settingsLocaleProvider);
     final presets = ref.watch(homeFeaturedPresetsProvider);
     final userGender = ref.watch(userGenderProvider);
 
@@ -78,6 +80,7 @@ class HomeScreen extends ConsumerWidget {
                       const HomeBrowseShortcuts(),
                       const SizedBox(height: AppSpacing.xl),
                       _FeaturedSectionHeader(
+                        locale: ref.watch(settingsLocaleProvider),
                         userGender: userGender,
                         onSeeAll: () => context.go('/browse'),
                       ),
@@ -100,10 +103,12 @@ class HomeScreen extends ConsumerWidget {
 
 class _FeaturedSectionHeader extends StatelessWidget {
   const _FeaturedSectionHeader({
+    required this.locale,
     required this.userGender,
     required this.onSeeAll,
   });
 
+  final Locale locale;
   final String? userGender;
   final VoidCallback onSeeAll;
 
@@ -117,7 +122,11 @@ class _FeaturedSectionHeader extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                AppStrings.sectionFeaturedDesigns,
+                AppStrings.localized(
+                  locale,
+                  AppStrings.sectionFeaturedDesigns,
+                  AppStrings.sectionFeaturedDesignsAr,
+                ),
                 style: AppTextStyles.titleMedium.copyWith(
                   fontWeight: FontWeight.w600,
                   letterSpacing: -0.2,
@@ -125,7 +134,7 @@ class _FeaturedSectionHeader extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                AppStrings.homeFeaturedSubtitleForGender(userGender),
+                AppStrings.homeFeaturedSubtitle(locale, userGender),
                 style: AppTextStyles.bodySmall.copyWith(
                   color: AppColors.fog,
                   fontSize: 12,
@@ -143,7 +152,11 @@ class _FeaturedSectionHeader extends StatelessWidget {
             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
           ),
           child: Text(
-            AppStrings.seeAll,
+            AppStrings.localized(
+              locale,
+              AppStrings.seeAll,
+              AppStrings.seeAllAr,
+            ),
             style: AppTextStyles.labelGold.copyWith(fontSize: 12),
           ),
         ),

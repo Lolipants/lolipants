@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lolipants/core/config/app_features.dart';
-import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
@@ -10,6 +9,7 @@ import 'package:lolipants/features/accessories/models/accessory.dart';
 import 'package:lolipants/features/accessories/providers/accessories_providers.dart';
 import 'package:lolipants/features/accessories/widgets/accessory_card.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 
 /// Accessories category hub: filters + CMS-backed product grid.
 class AccessoriesBrowseSection extends ConsumerStatefulWidget {
@@ -48,16 +48,12 @@ class _AccessoriesBrowseSectionState extends ConsumerState<AccessoriesBrowseSect
         if (kFeatureCasual) ...[
           const SizedBox(height: AppSpacing.lg),
           LolipantsButton(
-            label: AppStrings.accessoriesTshirtCta,
-            onPressed: widget.onDesignTshirt,
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Directionality(
-            textDirection: TextDirection.rtl,
-            child: Text(
+            label: localizedFromContext(
+              context,
+              AppStrings.accessoriesTshirtCta,
               AppStrings.accessoriesTshirtCtaAr,
-              style: AppTextStyles.arabicLabel.copyWith(fontSize: 12),
             ),
+            onPressed: widget.onDesignTshirt,
           ),
         ],
         const SizedBox(height: AppSpacing.lg),
@@ -129,7 +125,11 @@ class _LegacyPlaceholder extends StatelessWidget {
         if (kFeatureCasual) ...[
           const SizedBox(height: AppSpacing.lg),
           LolipantsButton(
-            label: AppStrings.accessoriesTshirtCta,
+            label: localizedFromContext(
+              context,
+              AppStrings.accessoriesTshirtCta,
+              AppStrings.accessoriesTshirtCtaAr,
+            ),
             onPressed: onDesignTshirt,
           ),
         ],

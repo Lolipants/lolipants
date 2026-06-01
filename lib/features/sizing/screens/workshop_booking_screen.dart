@@ -8,6 +8,7 @@ import 'package:lolipants/features/sizing/providers/sizing_providers.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
 import 'package:lolipants/shared/widgets/lolipants_text_field.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 
 /// Booking flow for workshop/home sizing.
 class WorkshopBookingScreen extends ConsumerStatefulWidget {
@@ -39,7 +40,7 @@ class _WorkshopBookingScreenState extends ConsumerState<WorkshopBookingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text(AppStrings.workshopTitle)),
+      appBar: AppBar(title: Text(pickSlashFromContext(context, AppStrings.workshopTitle))),
       body: Stack(
         children: [
           const ArabesqueBackground(),
@@ -47,14 +48,24 @@ class _WorkshopBookingScreenState extends ConsumerState<WorkshopBookingScreen> {
             padding: const EdgeInsets.all(AppSpacing.xl),
             children: [
               SegmentedButton<bool>(
-                segments: const [
+                segments: [
                   ButtonSegment<bool>(
                     value: false,
-                    label: Text(AppStrings.workshopVisitOption),
+                    label: Text(
+                      pickSlashFromContext(
+                        context,
+                        AppStrings.workshopVisitOption,
+                      ),
+                    ),
                   ),
                   ButtonSegment<bool>(
                     value: true,
-                    label: Text(AppStrings.workshopHomeOption),
+                    label: Text(
+                      pickSlashFromContext(
+                        context,
+                        AppStrings.workshopHomeOption,
+                      ),
+                    ),
                   ),
                 ],
                 selected: {_homeVisit},

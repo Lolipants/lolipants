@@ -14,6 +14,7 @@ import 'package:lolipants/features/sizing/services/pose_quality_service.dart';
 import 'package:lolipants/core/permissions/device_permission_prompt.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 
 /// AI-assisted measurement flow (Phase 3 scaffold).
 class AiMeasurementScreen extends ConsumerStatefulWidget {
@@ -49,7 +50,7 @@ class _AiMeasurementScreenState extends ConsumerState<AiMeasurementScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text(AppStrings.aiMeasurementTitle)),
+      appBar: AppBar(title: Text(pickSlashFromContext(context, AppStrings.aiMeasurementTitle))),
       body: Stack(
         children: [
           const ArabesqueBackground(),
@@ -128,7 +129,7 @@ class _AiMeasurementScreenState extends ConsumerState<AiMeasurementScreen> {
                 ),
                 TextButton(
                   onPressed: () => context.push('/sizing/manual'),
-                  child: const Text(AppStrings.aiMeasurementManualFallback),
+                  child: Text(pickSlashFromContext(context, AppStrings.aiMeasurementManualFallback)),
                 ),
               ],
               if (_error != null) ...[
@@ -263,7 +264,11 @@ class _AiMeasurementScreenState extends ConsumerState<AiMeasurementScreen> {
       return;
     }
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text(AppStrings.aiMeasurementSaved)),
+      SnackBar(
+        content: Text(
+          pickSlashFromContext(context, AppStrings.aiMeasurementSaved),
+        ),
+      ),
     );
     if (context.mounted) context.pop();
   }

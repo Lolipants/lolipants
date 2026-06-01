@@ -18,6 +18,7 @@ import 'package:lolipants/features/orders/providers/orders_providers.dart';
 import 'package:lolipants/features/editor/utils/ai_colour_parse.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
 import 'package:lolipants/shared/widgets/lolipants_text_field.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 
 final aiDesignServiceProvider = Provider<AiDesignService>(
   (ref) => AiDesignService(
@@ -164,13 +165,13 @@ class _AiPromptBarState extends ConsumerState<AiPromptBar> {
           const SizedBox(height: AppSpacing.md),
           if (_isLoading)
             Row(
-              children: const [
-                SizedBox.square(
+              children: [
+                const SizedBox.square(
                   dimension: 16,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 ),
-                SizedBox(width: AppSpacing.sm),
-                Text(AppStrings.aiGenerating),
+                const SizedBox(width: AppSpacing.sm),
+                Text(pickSlashFromContext(context, AppStrings.aiGenerating)),
               ],
             )
           else if (_error != null)
@@ -292,7 +293,11 @@ class _AiPromptBarState extends ConsumerState<AiPromptBar> {
       if (!mounted) return;
       setState(() => _suggestion = null);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text(AppStrings.aiAppliedToDesign)),
+        SnackBar(
+          content: Text(
+            pickSlashFromContext(context, AppStrings.aiAppliedToDesign),
+          ),
+        ),
       );
       return;
     }
@@ -353,8 +358,10 @@ class _AiPromptBarState extends ConsumerState<AiPromptBar> {
         if (!context.mounted) return;
         context.go('/editor', extra: design);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(AppStrings.aiDraftCreated),
+          SnackBar(
+            content: Text(
+              pickSlashFromContext(context, AppStrings.aiDraftCreated),
+            ),
           ),
         );
       },
@@ -407,7 +414,7 @@ class _SuggestionPreview extends StatelessWidget {
             const SizedBox(width: AppSpacing.sm),
             TextButton(
               onPressed: onTryAgain,
-              child: const Text(AppStrings.aiTryAgain),
+              child: Text(pickSlashFromContext(context, AppStrings.aiTryAgain)),
             ),
           ],
         ),

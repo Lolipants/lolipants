@@ -11,6 +11,8 @@ import 'package:lolipants/shared/widgets/arabesque_background.dart';
 import 'package:lolipants/shared/widgets/error_banner.dart';
 import 'package:lolipants/shared/widgets/loading_overlay.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
+import 'package:lolipants/shared/widgets/locale_bilingual_text.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 
 /// Orders tab: live list from the API with pull-to-refresh.
 class OrdersScreen extends ConsumerStatefulWidget {
@@ -67,16 +69,11 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Directionality(
-                                    textDirection: TextDirection.rtl,
-                                    child: Text(
-                                      AppStrings.myOrdersAr,
-                                      style: AppTextStyles.arabicLabel,
-                                    ),
-                                  ),
-                                  Text(
-                                    AppStrings.myOrders,
-                                    style: AppTextStyles.titleLarge,
+                                  LocaleBilingualText(
+                                    en: AppStrings.myOrders,
+                                    ar: AppStrings.myOrdersAr,
+                                    enStyle: AppTextStyles.titleLarge,
+                                    arStyle: AppTextStyles.arabicLabel,
                                   ),
                                 ],
                               ),
@@ -141,17 +138,15 @@ class _EmptyOrders extends StatelessWidget {
           children: [
             const Icon(Icons.diamond_outlined, size: 48, color: AppColors.gold),
             const SizedBox(height: AppSpacing.lg),
-            Text(AppStrings.ordersEmpty, style: AppTextStyles.titleMedium),
-            Directionality(
-              textDirection: TextDirection.rtl,
-              child: Text(
-                AppStrings.ordersEmptyAr,
-                style: AppTextStyles.arabicBody,
-              ),
+            LocaleBilingualText(
+              en: AppStrings.ordersEmpty,
+              ar: AppStrings.ordersEmptyAr,
+              enStyle: AppTextStyles.titleMedium,
+              arStyle: AppTextStyles.arabicBody,
             ),
             const SizedBox(height: AppSpacing.xl),
             LolipantsButton(
-              label: '${AppStrings.startDesigning} / ${AppStrings.startDesigningAr}',
+              label: localizedFromContext(context, AppStrings.startDesigning, AppStrings.startDesigningAr),
               variant: LolipantsButtonVariant.secondary,
               onPressed: onStart,
             ),

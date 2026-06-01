@@ -4,8 +4,10 @@ import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/features/auth/models/user.dart';
 import 'package:lolipants/features/auth/providers/auth_providers.dart';
+import 'package:lolipants/features/settings/providers/settings_provider.dart';
 
 /// Minimal greeting and avatar for the home feed.
 class HomeHeader extends ConsumerWidget {
@@ -33,36 +35,34 @@ class HomeHeader extends ConsumerWidget {
       orElse: () => '',
     );
 
+    final locale = ref.watch(settingsLocaleProvider);
+    final isAr = locale.languageCode == 'ar';
+    final greeting = localizedFromLocale(locale, en, ar) + nameSuffix;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.md),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '$en$nameSuffix',
-                  style: AppTextStyles.titleLarge.copyWith(
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: -0.3,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Directionality(
-                  textDirection: TextDirection.rtl,
-                  child: Text(
-                    '$ar$nameSuffix',
-                    style: AppTextStyles.arabicBody.copyWith(
-                      fontSize: 14,
-                      color: AppColors.fog,
-                      fontWeight: FontWeight.w400,
+            child: isAr
+                ? Directionality(
+                    textDirection: TextDirection.rtl,
+                    child: Text(
+                      greeting,
+                      style: AppTextStyles.arabicBody.copyWith(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  )
+                : Text(
+                    greeting,
+                    style: AppTextStyles.titleLarge.copyWith(
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: -0.3,
                     ),
                   ),
-                ),
-              ],
-            ),
           ),
           auth.maybeWhen(
             data: (state) {

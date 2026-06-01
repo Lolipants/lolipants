@@ -8,6 +8,7 @@ import 'package:lolipants/features/sizing/models/body_measurements.dart';
 import 'package:lolipants/features/sizing/providers/sizing_providers.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 
 /// Manual measurements entry form.
 class ManualSizeScreen extends ConsumerStatefulWidget {
@@ -55,7 +56,7 @@ class _ManualSizeScreenState extends ConsumerState<ManualSizeScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text(AppStrings.manualMeasurementsTitle)),
+      appBar: AppBar(title: Text(pickSlashFromContext(context, AppStrings.manualMeasurementsTitle))),
       body: Stack(
         children: [
           const ArabesqueBackground(),

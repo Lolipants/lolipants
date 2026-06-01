@@ -11,6 +11,8 @@ import 'package:lolipants/features/orders/models/accessory_order_draft.dart';
 import 'package:lolipants/features/orders/providers/checkout_providers.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
+import 'package:lolipants/features/settings/providers/settings_provider.dart';
 
 /// Accessory product detail with buy-now CTA.
 class AccessoryDetailScreen extends ConsumerWidget {
@@ -20,10 +22,15 @@ class AccessoryDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final description = accessory.descriptionEn?.trim();
+    final locale = ref.watch(settingsLocaleProvider);
+    final isAr = locale.languageCode == 'ar';
+    final label = localizedFromLocale(locale, accessory.labelEn, accessory.labelAr);
+    final description = isAr
+        ? accessory.descriptionAr?.trim()
+        : accessory.descriptionEn?.trim();
 
     return Scaffold(
-      appBar: AppBar(title: Text(accessory.labelEn)),
+      appBar: AppBar(title: Text(label)),
       body: Stack(
         children: [
           const ArabesqueBackground(),
@@ -41,14 +48,10 @@ class AccessoryDetailScreen extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: AppSpacing.lg),
-              Text(accessory.labelEn, style: AppTextStyles.titleMedium),
-              const SizedBox(height: AppSpacing.xs),
-              Directionality(
-                textDirection: TextDirection.rtl,
-                child: Text(
-                  accessory.labelAr,
-                  style: AppTextStyles.arabicLabel,
-                ),
+              Text(
+                label,
+                style: isAr ? AppTextStyles.arabicLabel : AppTextStyles.titleMedium,
+                textDirection: isAr ? TextDirection.rtl : null,
               ),
               const SizedBox(height: AppSpacing.md),
               Text(
@@ -57,17 +60,10 @@ class AccessoryDetailScreen extends ConsumerWidget {
               ),
               if (description != null && description.isNotEmpty) ...[
                 const SizedBox(height: AppSpacing.md),
-                Text(description, style: AppTextStyles.bodyMedium),
-              ],
-              if (accessory.descriptionAr != null &&
-                  accessory.descriptionAr!.trim().isNotEmpty) ...[
-                const SizedBox(height: AppSpacing.sm),
-                Directionality(
-                  textDirection: TextDirection.rtl,
-                  child: Text(
-                    accessory.descriptionAr!,
-                    style: AppTextStyles.bodyMedium,
-                  ),
+                Text(
+                  description,
+                  style: AppTextStyles.bodyMedium,
+                  textDirection: isAr ? TextDirection.rtl : null,
                 ),
               ],
               const SizedBox(height: AppSpacing.xxl),

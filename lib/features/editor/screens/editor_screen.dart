@@ -46,6 +46,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 
 /// Phase 3A editor shell screen.
 class EditorScreen extends ConsumerStatefulWidget {
@@ -682,7 +683,11 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
     if (!mounted) return;
     if (result.success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text(AppStrings.editorSaved)),
+        SnackBar(
+          content: Text(
+            pickSlashFromContext(context, AppStrings.editorSaved),
+          ),
+        ),
       );
     } else if (result.message != null && result.message!.trim().isNotEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1217,13 +1222,13 @@ class _EditorTopBar extends StatelessWidget {
             value: EditorHeroMode.compose,
             tooltip: AppStrings.editorHeroCompose,
             icon: const Icon(Icons.layers_outlined, size: 20),
-            label: narrow ? null : const Text(AppStrings.editorHeroCompose),
+            label: narrow ? null : Text(pickSlashFromContext(context, AppStrings.editorHeroCompose)),
           ),
           ButtonSegment<EditorHeroMode>(
             value: EditorHeroMode.look,
             tooltip: AppStrings.editorHeroAiLook,
             icon: const Icon(Icons.checkroom_outlined, size: 20),
-            label: narrow ? null : const Text(AppStrings.editorHeroAiLook),
+            label: narrow ? null : Text(pickSlashFromContext(context, AppStrings.editorHeroAiLook)),
             enabled: aiLookEnabled,
           ),
         ],

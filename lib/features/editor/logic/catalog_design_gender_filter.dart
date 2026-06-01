@@ -73,6 +73,11 @@ bool catalogDesignPathMatchesGenderLane(String path, String gender) {
   return garmentTypeMatchesGenderLane(garment, gender);
 }
 
+/// Whether [item] belongs on the shopper [gender] lane (uses `gender_lane` from D1).
+bool designCatalogItemMatchesGenderLane(DesignCatalogItem item, String gender) {
+  return _cmsDesignMatchesGenderLane(item, gender);
+}
+
 bool _cmsDesignMatchesGenderLane(DesignCatalogItem item, String gender) {
   final lane = item.genderLane?.trim();
   if (lane != null && lane.isNotEmpty) {
