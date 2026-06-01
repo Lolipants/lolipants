@@ -1,6 +1,7 @@
 import 'package:lolipants/core/preferences/user_gender_provider.dart';
 import 'package:lolipants/features/browse/data/preset_gender_filter.dart';
 import 'package:lolipants/features/editor/data/configurator_defaults.dart';
+import 'package:lolipants/features/editor/logic/mannequin_gender.dart';
 import 'package:lolipants/features/editor/models/configurator_catalog.dart';
 
 /// Whether [template] targets the men's design lane.
@@ -43,6 +44,19 @@ bool configuratorTemplateMatchesGender(
     default:
       return true;
   }
+}
+
+/// Configurator templates available for [mannequinId] (strict gender lane).
+List<ConfiguratorTemplate> configuratorTemplatesForMannequin(
+  List<ConfiguratorTemplate> templates,
+  String mannequinId,
+) {
+  final lane = mannequinGenderLane(mannequinId);
+  final matched = templates
+      .where((t) => configuratorTemplateMatchesGender(t, lane))
+      .toList(growable: false);
+  matched.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+  return matched;
 }
 
 /// Puts gender-matching templates first, then preserves [sortOrder].

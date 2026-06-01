@@ -61,6 +61,7 @@ class _OrderQuoteReviewScreenState extends ConsumerState<OrderQuoteReviewScreen>
       city: draft.city,
       deliveryLat: lat,
       deliveryLng: lng,
+      accessoryIds: draft.design.accessoryIds,
     );
     final negResult = await repo.listMyNegotiations();
     if (!mounted) return;

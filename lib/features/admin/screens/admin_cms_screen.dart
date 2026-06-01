@@ -31,7 +31,7 @@ class _AdminCmsScreenState extends ConsumerState<AdminCmsScreen>
     'patterns',
     'presets',
   ];
-  late final TabController _sectionTabs = TabController(length: 3, vsync: this);
+  late final TabController _sectionTabs = TabController(length: 4, vsync: this);
   late final TabController _assetTabs =
       TabController(length: _assetResources.length, vsync: this);
 
@@ -52,6 +52,7 @@ class _AdminCmsScreenState extends ConsumerState<AdminCmsScreen>
             Tab(text: 'Assets'),
             Tab(text: 'Configurator'),
             Tab(text: 'Wedding'),
+            Tab(text: 'Accessories'),
           ],
         ),
         Expanded(
@@ -78,6 +79,7 @@ class _AdminCmsScreenState extends ConsumerState<AdminCmsScreen>
               ),
               const AdminConfiguratorCmsTab(),
               const _ResourceList(resource: 'wedding-dresses'),
+              const _ResourceList(resource: 'accessories'),
             ],
           ),
         ),
@@ -106,6 +108,9 @@ String? _cmsResourceHelp(String resource) {
           'or editing a row.';
     case 'fabrics':
       return 'Fabric catalogue metadata for the editor fabric picker.';
+    case 'accessories':
+      return 'Browse accessories shop and optional garment add-ons. '
+          'Categories: scarf, bag, jewellery, other.';
     default:
       return null;
   }
@@ -285,7 +290,10 @@ class _ResourceRow extends ConsumerWidget {
           resource == 'wedding-dresses'
               ? '${data['category'] ?? ''} · rent ${data['rent_price_per_day']}/day · '
                   'sale ${data['sale_price']} · deposit ${data['insurance_deposit']}'
-              : id,
+              : resource == 'accessories'
+                  ? '${data['category'] ?? ''} · ${data['sale_price']} QAR · '
+                      'addon ${data['allow_addon'] == 1 ? 'yes' : 'no'}'
+                  : id,
           style: AppTextStyles.bodySmall,
         ),
         trailing: readOnly
@@ -450,6 +458,19 @@ class _CmsFormDialogState extends ConsumerState<_CmsFormDialog> {
           _FieldSpec('is_active', 'Active', isBool: true),
           _FieldSpec('image_url', 'Dress image', isImage: true),
         ];
+      case 'accessories':
+        return const [
+          _FieldSpec('label_en', 'Label (EN)'),
+          _FieldSpec('label_ar', 'Label (AR)'),
+          _FieldSpec('category', 'Category (scarf / bag / jewellery / other)'),
+          _FieldSpec('sale_price', 'Sale price (QAR)', isNumber: true),
+          _FieldSpec('description_en', 'Description (EN)', optional: true),
+          _FieldSpec('description_ar', 'Description (AR)', optional: true),
+          _FieldSpec('allow_addon', 'Allow garment add-on', isBool: true),
+          _FieldSpec('sort_order', 'Sort order', isNumber: true),
+          _FieldSpec('is_active', 'Active', isBool: true),
+          _FieldSpec('image_url', 'Product image', isImage: true),
+        ];
       default:
         return const [
           _FieldSpec('name', 'Name'),
@@ -592,6 +613,7 @@ class _CmsFormDialogState extends ConsumerState<_CmsFormDialog> {
       case 'patterns':
       case 'presets':
       case 'wedding-dresses':
+      case 'accessories':
         return true;
       default:
         return false;
@@ -604,6 +626,7 @@ class _CmsFormDialogState extends ConsumerState<_CmsFormDialog> {
       case 'patterns':
       case 'presets':
       case 'wedding-dresses':
+      case 'accessories':
         return 'designs';
       default:
         return 'designs';

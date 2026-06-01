@@ -9,11 +9,10 @@ import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/features/editor/data/built_in_mannequin_assets.dart';
 import 'package:lolipants/features/editor/models/configurator_catalog.dart';
 import 'package:lolipants/features/editor/providers/configurator_providers.dart';
-import 'package:lolipants/features/editor/providers/design_catalog_providers.dart';
 import 'package:lolipants/features/editor/providers/editor_provider.dart';
 import 'package:lolipants/features/editor/utils/fabric_texture_overlay.dart';
+import 'package:lolipants/features/editor/widgets/catalog_design_preview.dart';
 import 'package:lolipants/features/editor/widgets/configurator_option_image.dart';
-import 'package:lolipants/features/editor/widgets/fabric_textured_catalog_image.dart';
 import 'package:lolipants/features/editor/widgets/fabric_textured_garment_layer.dart';
 import 'package:lolipants/features/editor/widgets/editor_wedding_hero.dart';
 import 'package:lolipants/features/wedding/models/wedding_dress.dart';
@@ -30,38 +29,45 @@ class EditorHeroPreview extends ConsumerWidget {
   final EditorState state;
   final EditorTab activeTab;
 
-  bool get _usesConfiguratorCompose =>
-      kFeatureConfiguratorBuild &&
-      activeTab != EditorTab.wedding &&
-      state.heroMode == EditorHeroMode.compose;
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (activeTab == EditorTab.wedding) {
-      return _WeddingHeroBody(state: state);
+    final editor = ref.watch(editorProvider);
+    final tab = activeTab;
+
+    if (tab == EditorTab.wedding) {
+      return _WeddingHeroBody(state: editor);
     }
 
-    if (state.heroMode == EditorHeroMode.look) {
-      return _AiLookBody(state: state);
+    // AI Look tab: refined render only (catalogue flat-lay is Compose / layers).
+    if (editor.heroMode == EditorHeroMode.look) {
+      return _AiLookBody(state: editor);
     }
 
-    if (_usesConfiguratorCompose) {
+    // Catalogue compose hero is rendered in [EditorScreen] (hero shell layout).
+    if (editor.heroMode == EditorHeroMode.compose &&
+        editor.buildStyleMode == EditorBuildStyleMode.catalog) {
+      return const SizedBox.shrink();
+    }
+
+    if (kFeatureConfiguratorBuild &&
+        tab != EditorTab.wedding &&
+        editor.heroMode == EditorHeroMode.compose) {
       final catalog = ref.watch(configuratorCatalogProvider);
 
       ref.listen<AsyncValue<ConfiguratorCatalog>>(configuratorCatalogProvider,
           (previous, next) {
         next.whenData((_) {
           ref.read(editorProvider.notifier).ensureDefaultConfiguratorTemplate(
-                ref.read(genderOrderedConfiguratorTemplatesProvider),
+                ref.read(mannequinConfiguratorTemplatesProvider),
               );
         });
       });
 
-      final templates = ref.watch(genderOrderedConfiguratorTemplatesProvider);
+      final templates = ref.watch(mannequinConfiguratorTemplatesProvider);
 
       return catalog.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, __) => _BuildComposeBody(state: state, template: null),
+        error: (_, __) => _BuildComposeBody(state: editor, template: null),
         data: (_) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             ref.read(editorProvider.notifier).ensureDefaultConfiguratorTemplate(
@@ -70,7 +76,7 @@ class EditorHeroPreview extends ConsumerWidget {
           });
 
           ConfiguratorTemplate? template;
-          final selectedId = state.configuratorTemplateId.trim();
+          final selectedId = editor.configuratorTemplateId.trim();
           if (selectedId.isNotEmpty) {
             for (final t in templates) {
               if (t.id == selectedId) {
@@ -79,7 +85,7 @@ class EditorHeroPreview extends ConsumerWidget {
               }
             }
           }
-          return _BuildComposeBody(state: state, template: template);
+          return _BuildComposeBody(state: editor, template: template);
         },
       );
     }
@@ -131,9 +137,8 @@ class _BuildComposeBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final custom = state.customMannequinImagePath?.trim();
     final bundledPath = builtInMannequinAssetPath(state.mannequinId);
-    final mannequinPath = (custom != null && custom.isNotEmpty)
-        ? custom
-        : bundledPath;
+    final mannequinPath =
+        (custom != null && custom.isNotEmpty) ? custom : bundledPath;
 
     final selectedFabric = selectedFabricOption(
       selectedFabricId: state.selectedFabricId,
@@ -142,42 +147,6 @@ class _BuildComposeBody extends ConsumerWidget {
     final fabricProvider = selectedFabric != null
         ? fabricSwatchImageProvider(selectedFabric)
         : null;
-
-    if (state.buildStyleMode == EditorBuildStyleMode.catalog) {
-      final designPath = state.selectedCatalogDesignPath.trim();
-      if (designPath.isNotEmpty) {
-        final lookup = ref.watch(designCatalogLookupProvider);
-        final imageSource = resolveCatalogDesignImageSource(designPath, lookup);
-        final path = imageSource.isNotEmpty ? imageSource : designPath;
-        return InteractiveViewer(
-          minScale: 0.85,
-          maxScale: 3,
-          alignment: Alignment.center,
-          child: SizedBox(
-            width: double.infinity,
-            height: double.infinity,
-            child: FabricTexturedCatalogImage(
-              path: path,
-              fabricProvider: fabricProvider,
-              fit: BoxFit.contain,
-              alignment: Alignment.bottomCenter,
-              errorWidget: Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(AppSpacing.lg),
-                  child: Text(
-                    AppStrings.editorBuildHeroEmpty,
-                    textAlign: TextAlign.center,
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.fog,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
-      }
-    }
 
     final layers = template == null
         ? const <ConfiguratorOption>[]
@@ -252,14 +221,28 @@ class _AiLookBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final url = state.refinedLookUrl?.trim();
     if (url != null && url.isNotEmpty) {
-      return CachedNetworkImage(
-        imageUrl: url,
-        fit: BoxFit.contain,
-        placeholder: (_, __) => const Center(
-          child: CircularProgressIndicator(),
-        ),
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          return ColoredBox(
+            color: Colors.white,
+            child: CachedNetworkImage(
+              imageUrl: url,
+              width: constraints.maxWidth,
+              height: constraints.maxHeight,
+              fit: BoxFit.contain,
+              placeholder: (_, __) => const Center(
+                child: CircularProgressIndicator(),
+              ),
+              errorWidget: (_, __, ___) => _emptyState(),
+            ),
+          );
+        },
       );
     }
+    return _emptyState();
+  }
+
+  Widget _emptyState() {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),

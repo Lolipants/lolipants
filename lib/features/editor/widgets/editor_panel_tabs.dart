@@ -11,11 +11,13 @@ class EditorPanelTabs extends StatelessWidget {
   const EditorPanelTabs({
     required this.activeTab,
     required this.onTabChanged,
+    this.weddingTabEnabled = true,
     super.key,
   });
 
   final EditorTab activeTab;
   final ValueChanged<EditorTab> onTabChanged;
+  final bool weddingTabEnabled;
 
   bool get _designSelected =>
       activeTab == EditorTab.build || activeTab == EditorTab.designs;
@@ -24,7 +26,8 @@ class EditorPanelTabs extends StatelessWidget {
   Widget build(BuildContext context) {
     final tabs = <(EditorTab, String)>[
       if (kFeatureConfiguratorBuild) (EditorTab.build, 'Design'),
-      if (kFeatureWeddingTab) (EditorTab.wedding, AppStrings.editorTabWedding),
+      if (kFeatureWeddingTab && weddingTabEnabled)
+        (EditorTab.wedding, AppStrings.editorTabWedding),
     ];
     if (tabs.isEmpty) return const SizedBox.shrink();
 
@@ -50,6 +53,7 @@ class EditorPanelTabs extends StatelessWidget {
                   selected: entry.$1 == EditorTab.wedding
                       ? activeTab == EditorTab.wedding
                       : _designSelected,
+                  enabled: entry.$1 != EditorTab.wedding || weddingTabEnabled,
                   onTap: () => onTabChanged(entry.$1),
                 ),
               ),
@@ -65,18 +69,20 @@ class _TabButton extends StatelessWidget {
     required this.label,
     required this.selected,
     required this.onTap,
+    this.enabled = true,
   });
 
   final String label;
   final bool selected;
   final VoidCallback onTap;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: onTap,
+        onTap: enabled ? onTap : null,
         borderRadius: BorderRadius.circular(AppRadius.pill),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 160),
@@ -91,7 +97,11 @@ class _TabButton extends StatelessWidget {
             label,
             textAlign: TextAlign.center,
             style: AppTextStyles.bodySmall.copyWith(
-              color: selected ? AppColors.gold : AppColors.fog,
+              color: !enabled
+                  ? AppColors.fog.withValues(alpha: 0.35)
+                  : selected
+                      ? AppColors.gold
+                      : AppColors.fog,
               fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
               fontSize: 12,
             ),

@@ -24,7 +24,7 @@ final designCatalogLookupProvider = Provider<Map<String, DesignCatalogItem>>((re
   return {for (final item in items) item.id: item};
 });
 
-/// Bundled + CMS sections filtered for [mannequinId].
+/// Bundled + CMS sections filtered for [mannequinId] (gender lane only).
 final mergedCatalogSectionsProvider =
     Provider.family<List<CatalogDesignSection>, String>((ref, mannequinId) {
   final cmsItems = ref.watch(designCatalogItemsProvider).valueOrNull;
@@ -43,7 +43,7 @@ String resolveCatalogDesignImageSource(
   if (id != null) {
     return lookup[id]?.imageUrl ?? '';
   }
-  return ref;
+  return catalogDesignDisplayPath(ref);
 }
 
 /// Display label for a catalog ref.

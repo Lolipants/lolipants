@@ -10,6 +10,7 @@ import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/features/orders/models/checkout_draft.dart';
 import 'package:lolipants/features/orders/models/order_design_draft.dart';
+import 'package:lolipants/features/orders/models/accessory_checkout_draft.dart';
 import 'package:lolipants/features/orders/models/wedding_checkout_draft.dart';
 import 'package:lolipants/features/orders/providers/checkout_providers.dart';
 import 'package:lolipants/features/orders/providers/orders_providers.dart';
@@ -40,6 +41,10 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final accessoryDraft = ref.watch(accessoryCheckoutDraftProvider);
+    if (accessoryDraft != null) {
+      return _buildAccessoryPayment(context, accessoryDraft);
+    }
     final weddingDraft = ref.watch(weddingCheckoutDraftProvider);
     if (weddingDraft != null) {
       return _buildWeddingPayment(context, weddingDraft);
@@ -122,6 +127,155 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildAccessoryPayment(
+    BuildContext context,
+    AccessoryCheckoutDraft draft,
+  ) {
+    final quote = draft.quote;
+    return Scaffold(
+      appBar: AppBar(title: const Text('Payment')),
+      body: Stack(
+        children: [
+          const ArabesqueBackground(),
+          ListView(
+            padding: const EdgeInsets.all(AppSpacing.xl),
+            children: [
+              Text(draft.accessory.accessoryLabel, style: AppTextStyles.titleMedium),
+              const SizedBox(height: AppSpacing.md),
+              if (quote != null)
+                Text(
+                  'Total: ${quote.total} ${quote.currency}',
+                  style: AppTextStyles.titleSmall,
+                ),
+              const SizedBox(height: AppSpacing.lg),
+              if (_errorMessage != null) ...[
+                ErrorBanner(
+                  message: _errorMessage!,
+                  onDismiss: () => setState(() => _errorMessage = null),
+                ),
+                const SizedBox(height: AppSpacing.md),
+              ],
+              LolipantsButton(
+                label: _processing
+                    ? 'Processing...'
+                    : quote == null
+                        ? 'Pricing unavailable'
+                        : 'Pay ${quote.total} ${quote.currency}',
+                onPressed: _processing || quote == null
+                    ? null
+                    : () => _payAccessory(draft),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _payAccessory(AccessoryCheckoutDraft draft) async {
+    setState(() {
+      _processing = true;
+      _errorMessage = null;
+    });
+    await _ensurePushRegistered();
+    final ordersRepo = ref.read(ordersRepositoryProvider);
+    final paymentsRepo = ref.read(paymentsRepositoryProvider);
+    final quote = draft.quote;
+    if (quote == null ||
+        quote.tailorId == null ||
+        quote.tailorId!.isEmpty ||
+        draft.deliveryLat == null ||
+        draft.deliveryLng == null) {
+      _fail('Pricing expired. Go back and refresh your quote.');
+      return;
+    }
+
+    final orderResult = await ordersRepo.createAccessoryOrder(
+      accessoryId: draft.accessory.accessoryId,
+      fulfillmentType: draft.accessory.fulfillmentType,
+      deliveryAddress: draft.address,
+      deliveryCity: draft.city,
+      deliveryPhone: draft.phone,
+      deliveryLat: draft.deliveryLat!,
+      deliveryLng: draft.deliveryLng!,
+      tailorId: quote.tailorId!,
+      basePrice: quote.basePrice,
+      fabricFee: quote.fabricFee,
+      deliveryFee: quote.deliveryFee,
+      accessoryFee: quote.accessoryFee,
+      totalPrice: quote.total,
+      deliveryNotes: draft.notes,
+      idempotencyKey: draft.idempotencyKey,
+    );
+    final orderOrError = orderResult.fold<String>(
+      (e) => orderErrorMessage(e, fallback: 'Could not create order.'),
+      (_) => '',
+    );
+    if (orderOrError.isNotEmpty) {
+      _fail(orderOrError);
+      return;
+    }
+    final order = orderResult.toNullable();
+    if (order == null) {
+      _fail('Order creation returned no payload.');
+      return;
+    }
+    ref.read(accessoryCheckoutDraftProvider.notifier).state =
+        draft.copyWith(orderId: order.id);
+
+    final intentResult = await paymentsRepo.createIntent(
+      orderId: order.id,
+      idempotencyKey: draft.idempotencyKey,
+    );
+    final intentError = intentResult.fold<String>(
+      (e) => orderErrorMessage(e, fallback: 'Could not start payment.'),
+      (_) => '',
+    );
+    if (intentError.isNotEmpty) {
+      _fail(intentError);
+      return;
+    }
+    final intent = intentResult.toNullable();
+    if (intent == null) {
+      _fail('Payment intent returned no payload.');
+      return;
+    }
+    ref.read(accessoryCheckoutDraftProvider.notifier).state = (ref
+                .read(accessoryCheckoutDraftProvider) ??
+            draft)
+        .copyWith(
+      orderId: order.id,
+      paymentReference: intent.reference,
+    );
+
+    final tapToken = await _requestTapToken();
+    if (tapToken == null) {
+      _fail('Payment was cancelled.');
+      return;
+    }
+
+    final chargeResult = tapToken == _kSandboxToken
+        ? await paymentsRepo.sandboxConfirm(paymentReference: intent.reference)
+        : await paymentsRepo.confirmWithToken(
+            paymentReference: intent.reference,
+            tapToken: tapToken,
+            idempotencyKey: draft.idempotencyKey,
+          );
+    final chargeError = chargeResult.fold<String>(
+      (e) => orderErrorMessage(e, fallback: 'Payment could not be captured.'),
+      (_) => '',
+    );
+    if (chargeError.isNotEmpty) {
+      _fail(chargeError);
+      return;
+    }
+
+    if (!mounted) return;
+    unawaited(ref.read(myOrdersProvider.notifier).reload());
+    ref.read(accessoryCheckoutDraftProvider.notifier).state = null;
+    context.go('/order/confirmed/${order.id}');
   }
 
   Widget _buildWeddingPayment(BuildContext context, WeddingCheckoutDraft draft) {
@@ -313,7 +467,9 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
       basePrice: quote.basePrice,
       fabricFee: quote.fabricFee,
       deliveryFee: quote.deliveryFee,
+      accessoryFee: quote.accessoryFee,
       totalPrice: quote.total,
+      accessoryIds: draft.design.accessoryIds,
       deliveryNotes: draft.notes,
       idempotencyKey: draft.idempotencyKey,
       designerId: draft.design.designerId,

@@ -37,4 +37,19 @@ void main() {
       isFalse,
     );
   });
+
+  test('bundledCatalogAssetPath ignores CDN remapping', () {
+    expect(
+      bundledCatalogAssetPath(
+        'assets/images/designs/design_womens_look_gulf_abaya_black_closed.png',
+      ),
+      'assets/images/designs/design_womens_look_gulf_abaya_black_closed.png',
+    );
+    expect(
+      catalogImageAssetPath(
+        'assets/images/designs/design_womens_look_gulf_abaya_black_closed.png',
+      ),
+      isNull,
+    );
+  });
 }

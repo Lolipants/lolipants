@@ -33,6 +33,7 @@ class Order {
     this.basePrice,
     this.fabricFee,
     this.deliveryFee,
+    this.accessoryFee,
     this.totalPrice,
     this.currency = 'QAR',
     this.deliveryAddress,
@@ -115,8 +116,11 @@ class Order {
   /// Garment type from the linked design.
   final String? garmentType;
 
-  /// `custom`, `wedding_rent`, or `wedding_purchase`.
+  /// `custom`, `wedding_rent`, `wedding_purchase`, or `accessory_purchase`.
   final String? fulfillmentType;
+
+  /// Accessories subtotal on custom or standalone accessory orders.
+  final int? accessoryFee;
 
   /// Rental period for wedding rent orders.
   final int? rentalDays;
@@ -127,6 +131,7 @@ class Order {
       return days != null ? 'Wedding rent · $days days' : 'Wedding rent';
     }
     if (fulfillmentType == 'wedding_purchase') return 'Wedding purchase';
+    if (fulfillmentType == 'accessory_purchase') return 'Accessory purchase';
     return null;
   }
 
@@ -193,6 +198,7 @@ class Order {
       basePrice: asInt(json['base_price'] ?? json['basePrice']),
       fabricFee: asInt(json['fabric_fee'] ?? json['fabricFee']),
       deliveryFee: asInt(json['delivery_fee'] ?? json['deliveryFee']),
+      accessoryFee: asInt(json['accessory_fee'] ?? json['accessoryFee']),
       totalPrice: asInt(json['total_price'] ?? json['totalPrice']),
       currency: json['currency']?.toString() ?? 'QAR',
       deliveryAddress: json['delivery_address']?.toString() ??

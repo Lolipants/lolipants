@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:lolipants/core/config/app_features.dart';
+import 'package:lolipants/features/editor/widgets/editor_accessories_sheet.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/features/editor/data/bundled_design_assets.dart';
 import 'package:lolipants/features/editor/models/configurator_catalog.dart';
 import 'package:lolipants/features/editor/providers/configurator_providers.dart';
 import 'package:lolipants/features/editor/providers/editor_estimate_provider.dart';
@@ -19,6 +22,20 @@ class EditorDesignSummaryBar extends ConsumerWidget {
     final estimateAsync = ref.watch(editorEstimateProvider);
 
     if (editor.isWeddingTab) return const SizedBox.shrink();
+
+    if (editor.buildStyleMode == EditorBuildStyleMode.catalog) {
+      final path = editor.selectedCatalogDesignPath.trim();
+      final summaryLine = path.isNotEmpty
+          ? catalogDesignLabel(path)
+          : (editor.designName.trim().isNotEmpty
+              ? editor.designName.trim()
+              : 'Your design');
+      return _SummaryBarContent(
+        summaryLine: summaryLine,
+        accessoriesSummary: editor.accessoriesSummary,
+        accessoryCount: editor.selectedAccessoryIds.length,
+      );
+    }
 
     return catalogAsync.when(
       loading: () => const SizedBox.shrink(),
@@ -56,25 +73,54 @@ class EditorDesignSummaryBar extends ConsumerWidget {
           },
         );
 
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.md,
-            2,
-            AppSpacing.md,
-            6,
+        return _SummaryBarContent(
+          summaryLine: summaryLine,
+          estimateLabel: estimateLabel,
+          accessoriesSummary: editor.accessoriesSummary,
+          accessoryCount: editor.selectedAccessoryIds.length,
+        );
+      },
+    );
+  }
+}
+
+class _SummaryBarContent extends StatelessWidget {
+  const _SummaryBarContent({
+    required this.summaryLine,
+    this.estimateLabel,
+    this.accessoriesSummary = '',
+    this.accessoryCount = 0,
+  });
+
+  final String summaryLine;
+  final String? estimateLabel;
+  final String accessoriesSummary;
+  final int accessoryCount;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        2,
+        AppSpacing.md,
+        6,
+      ),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: AppColors.stone.withValues(alpha: 0.94),
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(color: AppColors.borderSubtle),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.sm,
+            vertical: 6,
           ),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: AppColors.stone.withValues(alpha: 0.94),
-              borderRadius: BorderRadius.circular(AppRadius.md),
-              border: Border.all(color: AppColors.borderSubtle),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.sm,
-                vertical: 6,
-              ),
-              child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 children: [
                   Expanded(
                     child: Text(
@@ -92,7 +138,7 @@ class EditorDesignSummaryBar extends ConsumerWidget {
                   if (estimateLabel != null) ...[
                     const SizedBox(width: AppSpacing.sm),
                     Text(
-                      estimateLabel,
+                      estimateLabel!,
                       style: AppTextStyles.bodySmall.copyWith(
                         color: AppColors.gold,
                         fontSize: 11,
@@ -100,12 +146,44 @@ class EditorDesignSummaryBar extends ConsumerWidget {
                       ),
                     ),
                   ],
+                  if (kFeatureAccessories) ...[
+                    const SizedBox(width: AppSpacing.xs),
+                    TextButton(
+                      onPressed: () => showEditorAccessoriesSheet(context),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 6),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: Text(
+                        accessoryCount > 0
+                            ? 'Add-ons ($accessoryCount)'
+                            : 'Add-ons',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.gold,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
-            ),
+              if (accessoriesSummary.trim().isNotEmpty) ...[
+                const SizedBox(height: 2),
+                Text(
+                  accessoriesSummary.trim(),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.fog,
+                    fontSize: 10,
+                  ),
+                ),
+              ],
+            ],
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 }

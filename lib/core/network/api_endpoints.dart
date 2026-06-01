@@ -108,8 +108,14 @@ abstract final class ApiEndpoints {
   /// Public wedding dress catalogue.
   static const String weddingDresses = '/wedding/dresses';
 
+  /// Public accessories catalogue.
+  static const String accessories = '/accessories';
+
   /// Proximity quote for wedding rent or purchase.
   static const String ordersWeddingQuote = '/orders/wedding-quote';
+
+  /// Proximity quote for standalone accessory purchase.
+  static const String ordersAccessoryQuote = '/orders/accessory-quote';
 
   /// Garment price estimate band (no delivery coords).
   static const String ordersEstimate = '/orders/estimate';

@@ -1,6 +1,9 @@
 import 'package:lolipants/features/editor/data/configurator_defaults.dart';
 import 'package:lolipants/features/editor/models/configurator_catalog.dart';
 
+const _sleeveSlotKeys = {'sleeve', 'sleeve_length'};
+const _overlaySlotKeys = {'overlay_panel', 'chest_panel', 'overlay'};
+
 /// Returns the selected [optionKey] for [slotKey], or null.
 String? selectedOptionKeyForSlot({
   required ConfiguratorTemplate template,
@@ -107,7 +110,7 @@ List<ConfiguratorOption> filteredOptionsForSlot({
   required ConfiguratorSelections selections,
   required ConfiguratorSlot slot,
 }) {
-  return slot.options
+  var options = slot.options
       .where(
         (o) => isConfiguratorOptionVisible(
           template: template,
@@ -117,6 +120,66 @@ List<ConfiguratorOption> filteredOptionsForSlot({
         ),
       )
       .toList(growable: false);
+
+  if (_sleeveSlotKeys.contains(slot.slotKey) &&
+      bodiceRequiresSleeveless(
+        template: template,
+        selections: selections,
+      )) {
+    options = options
+        .where((o) => o.optionKey == 'sleeveless')
+        .toList(growable: false);
+  }
+
+  return options;
+}
+
+/// True when the selected bodice option requires [sleeveless] sleeves.
+bool bodiceRequiresSleeveless({
+  required ConfiguratorTemplate template,
+  required ConfiguratorSelections selections,
+}) {
+  for (final slot in template.slots) {
+    if (slot.slotKey != 'bodice') continue;
+    final optId = selections[slot.id];
+    if (optId == null) return false;
+    for (final o in slot.options) {
+      if (o.id != optId) continue;
+      return o.metadata['requiresSleeveless'] == true;
+    }
+    return false;
+  }
+  return false;
+}
+
+String? _sleevelessOptionId(ConfiguratorSlot sleeveSlot) {
+  for (final o in sleeveSlot.options) {
+    if (o.optionKey == 'sleeveless') return o.id;
+  }
+  return null;
+}
+
+/// Halter / off-shoulder bodices always pair with the sleeveless option.
+ConfiguratorSelections applyBodiceSleeveCoupling({
+  required ConfiguratorTemplate template,
+  required ConfiguratorSelections selections,
+}) {
+  if (!bodiceRequiresSleeveless(
+    template: template,
+    selections: selections,
+  )) {
+    return selections;
+  }
+
+  final next = Map<String, String>.from(selections);
+  for (final slot in template.slots) {
+    if (!_sleeveSlotKeys.contains(slot.slotKey)) continue;
+    final sleevelessId = _sleevelessOptionId(slot);
+    if (sleevelessId != null) {
+      next[slot.id] = sleevelessId;
+    }
+  }
+  return next;
 }
 
 /// Clears selections that conflict with [slotId]/[optionId] being chosen.
@@ -169,9 +232,14 @@ ConfiguratorSelections resolveConfiguratorConflicts({
     }
   }
 
-  return ensureDefaultSelectionsForActiveSlots(
+  final coupled = applyBodiceSleeveCoupling(
     template: template,
     selections: next,
+  );
+
+  return ensureDefaultSelectionsForActiveSlots(
+    template: template,
+    selections: coupled,
   );
 }
 
@@ -312,9 +380,6 @@ String? configuratorRequiredSlotsMessage({
   }
   return 'Please choose: ${missing.join(', ')}';
 }
-
-const _sleeveSlotKeys = {'sleeve', 'sleeve_length'};
-const _overlaySlotKeys = {'overlay_panel', 'chest_panel', 'overlay'};
 
 ConfiguratorOption? _selectedOptionForSlot({
   required ConfiguratorSlot slot,

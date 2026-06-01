@@ -313,6 +313,21 @@ class AppStrings {
   /// Short tagline (Arabic).
   static const String taglineAr = 'استمتع بتصميم أزيائك';
 
+  /// Home: explore all browse (English).
+  static const String homeExploreAll = 'Explore all';
+
+  /// Home featured subtitle for the shopper's gender lane (English).
+  static String homeFeaturedSubtitleForGender(String? gender) {
+    switch (gender) {
+      case 'men':
+        return "Men's picks for you";
+      case 'women':
+        return "Women's picks for you";
+      default:
+        return 'Curated for you';
+    }
+  }
+
   /// Home: shop by gender header (English).
   static const String homeShopByGender = 'Shop by category';
 

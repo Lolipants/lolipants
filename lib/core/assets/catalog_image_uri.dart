@@ -59,3 +59,14 @@ String? catalogImageAssetPath(String pathOrUrl) {
   if (resolved.startsWith('assets/')) return resolved;
   return null;
 }
+
+/// Bundled asset path for [pathOrUrl], bypassing CDN remapping.
+///
+/// Returns the shipped `assets/...` path whenever the input points at a
+/// bundled asset, so callers can fall back to the local copy if a remote
+/// (R2) load fails. Returns null for remote URLs or filesystem paths.
+String? bundledCatalogAssetPath(String pathOrUrl) {
+  final p = pathOrUrl.trim();
+  if (p.startsWith('assets/')) return p;
+  return null;
+}

@@ -8,6 +8,7 @@ import 'package:lolipants/features/orders/models/order_estimate.dart';
 import 'package:lolipants/features/orders/models/order_quote.dart';
 import 'package:lolipants/features/orders/models/tailor_quote_option.dart';
 import 'package:lolipants/features/orders/models/quote_negotiation.dart';
+import 'package:lolipants/features/orders/models/accessory_order_quote.dart';
 import 'package:lolipants/features/orders/models/wedding_order_quote.dart';
 
 /// API-backed repository for customer orders.
@@ -108,6 +109,7 @@ class OrdersRepository {
     required double deliveryLat,
     required double deliveryLng,
     int limit = 5,
+    List<String> accessoryIds = const [],
   }) async {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
@@ -118,6 +120,7 @@ class OrdersRepository {
           'deliveryLat': deliveryLat,
           'deliveryLng': deliveryLng,
           'limit': limit,
+          if (accessoryIds.isNotEmpty) 'accessoryIds': accessoryIds.join(','),
         },
         options: await _authOptions(),
       );
@@ -146,6 +149,7 @@ class OrdersRepository {
     required String city,
     required double deliveryLat,
     required double deliveryLng,
+    List<String> accessoryIds = const [],
   }) async {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
@@ -155,6 +159,7 @@ class OrdersRepository {
           'city': city,
           'deliveryLat': deliveryLat,
           'deliveryLng': deliveryLng,
+          if (accessoryIds.isNotEmpty) 'accessoryIds': accessoryIds.join(','),
         },
         options: await _authOptions(),
       );
@@ -197,6 +202,95 @@ class OrdersRepository {
         return left(const ServerException(500, 'Missing quote payload'));
       }
       return right(WeddingOrderQuote.fromApi(data));
+    } on DioException catch (e) {
+      return left(_mapDio(e));
+    } on Exception {
+      return left(const UnknownException());
+    }
+  }
+
+  /// Accessory purchase quote (`GET /orders/accessory-quote`).
+  Future<Either<AppException, AccessoryOrderQuote>> getAccessoryQuote({
+    required String accessoryId,
+    required String city,
+    required double deliveryLat,
+    required double deliveryLng,
+  }) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        ApiEndpoints.ordersAccessoryQuote,
+        queryParameters: {
+          'accessoryId': accessoryId,
+          'city': city,
+          'deliveryLat': deliveryLat,
+          'deliveryLng': deliveryLng,
+        },
+        options: await _authOptions(),
+      );
+      final data = response.data;
+      if (data == null) {
+        return left(const ServerException(500, 'Missing quote payload'));
+      }
+      return right(AccessoryOrderQuote.fromApi(data));
+    } on DioException catch (e) {
+      return left(_mapDio(e));
+    } on Exception {
+      return left(const UnknownException());
+    }
+  }
+
+  /// Places a standalone accessory purchase order.
+  Future<Either<AppException, Order>> createAccessoryOrder({
+    required String accessoryId,
+    required String fulfillmentType,
+    required String deliveryAddress,
+    required String deliveryCity,
+    required String deliveryPhone,
+    required double deliveryLat,
+    required double deliveryLng,
+    required String tailorId,
+    required int basePrice,
+    required int fabricFee,
+    required int deliveryFee,
+    required int accessoryFee,
+    required int totalPrice,
+    String? deliveryNotes,
+    String? idempotencyKey,
+  }) async {
+    try {
+      final key = idempotencyKey ??
+          'accessory_${DateTime.now().millisecondsSinceEpoch}_$accessoryId';
+      final authOptions = await _authOptions();
+      final response = await _dio.post<Map<String, dynamic>>(
+        ApiEndpoints.orders,
+        data: {
+          'accessoryId': accessoryId,
+          'fulfillmentType': fulfillmentType,
+          'deliveryAddress': deliveryAddress,
+          'deliveryCity': deliveryCity,
+          'deliveryPhone': deliveryPhone,
+          'deliveryLat': deliveryLat,
+          'deliveryLng': deliveryLng,
+          'tailorId': tailorId,
+          'basePrice': basePrice,
+          'fabricFee': fabricFee,
+          'deliveryFee': deliveryFee,
+          'accessoryFee': accessoryFee,
+          'totalPrice': totalPrice,
+          'deliveryNotes': deliveryNotes,
+        },
+        options: authOptions.copyWith(
+          headers: {
+            ...?(authOptions.headers),
+            'X-Idempotency-Key': key,
+          },
+        ),
+      );
+      final data = response.data;
+      if (data == null) {
+        return left(const ServerException(500, 'Missing order payload'));
+      }
+      return right(Order.fromApi(data));
     } on DioException catch (e) {
       return left(_mapDio(e));
     } on Exception {
@@ -281,6 +375,8 @@ class OrdersRepository {
     required int fabricFee,
     required int deliveryFee,
     required int totalPrice,
+    int accessoryFee = 0,
+    List<String> accessoryIds = const [],
     String? deliveryNotes,
     String? idempotencyKey,
     String? designerId,
@@ -303,8 +399,10 @@ class OrdersRepository {
           'basePrice': basePrice,
           'fabricFee': fabricFee,
           'deliveryFee': deliveryFee,
+          'accessoryFee': accessoryFee,
           'totalPrice': totalPrice,
           'deliveryNotes': deliveryNotes,
+          if (accessoryIds.isNotEmpty) 'accessoryIds': accessoryIds,
           if (designerId != null && designerId.isNotEmpty)
             'designerId': designerId,
           if (quoteLockToken != null && quoteLockToken.isNotEmpty)

@@ -6,6 +6,16 @@ import { designerCommissionPct } from "../lib/commissionConfig";
 import { pickCourierForDelivery } from "../lib/courierAssignment";
 import { pickTailorForDelivery, estimateGarmentPriceRange, compareTailorsForDelivery, quoteForTailorId } from "../lib/tailorAssignment";
 import {
+  computeAccessoryPurchaseQuote,
+  insertOrderAccessoryLines,
+  loadAccessoriesByIds,
+  loadOrderAccessoryLines,
+  parseAccessoryIds,
+  pickTailorForAccessory,
+  sumAccessorySalePrice,
+  type AccessoryRow,
+} from "../lib/accessoryPricing";
+import {
   computeWeddingQuote,
   pickTailorForWedding,
   type WeddingDressRow,
@@ -71,6 +81,42 @@ function pricesMatch(
   );
 }
 
+function pricesMatchWithAccessories(
+  a: {
+    base: number;
+    fabric: number;
+    delivery: number;
+    accessory: number;
+    total: number;
+  },
+  b: {
+    base: number;
+    fabric: number;
+    delivery: number;
+    accessory: number;
+    total: number;
+  },
+): boolean {
+  const eps = 0.01;
+  return (
+    Math.abs(a.base - b.base) < eps &&
+    Math.abs(a.fabric - b.fabric) < eps &&
+    Math.abs(a.delivery - b.delivery) < eps &&
+    Math.abs(a.accessory - b.accessory) < eps &&
+    Math.abs(a.total - b.total) < eps
+  );
+}
+
+async function attachOrderAccessoriesToPayload(
+  db: D1Database,
+  order: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+  const orderId = String(order.id ?? "");
+  if (!orderId) return order;
+  const accessories = await loadOrderAccessoryLines(db, orderId);
+  return { ...order, orderAccessories: accessories };
+}
+
 async function loadTailorOrderPayload(
   db: D1Database,
   tailorId: string,
@@ -103,7 +149,11 @@ async function loadTailorOrderPayload(
     )
     .bind(orderId)
     .first<Record<string, unknown>>();
-  return { ...order, statusHistory: history.results, payment };
+  return attachOrderAccessoriesToPayload(db, {
+    ...order,
+    statusHistory: history.results,
+    payment,
+  });
 }
 
 const CUSTOMER_ORDER_COLUMNS = `
@@ -152,7 +202,11 @@ async function loadCustomerOrderPayload(
     )
     .bind(orderId)
     .first<Record<string, unknown>>();
-  return { ...order, statusHistory: history.results, payment };
+  return attachOrderAccessoriesToPayload(db, {
+    ...order,
+    statusHistory: history.results,
+    payment,
+  });
 }
 
 async function assignTailorAndQuote(
@@ -248,6 +302,18 @@ orderRoutes.get("/quote", async (c) => {
     );
   }
 
+  const accessoryIds = parseAccessoryIds(c.req.query("accessoryIds"));
+  let accessoryFee = 0;
+  if (accessoryIds.length > 0) {
+    const accessories = await loadAccessoriesByIds(c.env.DB, accessoryIds, {
+      requireAddon: true,
+    });
+    if (!accessories) {
+      return apiError(c, 400, "ACCESSORY_INVALID", "One or more accessories are invalid");
+    }
+    accessoryFee = sumAccessorySalePrice(accessories);
+  }
+
   const quote = await assignTailorAndQuote(c.env.DB, {
     design: {
       garment_type: design.garment_type,
@@ -280,10 +346,12 @@ orderRoutes.get("/quote", async (c) => {
     basePrice: quote.basePrice,
     fabricFee: quote.fabricFee,
     deliveryFee: quote.deliveryFee,
-    total: quote.total,
+    accessoryFee,
+    total: quote.total + accessoryFee,
     currency: quote.currency,
     fabricQuality: quote.fabricQuality,
     garmentType: quote.garmentType,
+    accessoryIds,
   });
 });
 
@@ -348,6 +416,18 @@ orderRoutes.get("/quotes/compare", async (c) => {
     );
   }
 
+  const accessoryIds = parseAccessoryIds(c.req.query("accessoryIds"));
+  let accessoryFee = 0;
+  if (accessoryIds.length > 0) {
+    const accessories = await loadAccessoriesByIds(c.env.DB, accessoryIds, {
+      requireAddon: true,
+    });
+    if (!accessories) {
+      return apiError(c, 400, "ACCESSORY_INVALID", "One or more accessories are invalid");
+    }
+    accessoryFee = sumAccessorySalePrice(accessories);
+  }
+
   const quotes = await compareTailorsForDelivery({
     db: c.env.DB,
     deliveryLat: latParsed.value,
@@ -369,12 +449,20 @@ orderRoutes.get("/quotes/compare", async (c) => {
     );
   }
 
+  const quotesWithAccessories = quotes.map((q) => ({
+    ...q,
+    accessoryFee,
+    total: q.total + accessoryFee,
+  }));
+
   return c.json({
     designId,
     city,
     deliveryLat: latParsed.value,
     deliveryLng: lngParsed.value,
-    quotes,
+    accessoryIds,
+    accessoryFee,
+    quotes: quotesWithAccessories,
   });
 });
 
@@ -467,6 +555,72 @@ orderRoutes.get("/wedding-quote", async (c) => {
   });
 });
 
+orderRoutes.get("/accessory-quote", async (c) => {
+  const accessoryId = (c.req.query("accessoryId") ?? "").trim();
+  const city = (c.req.query("city") ?? "Doha").trim();
+  const latParsed = parseCoord(c.req.query("deliveryLat"), "deliveryLat");
+  const lngParsed = parseCoord(c.req.query("deliveryLng"), "deliveryLng");
+  if (!accessoryId) {
+    return apiError(c, 400, "ACCESSORY_ID_REQUIRED", "accessoryId is required");
+  }
+  if (!latParsed.ok) {
+    return apiError(c, 400, "DELIVERY_LAT_REQUIRED", latParsed.message);
+  }
+  if (!lngParsed.ok) {
+    return apiError(c, 400, "DELIVERY_LNG_REQUIRED", lngParsed.message);
+  }
+
+  const accessories = await loadAccessoriesByIds(c.env.DB, [accessoryId]);
+  if (!accessories || accessories.length !== 1) {
+    return apiError(c, 404, "ACCESSORY_NOT_FOUND", "Accessory not found");
+  }
+  const accessory = accessories[0]!;
+
+  const picked = await pickTailorForAccessory({
+    db: c.env.DB,
+    city,
+    deliveryLat: latParsed.value,
+    deliveryLng: lngParsed.value,
+  });
+  if (!picked) {
+    return apiError(
+      c,
+      404,
+      "NO_TAILOR_AVAILABLE",
+      "No tailor is available for accessories",
+    );
+  }
+
+  const quote = computeAccessoryPurchaseQuote({
+    accessories: [accessory],
+    deliveryFee: picked.deliveryFee,
+  });
+
+  return c.json({
+    accessoryId: accessory.id,
+    accessoryLabel: accessory.label_en,
+    accessoryLabelAr: accessory.label_ar,
+    accessoryCategory: accessory.category,
+    accessoryImageUrl: accessory.image_url,
+    salePrice: accessory.sale_price,
+    fulfillmentType: "accessory_purchase",
+    city,
+    deliveryLat: latParsed.value,
+    deliveryLng: lngParsed.value,
+    tailorId: picked.tailorId,
+    tailorName: picked.tailorName,
+    shopName: picked.shopName,
+    distanceKm: Math.round(picked.distanceKm * 10) / 10,
+    assignmentMethod: picked.assignmentMethod,
+    basePrice: quote.basePrice,
+    fabricFee: quote.fabricFee,
+    deliveryFee: quote.deliveryFee,
+    accessoryFee: quote.accessoryFee,
+    total: quote.total,
+    currency: quote.currency,
+  });
+});
+
 orderRoutes.get("/queue", requireRole("tailor"), async (c) => {
   const tailorId = c.get("userId") as string;
   const statusFilter = (c.req.query("status") ?? "").trim().toLowerCase();
@@ -535,6 +689,200 @@ orderRoutes.get("/:id", async (c) => {
   if (!order) return apiError(c, 404, "ORDER_NOT_FOUND", "Order not found");
   return c.json(order);
 });
+
+async function placeAccessoryOrder(
+  c: Context<{ Bindings: Env; Variables: AppVariables }>,
+  input: {
+    userId: string;
+    idempotencyKey: string;
+    body: Record<string, unknown>;
+    accessoryId: string;
+  },
+) {
+  const { userId, idempotencyKey, body, accessoryId } = input;
+  if (!accessoryId) {
+    return apiError(c, 400, "ACCESSORY_ID_REQUIRED", "accessoryId is required");
+  }
+
+  const deliveryAddress = String(body.deliveryAddress ?? "").trim();
+  const deliveryCity = String(body.deliveryCity ?? "").trim();
+  const deliveryPhone = String(body.deliveryPhone ?? "").trim();
+  if (!deliveryAddress || !deliveryCity || !deliveryPhone) {
+    return apiError(
+      c,
+      400,
+      "DELIVERY_FIELDS_REQUIRED",
+      "deliveryAddress, deliveryCity, and deliveryPhone are required",
+    );
+  }
+
+  const latRaw = body.deliveryLat ?? body.delivery_lat;
+  const lngRaw = body.deliveryLng ?? body.delivery_lng;
+  const lat =
+    typeof latRaw === "number" ? latRaw : Number(String(latRaw ?? "").trim());
+  const lng =
+    typeof lngRaw === "number" ? lngRaw : Number(String(lngRaw ?? "").trim());
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    return apiError(
+      c,
+      400,
+      "DELIVERY_COORDS_REQUIRED",
+      "deliveryLat and deliveryLng are required",
+    );
+  }
+
+  const requestedTailorId = String(body.tailorId ?? body.tailor_id ?? "").trim();
+  if (!requestedTailorId) {
+    return apiError(c, 400, "TAILOR_ID_REQUIRED", "tailorId is required");
+  }
+
+  const accessories = await c.env.DB.prepare(
+    `SELECT id, label_en, label_ar, category, image_url, sale_price,
+            description_en, description_ar, allow_addon, is_active, sort_order
+     FROM accessories WHERE id = ? AND is_active = 1`,
+  )
+    .bind(accessoryId)
+    .first<AccessoryRow>();
+  if (!accessories) {
+    return apiError(c, 404, "ACCESSORY_NOT_FOUND", "Accessory not found");
+  }
+
+  const picked = await pickTailorForAccessory({
+    db: c.env.DB,
+    city: deliveryCity,
+    deliveryLat: lat,
+    deliveryLng: lng,
+  });
+  if (!picked) {
+    return apiError(
+      c,
+      404,
+      "NO_TAILOR_AVAILABLE",
+      "No tailor is available for accessories",
+    );
+  }
+  if (picked.tailorId !== requestedTailorId) {
+    return apiError(
+      c,
+      409,
+      "QUOTE_STALE",
+      "Assigned tailor changed. Refresh your quote before paying.",
+    );
+  }
+
+  const quote = computeAccessoryPurchaseQuote({
+    accessories: [accessories],
+    deliveryFee: picked.deliveryFee,
+  });
+
+  const clientBase = Number(body.basePrice ?? body.base_price);
+  const clientFabric = Number(body.fabricFee ?? body.fabric_fee);
+  const clientDelivery = Number(body.deliveryFee ?? body.delivery_fee);
+  const clientAccessoryRaw = Number(body.accessoryFee ?? body.accessory_fee);
+  const clientAccessoryFee = Number.isFinite(clientAccessoryRaw)
+    ? clientAccessoryRaw
+    : 0;
+  const clientTotal = Number(body.totalPrice ?? body.total_price);
+  if (
+    Number.isFinite(clientTotal) &&
+    !pricesMatchWithAccessories(
+      {
+        base: clientBase,
+        fabric: clientFabric,
+        delivery: clientDelivery,
+        accessory: clientAccessoryFee,
+        total: clientTotal,
+      },
+      {
+        base: quote.basePrice,
+        fabric: quote.fabricFee,
+        delivery: quote.deliveryFee,
+        accessory: quote.accessoryFee,
+        total: quote.total,
+      },
+    )
+  ) {
+    return apiError(
+      c,
+      409,
+      "QUOTE_MISMATCH",
+      "Price no longer matches the server quote. Refresh and try again.",
+    );
+  }
+
+  const fulfillmentType = "accessory_purchase";
+  const designId = uuidv4();
+  await c.env.DB.prepare(
+    `INSERT INTO designs (id, user_id, name, garment_type, fabric_quality,
+      primary_colour, print_image_url, text_layers, render_metadata, is_public)
+      VALUES (?, ?, ?, 'accessory', 'standard', '#FFFFFF', ?, '[]', ?, 0)`,
+  )
+    .bind(
+      designId,
+      userId,
+      accessories.label_en,
+      accessories.image_url,
+      JSON.stringify({
+        accessoryId: accessories.id,
+        accessoryCategory: accessories.category,
+        fulfillmentType,
+      }),
+    )
+    .run();
+
+  const orderId = uuidv4();
+  try {
+    await c.env.DB.prepare(
+      `INSERT INTO orders (id, user_id, design_id, tailor_id, status,
+        delivery_address, delivery_city, delivery_phone, delivery_notes,
+        delivery_lat, delivery_lng, assignment_method,
+        base_price, fabric_fee, delivery_fee, accessory_fee, total_price, payment_token,
+        fulfillment_type)
+        VALUES (?, ?, ?, ?, 'placed', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                ?)`,
+    )
+      .bind(
+        orderId,
+        userId,
+        designId,
+        picked.tailorId,
+        deliveryAddress,
+        deliveryCity,
+        deliveryPhone,
+        body.deliveryNotes ?? null,
+        lat,
+        lng,
+        picked.assignmentMethod,
+        quote.basePrice,
+        quote.fabricFee,
+        quote.deliveryFee,
+        quote.accessoryFee,
+        quote.total,
+        body.paymentToken ?? null,
+        fulfillmentType,
+      )
+      .run();
+
+    await insertOrderAccessoryLines(c.env.DB, orderId, [accessories]);
+
+    await c.env.DB.prepare(
+      "INSERT INTO order_status_history (id, order_id, status) VALUES (?, ?, 'placed')",
+    )
+      .bind(uuidv4(), orderId)
+      .run();
+    await c.env.DB.prepare(
+      "INSERT INTO order_idempotency_keys (id, user_id, idempotency_key, order_id) VALUES (?, ?, ?, ?)",
+    )
+      .bind(uuidv4(), userId, idempotencyKey, orderId)
+      .run();
+  } catch (err) {
+    console.error("[accessory-order]", err);
+    return apiError(c, 500, "ORDER_FAILED", "Could not place accessory order");
+  }
+
+  const created = await loadCustomerOrderPayload(c.env.DB, userId, orderId);
+  return c.json(created ?? { id: orderId }, 201);
+}
 
 async function placeWeddingOrder(
   c: Context<{ Bindings: Env; Variables: AppVariables }>,
@@ -791,14 +1139,26 @@ orderRoutes.post("/", async (c) => {
   if (existing) return c.json(existing, 200);
 
   const body = (await c.req.json()) as Record<string, unknown>;
+  const accessoryId = String(body.accessoryId ?? body.accessory_id ?? "").trim();
   const weddingDressId = String(body.weddingDressId ?? body.wedding_dress_id ?? "").trim();
   const fulfillmentTypeRaw = String(
     body.fulfillmentType ?? body.fulfillment_type ?? "",
   ).trim();
+  const isAccessoryOrder =
+    accessoryId.length > 0 || fulfillmentTypeRaw === "accessory_purchase";
   const isWeddingOrder =
     weddingDressId.length > 0 ||
     fulfillmentTypeRaw === "wedding_rent" ||
     fulfillmentTypeRaw === "wedding_purchase";
+
+  if (isAccessoryOrder) {
+    return placeAccessoryOrder(c, {
+      userId,
+      idempotencyKey,
+      body,
+      accessoryId,
+    });
+  }
 
   if (isWeddingOrder) {
     return placeWeddingOrder(c, {
@@ -993,24 +1353,52 @@ orderRoutes.post("/", async (c) => {
     }
   }
 
+  const accessoryIds = parseAccessoryIds(
+    body.accessoryIds ?? body.accessory_ids,
+  );
+  let orderAccessories: AccessoryRow[] = [];
+  let accessoryFee = 0;
+  if (accessoryIds.length > 0) {
+    const loaded = await loadAccessoriesByIds(c.env.DB, accessoryIds, {
+      requireAddon: true,
+    });
+    if (!loaded) {
+      return apiError(
+        c,
+        400,
+        "ACCESSORY_INVALID",
+        "One or more accessories are invalid or not available as add-ons",
+      );
+    }
+    orderAccessories = loaded;
+    accessoryFee = sumAccessorySalePrice(loaded);
+  }
+
   const clientBase = Number(body.basePrice ?? body.base_price);
   const clientFabric = Number(body.fabricFee ?? body.fabric_fee);
   const clientDelivery = Number(body.deliveryFee ?? body.delivery_fee);
+  const clientAccessoryRaw = Number(body.accessoryFee ?? body.accessory_fee);
+  const clientAccessoryFee = Number.isFinite(clientAccessoryRaw)
+    ? clientAccessoryRaw
+    : 0;
   const clientTotal = Number(body.totalPrice ?? body.total_price);
+  const serverTotal = quote.total + accessoryFee;
   if (
     Number.isFinite(clientTotal) &&
-    !pricesMatch(
+    !pricesMatchWithAccessories(
       {
         base: clientBase,
         fabric: clientFabric,
         delivery: clientDelivery,
+        accessory: clientAccessoryFee,
         total: clientTotal,
       },
       {
         base: quote.basePrice,
         fabric: quote.fabricFee,
         delivery: quote.deliveryFee,
-        total: quote.total,
+        accessory: accessoryFee,
+        total: serverTotal,
       },
     )
   ) {
@@ -1025,7 +1413,7 @@ orderRoutes.post("/", async (c) => {
   const basePrice = quote.basePrice;
   const fabricFee = quote.fabricFee;
   const deliveryFee = quote.deliveryFee;
-  const totalPrice = quote.total;
+  const totalPrice = serverTotal;
   const id = uuidv4();
 
   try {
@@ -1033,7 +1421,7 @@ orderRoutes.post("/", async (c) => {
       `INSERT INTO orders (id, user_id, design_id, designer_id, tailor_id, status,
         delivery_address, delivery_city, delivery_phone, delivery_notes,
         delivery_lat, delivery_lng, price_plan_id, assignment_method,
-        base_price, fabric_fee, delivery_fee, total_price, payment_token)
+        base_price, fabric_fee, delivery_fee, accessory_fee, total_price, payment_token)
         VALUES (?, ?, ?, ?, ?, 'placed', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
       .bind(
@@ -1053,10 +1441,15 @@ orderRoutes.post("/", async (c) => {
         basePrice,
         fabricFee,
         deliveryFee,
+        accessoryFee,
         totalPrice,
         body.paymentToken ?? null,
       )
       .run();
+
+    if (orderAccessories.length > 0) {
+      await insertOrderAccessoryLines(c.env.DB, id, orderAccessories);
+    }
 
     await c.env.DB.prepare(
       "INSERT INTO order_status_history (id, order_id, status) VALUES (?, ?, 'placed')",
@@ -1098,10 +1491,8 @@ orderRoutes.post("/", async (c) => {
     return apiError(c, 500, "ORDER_CREATE_FAILED", "Could not create order");
   }
 
-  const created = await c.env.DB.prepare("SELECT * FROM orders WHERE id = ?")
-    .bind(id)
-    .first();
-  return c.json(created, 201);
+  const created = await loadCustomerOrderPayload(c.env.DB, userId, id);
+  return c.json(created ?? { id }, 201);
 });
 
 orderRoutes.delete("/:id", async (c) => {

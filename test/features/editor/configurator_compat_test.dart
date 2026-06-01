@@ -26,9 +26,7 @@ void main() {
               labelEn: 'Bardot',
               labelAr: 'Bardot',
               assetUrl: null,
-              metadata: const {
-                'excludesOptionKeys': ['long_wine'],
-              },
+              metadata: const {'requiresSleeveless': true},
               sortOrder: 0,
             ),
           ],
@@ -41,13 +39,22 @@ void main() {
           sortOrder: 1,
           options: [
             ConfiguratorOption(
+              id: 'opt_none',
+              optionKey: 'sleeveless',
+              labelEn: 'No sleeves',
+              labelAr: 'No sleeves',
+              assetUrl: null,
+              metadata: const {'skipLayerRender': true},
+              sortOrder: 0,
+            ),
+            ConfiguratorOption(
               id: 'opt_long',
               optionKey: 'long_wine',
               labelEn: 'Long',
               labelAr: 'Long',
               assetUrl: null,
               metadata: const {},
-              sortOrder: 0,
+              sortOrder: 1,
             ),
             ConfiguratorOption(
               id: 'opt_cold',
@@ -55,33 +62,31 @@ void main() {
               labelEn: 'Cold',
               labelAr: 'Cold',
               assetUrl: null,
-              metadata: const {
-                'visibleWhen': {'slotKey': 'bodice', 'optionKey': 'bardot'},
-              },
-              sortOrder: 1,
+              metadata: const {},
+              sortOrder: 2,
             ),
           ],
         ),
       ],
     );
 
-    test('visibleWhen hides incompatible sleeve options', () {
-      final hidden = filteredOptionsForSlot(
+    test('off-shoulder bodice only allows no-sleeves in picker', () {
+      final allSleeves = filteredOptionsForSlot(
         template: template,
         selections: const {},
         slot: template.slots[1],
       );
-      expect(hidden.map((e) => e.id), ['opt_long']);
+      expect(allSleeves.map((e) => e.id), ['opt_none', 'opt_long', 'opt_cold']);
 
-      final visible = filteredOptionsForSlot(
+      final withBardot = filteredOptionsForSlot(
         template: template,
         selections: const {'slot_bodice': 'opt_a'},
         slot: template.slots[1],
       );
-      expect(visible.map((e) => e.id), contains('opt_cold'));
+      expect(withBardot.map((e) => e.id), ['opt_none']);
     });
 
-    test('resolveConfiguratorConflicts clears excluded selections', () {
+    test('resolveConfiguratorConflicts couples bardot with sleeveless', () {
       final resolved = resolveConfiguratorConflicts(
         template: template,
         selections: const {
@@ -91,7 +96,7 @@ void main() {
         slotId: 'slot_bodice',
         optionId: 'opt_a',
       );
-      expect(resolved['slot_sleeve'], 'opt_cold');
+      expect(resolved['slot_sleeve'], 'opt_none');
     });
 
     test('requiredSlotKeys blocks incomplete selections', () {
@@ -107,14 +112,14 @@ void main() {
           template: template,
           selections: const {
             'slot_bodice': 'opt_a',
-            'slot_sleeve': 'opt_long',
+            'slot_sleeve': 'opt_none',
           },
         ),
         isTrue,
       );
     });
 
-    test('suppressesSlotKeys hides sleeve slot and clears selection', () {
+    test('halter bodice couples to sleeveless and keeps sleeve slot', () {
       final halterTemplate = ConfiguratorTemplate(
         id: 't2',
         nameEn: 'Dress',
@@ -137,9 +142,7 @@ void main() {
                 labelEn: 'Halter',
                 labelAr: 'Halter',
                 assetUrl: null,
-                metadata: const {
-                  'suppressesSlotKeys': ['sleeve'],
-                },
+                metadata: const {'requiresSleeveless': true},
                 sortOrder: 0,
               ),
             ],
@@ -152,13 +155,22 @@ void main() {
             sortOrder: 1,
             options: [
               ConfiguratorOption(
+                id: 'opt_none',
+                optionKey: 'sleeveless',
+                labelEn: 'No sleeves',
+                labelAr: 'No sleeves',
+                assetUrl: null,
+                metadata: const {'skipLayerRender': true},
+                sortOrder: 0,
+              ),
+              ConfiguratorOption(
                 id: 'opt_bishop',
                 optionKey: 'bishop',
                 labelEn: 'Bishop',
                 labelAr: 'Bishop',
                 assetUrl: null,
                 metadata: const {},
-                sortOrder: 0,
+                sortOrder: 1,
               ),
             ],
           ),
@@ -174,13 +186,21 @@ void main() {
         slotId: 'slot_bodice',
         optionId: 'opt_halter',
       );
-      expect(resolved['slot_sleeve'], isNull);
+      expect(resolved['slot_sleeve'], 'opt_none');
       expect(
         activeConfiguratorSlots(
           template: halterTemplate,
           selections: resolved,
         ).map((s) => s.slotKey),
-        ['bodice'],
+        ['bodice', 'sleeve'],
+      );
+      expect(
+        filteredOptionsForSlot(
+          template: halterTemplate,
+          selections: resolved,
+          slot: halterTemplate.slots[1],
+        ).map((o) => o.id),
+        ['opt_none'],
       );
       expect(
         configuratorRequiredSlotsFilled(

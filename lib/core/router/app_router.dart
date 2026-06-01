@@ -46,7 +46,12 @@ import 'package:lolipants/features/orders/screens/order_confirmation_screen.dart
 import 'package:lolipants/features/orders/screens/order_quote_review_screen.dart';
 import 'package:lolipants/features/orders/screens/order_detail_screen.dart';
 import 'package:lolipants/features/orders/models/order_design_draft.dart';
+import 'package:lolipants/features/accessories/models/accessory.dart';
+import 'package:lolipants/features/accessories/screens/accessory_detail_screen.dart';
+import 'package:lolipants/features/orders/models/accessory_order_draft.dart';
 import 'package:lolipants/features/orders/models/wedding_order_draft.dart';
+import 'package:lolipants/features/orders/screens/order_accessory_quote_review_screen.dart';
+import 'package:lolipants/features/orders/screens/order_accessory_summary_screen.dart';
 import 'package:lolipants/features/orders/screens/order_summary_screen.dart';
 import 'package:lolipants/features/orders/screens/order_wedding_quote_review_screen.dart';
 import 'package:lolipants/features/orders/screens/order_wedding_summary_screen.dart';
@@ -338,6 +343,34 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/order/wedding-quote-review',
         name: 'orderWeddingQuoteReview',
         builder: (context, state) => const OrderWeddingQuoteReviewScreen(),
+      ),
+      GoRoute(
+        path: '/browse/accessory/:accessoryId',
+        name: 'accessoryDetail',
+        builder: (context, state) {
+          final extra = state.extra;
+          if (extra is Accessory) {
+            return AccessoryDetailScreen(accessory: extra);
+          }
+          return const Scaffold(
+            body: Center(child: Text('Accessory not found')),
+          );
+        },
+      ),
+      GoRoute(
+        path: '/order/accessory-summary',
+        name: 'orderAccessorySummary',
+        builder: (context, state) {
+          final draft = state.extra is AccessoryOrderDraft
+              ? state.extra! as AccessoryOrderDraft
+              : null;
+          return OrderAccessorySummaryScreen(accessoryDraft: draft);
+        },
+      ),
+      GoRoute(
+        path: '/order/accessory-quote-review',
+        name: 'orderAccessoryQuoteReview',
+        builder: (context, state) => const OrderAccessoryQuoteReviewScreen(),
       ),
       GoRoute(
         path: '/order/size-confirm',

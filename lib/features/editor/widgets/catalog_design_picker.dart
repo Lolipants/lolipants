@@ -3,8 +3,8 @@ import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/features/editor/models/catalog_design_pick.dart';
+import 'package:lolipants/features/editor/widgets/catalog_design_preview.dart';
 import 'package:lolipants/features/editor/widgets/editor_asset_thumb_card.dart';
-import 'package:lolipants/shared/widgets/catalog_image.dart';
 
 /// Sectioned horizontal rows of catalogue flats (Build-style white cards).
 class CatalogDesignPicker extends StatelessWidget {
@@ -60,15 +60,16 @@ class CatalogDesignPicker extends StatelessWidget {
                     return EditorAssetThumbCard(
                       width: _cardWidth,
                       height: _cardHeight,
-                      imageScale: 1.35,
-                      imageAlignment: Alignment.bottomCenter,
+                      imageScale: 1,
+                      imageAlignment: Alignment.center,
                       label: pick.label,
                       selected: selected,
                       onTap: () => onSelected(pick.ref),
-                      image: CatalogImage(
-                        path: pick.imageSource,
-                        fit: BoxFit.fitHeight,
-                        alignment: Alignment.bottomCenter,
+                      image: CatalogDesignPreview(
+                        imageSource: pick.imageSource,
+                        fit: BoxFit.contain,
+                        alignment: Alignment.center,
+                        backgroundColor: kCatalogPreviewBackground,
                         errorWidget: const Icon(
                           Icons.image_not_supported_outlined,
                           size: 20,

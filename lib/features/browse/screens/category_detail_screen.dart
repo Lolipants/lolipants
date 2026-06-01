@@ -11,6 +11,7 @@ import 'package:lolipants/features/browse/data/region_presets.dart';
 import 'package:lolipants/features/browse/providers/preset_providers.dart';
 import 'package:lolipants/features/browse/widgets/region_style_button.dart';
 import 'package:lolipants/features/editor/models/editor_preset_args.dart';
+import 'package:lolipants/features/accessories/screens/accessories_browse_section.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
 
@@ -99,16 +100,16 @@ class CategoryDetailScreen extends ConsumerWidget {
         children: [
           const ArabesqueBackground(),
           SafeArea(
-            child: presets.isEmpty && key != 'accessories'
+            child: key == 'accessories'
+                ? AccessoriesBrowseSection(
+                    onDesignTshirt: () {
+                      if (kFeatureCasual) {
+                        context.push('/browse/c/casual');
+                      }
+                    },
+                  )
+                : presets.isEmpty
                 ? _EmptyState(titleEn: titleEn)
-                : presets.isEmpty && key == 'accessories'
-                    ? _AccessoriesHub(
-                        onDesignTshirt: () {
-                          if (kFeatureCasual) {
-                            context.push('/browse/c/casual');
-                          }
-                        },
-                      )
                     : ListView(
                     padding: const EdgeInsets.fromLTRB(
                       AppSpacing.xl,
@@ -179,105 +180,6 @@ class _EmptyState extends StatelessWidget {
           textAlign: TextAlign.center,
           style: AppTextStyles.bodyMedium,
         ),
-      ),
-    );
-  }
-}
-
-class _AccessoriesHub extends StatelessWidget {
-  const _AccessoriesHub({required this.onDesignTshirt});
-
-  final VoidCallback onDesignTshirt;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.xl,
-        AppSpacing.md,
-        AppSpacing.xl,
-        AppSpacing.xxl,
-      ),
-      children: [
-        Text(
-          AppStrings.homeAccessoriesSubtitle,
-          style: AppTextStyles.bodyMedium,
-        ),
-        const SizedBox(height: AppSpacing.lg),
-        if (kFeatureCasual) ...[
-          LolipantsButton(
-            label: AppStrings.accessoriesTshirtCta,
-            onPressed: onDesignTshirt,
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Directionality(
-            textDirection: TextDirection.rtl,
-            child: Text(
-              AppStrings.accessoriesTshirtCtaAr,
-              style: AppTextStyles.arabicLabel.copyWith(fontSize: 12),
-            ),
-          ),
-        ],
-        const SizedBox(height: AppSpacing.xl),
-        _AccessoryTile(
-          icon: Icons.checkroom_outlined,
-          title: 'Scarves & shawls',
-          subtitle: 'Coming soon',
-        ),
-        const SizedBox(height: AppSpacing.md),
-        _AccessoryTile(
-          icon: Icons.shopping_bag_outlined,
-          title: 'Bags',
-          subtitle: 'Coming soon',
-        ),
-        const SizedBox(height: AppSpacing.md),
-        _AccessoryTile(
-          icon: Icons.watch_outlined,
-          title: 'Jewellery & watches',
-          subtitle: 'Coming soon',
-        ),
-      ],
-    );
-  }
-}
-
-class _AccessoryTile extends StatelessWidget {
-  const _AccessoryTile({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: AppColors.stone.withValues(alpha: 0.9),
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(color: AppColors.borderSubtle),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: AppColors.gold),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: AppTextStyles.titleSmall),
-                Text(
-                  subtitle,
-                  style: AppTextStyles.bodySmall.copyWith(color: AppColors.fog),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }

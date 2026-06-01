@@ -57,6 +57,12 @@ const bool kFeatureWeddingTab = bool.fromEnvironment(
   defaultValue: true,
 );
 
+/// Accessories browse shop, standalone checkout, and editor garment add-ons.
+const bool kFeatureAccessories = bool.fromEnvironment(
+  'FEATURE_ACCESSORIES',
+  defaultValue: true,
+);
+
 /// "Use my photo" custom mannequin generation.
 ///
 /// Disabled by default in low-cost mode because it needs a paid backend job.

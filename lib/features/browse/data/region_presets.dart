@@ -11,43 +11,43 @@ enum Region { gulf, levant, maghreb, modern }
 /// Bundled flat-lay PNG per preset id for Home/Browse thumbnails. Unknown ids
 /// fall back to the geometric pattern in `RegionStyleButton`.
 const Map<String, String> kRegionPresetPreviewAssetById = {
-  'qa_thobe': 'assets/images/designs/design_gulf_qatari_thobe_warm_white.png',
-  'sa_bisht': 'assets/images/designs/design_gulf_sa_bisht_black_gold.png',
-  'ae_kandura': 'assets/images/designs/design_gulf_ae_kandura_white.png',
-  'om_dishdasha': 'assets/images/designs/design_gulf_om_dishdasha_green.png',
-  'lev_kaftan': 'assets/images/designs/design_lev_kaftan_aubergine.png',
-  'lev_jubbah': 'assets/images/designs/design_lev_jubbah_emerald.png',
-  'ma_djellaba': 'assets/images/designs/design_mag_djellaba_burgundy_hood.png',
-  'ma_gandoura': 'assets/images/designs/design_mag_gandoura_white_grey.png',
-  'mod_minimal': 'assets/images/designs/design_mod_thobe_grey_minimal.png',
+  'qa_thobe': 'assets/images/designs/design_mens_look_gulf_qatari_thobe_warm_white.png',
+  'sa_bisht': 'assets/images/designs/design_mens_look_gulf_sa_bisht_black_gold.png',
+  'ae_kandura': 'assets/images/designs/design_mens_look_gulf_ae_kandura_white.png',
+  'om_dishdasha': 'assets/images/designs/design_mens_look_gulf_om_dishdasha_green.png',
+  'lev_kaftan': 'assets/images/designs/design_womens_look_lev_kaftan_aubergine.png',
+  'lev_jubbah': 'assets/images/designs/design_womens_look_lev_jubbah_emerald.png',
+  'ma_djellaba': 'assets/images/designs/design_womens_look_mag_djellaba_sage.png',
+  'ma_gandoura': 'assets/images/designs/design_womens_look_mag_djellaba_sage.png',
+  'mod_minimal': 'assets/images/designs/design_mens_look_mod_thobe_grey_minimal.png',
   'casual_tee':
       'assets/images/designs/design_casual_tee_crew_white.png',
   'casual_polo':
       'assets/images/designs/design_casual_longsleeve_crew_white.png',
-  'casual_jumpsuit': 'assets/images/designs/design_mod_jumpsuit_green.png',
-  'casual_denim': 'assets/images/designs/design_mod_dress_denim_indigo.png',
+  'casual_jumpsuit': 'assets/images/designs/design_womens_look_mod_jumpsuit_green.png',
+  'casual_denim': 'assets/images/designs/design_womens_look_mod_dress_denim_indigo.png',
   'casual_coat':
-      'assets/images/designs/design_mod_mens_overcoat_navy_midnight.png',
+      'assets/images/designs/design_mens_look_mod_mens_overcoat_navy_midnight.png',
   'mens_shirt_ecru':
-      'assets/images/designs/design_mod_mens_shirt_longline_ecru.png',
+      'assets/images/designs/design_mens_look_mod_mens_shirt_longline_ecru.png',
   'mens_overshirt_olive':
-      'assets/images/designs/design_mod_mens_overshirt_olive_linen.png',
+      'assets/images/designs/design_mens_look_mod_mens_overshirt_olive_linen.png',
   'mens_shacket_camel':
-      'assets/images/designs/design_mod_mens_shacket_camel.png',
+      'assets/images/designs/design_mens_look_mod_mens_shacket_camel.png',
   'mens_hoodie_zip_charcoal':
-      'assets/images/designs/design_mod_mens_hoodie_zip_charcoal.png',
+      'assets/images/designs/design_mens_look_mod_mens_hoodie_zip_charcoal.png',
   'mens_overcoat_navy':
-      'assets/images/designs/design_mod_mens_overcoat_navy_midnight.png',
+      'assets/images/designs/design_mens_look_mod_mens_overcoat_navy_midnight.png',
   'mens_anorak_sand':
-      'assets/images/designs/design_mod_mens_anorak_sand.png',
+      'assets/images/designs/design_mens_look_mod_mens_anorak_sand.png',
   'mens_cardigan_charcoal':
-      'assets/images/designs/design_mod_mens_cardigan_long_charcoal.png',
+      'assets/images/designs/design_mens_look_mod_mens_cardigan_long_charcoal.png',
   'mens_trousers_stone':
-      'assets/images/designs/design_mod_mens_trousers_wide_pleat_stone.png',
+      'assets/images/designs/design_mens_look_mod_mens_trousers_wide_pleat_stone.png',
   'mens_jacket_sage':
-      'assets/images/designs/design_mod_mens_jacket_utility_sage.png',
+      'assets/images/designs/design_mens_look_mod_mens_jacket_utility_sage.png',
   'mens_polo_black':
-      'assets/images/designs/design_mod_mens_polo_longline_black.png',
+      'assets/images/designs/design_mens_look_mod_mens_polo_longline_black.png',
 };
 
 Region _regionFromToken(String? token) {

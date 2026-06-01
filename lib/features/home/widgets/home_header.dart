@@ -7,7 +7,7 @@ import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/features/auth/models/user.dart';
 import 'package:lolipants/features/auth/providers/auth_providers.dart';
 
-/// Time-of-day greeting and signed-in user line for the home feed.
+/// Minimal greeting and avatar for the home feed.
 class HomeHeader extends ConsumerWidget {
   /// Creates the home header.
   const HomeHeader({super.key});
@@ -24,13 +24,9 @@ class HomeHeader extends ConsumerWidget {
     final auth = ref.watch(authProvider);
     final nameSuffix = auth.maybeWhen(
       data: (state) {
-        if (state is! AuthAuthenticated) {
-          return '';
-        }
+        if (state is! AuthAuthenticated) return '';
         final n = state.user.name.trim();
-        if (n.isEmpty) {
-          return '';
-        }
+        if (n.isEmpty) return '';
         final first = n.split(RegExp(r'\s+')).first;
         return ', $first';
       },
@@ -38,9 +34,9 @@ class HomeHeader extends ConsumerWidget {
     );
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+      padding: const EdgeInsets.only(bottom: AppSpacing.md),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Expanded(
             child: Column(
@@ -48,24 +44,22 @@ class HomeHeader extends ConsumerWidget {
               children: [
                 Text(
                   '$en$nameSuffix',
-                  style: AppTextStyles.titleLarge,
+                  style: AppTextStyles.titleLarge.copyWith(
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: -0.3,
+                  ),
                 ),
-                const SizedBox(height: AppSpacing.xs),
+                const SizedBox(height: 2),
                 Directionality(
                   textDirection: TextDirection.rtl,
                   child: Text(
                     '$ar$nameSuffix',
                     style: AppTextStyles.arabicBody.copyWith(
-                      fontSize: 16,
-                      color: AppColors.gold,
-                      fontWeight: FontWeight.w500,
+                      fontSize: 14,
+                      color: AppColors.fog,
+                      fontWeight: FontWeight.w400,
                     ),
                   ),
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  AppStrings.tagline,
-                  style: AppTextStyles.bodySmall.copyWith(color: AppColors.fog),
                 ),
               ],
             ),
@@ -77,13 +71,13 @@ class HomeHeader extends ConsumerWidget {
               }
               final avatarImage = _safeAvatarImage(state.user);
               return CircleAvatar(
-                radius: 26,
-                backgroundColor: AppColors.ember,
+                radius: 22,
+                backgroundColor: AppColors.stone,
                 backgroundImage: avatarImage,
                 child: avatarImage == null
                     ? Text(
                         state.user.initials,
-                        style: AppTextStyles.labelGold.copyWith(fontSize: 14),
+                        style: AppTextStyles.labelGold.copyWith(fontSize: 13),
                       )
                     : null,
               );

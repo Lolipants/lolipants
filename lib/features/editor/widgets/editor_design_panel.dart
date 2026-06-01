@@ -5,9 +5,11 @@ import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
-import 'package:lolipants/core/preferences/user_gender_provider.dart';
+import 'package:lolipants/features/editor/data/bundled_design_assets.dart';
 import 'package:lolipants/features/editor/logic/configurator_compat.dart';
+import 'package:lolipants/features/editor/data/configurator_bundled_catalog.dart';
 import 'package:lolipants/features/editor/logic/configurator_gender.dart';
+import 'package:lolipants/features/editor/logic/mannequin_gender.dart';
 import 'package:lolipants/features/editor/models/configurator_catalog.dart';
 import 'package:lolipants/features/editor/providers/configurator_providers.dart';
 import 'package:lolipants/features/editor/providers/design_catalog_providers.dart';
@@ -15,7 +17,9 @@ import 'package:lolipants/features/editor/providers/editor_provider.dart';
 import 'package:lolipants/features/editor/utils/layer_tint.dart';
 import 'package:lolipants/features/editor/widgets/configurator_option_image.dart';
 import 'package:lolipants/features/editor/widgets/editor_asset_thumb_card.dart';
+import 'package:lolipants/features/editor/widgets/catalog_design_header.dart';
 import 'package:lolipants/features/editor/widgets/catalog_design_picker.dart';
+import 'package:lolipants/features/editor/widgets/editor_panel_header.dart';
 import 'package:lolipants/features/editor/widgets/editor_studio_prompt_card.dart';
 import 'package:lolipants/features/editor/widgets/editor_style_dropdown.dart';
 
@@ -44,15 +48,19 @@ class _EditorDesignPanelState extends ConsumerState<EditorDesignPanel> {
     final editor = ref.watch(editorProvider);
     final notifier = ref.read(editorProvider.notifier);
     final catalogAsync = ref.watch(configuratorCatalogProvider);
-    final templates = ref.watch(genderOrderedConfiguratorTemplatesProvider);
+    final catalogTemplates =
+        ref.watch(configuratorCatalogProvider).valueOrNull?.templates ??
+            bundledConfiguratorCatalog().templates;
+    final templates = ref.watch(mannequinConfiguratorTemplatesProvider);
+    final catalogOnly = templates.isEmpty;
     final panelHeight = widget.height ??
         (MediaQuery.sizeOf(context).height * 0.36).clamp(260.0, 340.0);
 
     ref.listen<AsyncValue<ConfiguratorCatalog>>(configuratorCatalogProvider,
         (previous, next) {
       next.whenData((_) {
-        ref.read(editorProvider.notifier).ensureDefaultConfiguratorTemplate(
-              ref.read(genderOrderedConfiguratorTemplatesProvider),
+        ref.read(editorProvider.notifier).syncBuildLaneForMannequin(
+              ref.read(mannequinConfiguratorTemplatesProvider),
             );
       });
     });
@@ -66,25 +74,18 @@ class _EditorDesignPanelState extends ConsumerState<EditorDesignPanel> {
         ),
       ),
       data: (_) {
-        if (templates.isEmpty) {
-          return Center(
-            child: Text(
-              AppStrings.editorBuildPickTemplate,
-              style: AppTextStyles.bodyMedium,
-            ),
-          );
-        }
-
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (!mounted) return;
-          notifier.ensureDefaultConfiguratorTemplate(templates);
+          notifier.syncBuildLaneForMannequin(templates);
         });
 
-        final template = _resolveTemplate(templates, editor);
-
-        if (editor.buildStyleMode == EditorBuildStyleMode.catalog) {
-          final sections =
+        if (catalogOnly || editor.buildStyleMode == EditorBuildStyleMode.catalog) {
+          final allSections =
               ref.watch(mergedCatalogSectionsProvider(editor.mannequinId));
+          final sections = filterCatalogSectionsByMode(
+            allSections,
+            editor.catalogFilter,
+          );
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -101,34 +102,52 @@ class _EditorDesignPanelState extends ConsumerState<EditorDesignPanel> {
                   ),
                 ),
               ],
-              Padding(
-                padding: EdgeInsets.fromLTRB(
-                  AppSpacing.md,
-                  widget.embedded ? AppSpacing.xs : AppSpacing.sm,
-                  AppSpacing.md,
-                  AppSpacing.xs,
-                ),
-                child: EditorStyleDropdown(
-                  templates: templates,
-                  mannequinId: editor.mannequinId,
-                  selectedTemplateId: template.id,
-                  buildStyleMode: editor.buildStyleMode,
-                  onReset: () {
-                    notifier.setConfiguratorSlotIndex(0);
-                    notifier.resetConfiguratorBuild(templates);
-                  },
-                ),
+              CatalogDesignHeader(
+                templates: catalogTemplates,
+                mannequinId: editor.mannequinId,
+                template: catalogOnly ? null : _resolveTemplate(templates, editor),
+                catalogOnly: catalogOnly,
+                embedded: widget.embedded,
+                onReset: catalogOnly
+                    ? null
+                    : () {
+                        notifier.setConfiguratorSlotIndex(0);
+                        notifier.resetCatalogBuild(editor.mannequinId);
+                      },
               ),
               Expanded(
-                child: CatalogDesignPicker(
-                  sections: sections,
-                  selectedRef: editor.selectedCatalogDesignPath,
-                  onSelected: notifier.setCatalogDesignPath,
-                ),
+                child: _aiExpanded
+                    ? _AiSection(
+                        expanded: true,
+                        onToggle: () => setState(() => _aiExpanded = false),
+                        onGenerate: widget.onGenerateAi ?? () async {},
+                      )
+                    : CatalogDesignPicker(
+                        sections: sections,
+                        selectedRef: editor.selectedCatalogDesignPath,
+                        onSelected: notifier.setCatalogDesignPath,
+                      ),
               ),
+              if (kFeatureAiEditorTab && !_aiExpanded)
+                _AiSection(
+                  expanded: false,
+                  onToggle: () => setState(() => _aiExpanded = true),
+                  onGenerate: widget.onGenerateAi ?? () async {},
+                ),
             ],
           );
         }
+
+        if (templates.isEmpty) {
+          return Center(
+            child: Text(
+              AppStrings.editorBuildPickTemplate,
+              style: AppTextStyles.bodyMedium,
+            ),
+          );
+        }
+
+        final template = _resolveTemplate(templates, editor);
 
         final slots = activeConfiguratorSlots(
           template: template,
@@ -162,48 +181,27 @@ class _EditorDesignPanelState extends ConsumerState<EditorDesignPanel> {
                 ),
               ),
             ],
-            Padding(
-              padding: EdgeInsets.fromLTRB(
-                AppSpacing.md,
-                widget.embedded ? AppSpacing.xs : AppSpacing.sm,
-                AppSpacing.md,
-                AppSpacing.xs,
+            EditorPanelHeader(
+              embedded: widget.embedded,
+              leading: EditorStyleDropdown(
+                templates: catalogTemplates,
+                mannequinId: editor.mannequinId,
+                selectedTemplateId: template.id,
+                buildStyleMode: editor.buildStyleMode,
+                dense: true,
+                onReset: () {
+                  notifier.setConfiguratorSlotIndex(0);
+                  notifier.resetConfiguratorBuild(templates);
+                },
               ),
-              child: SizedBox(
-                height: 32,
-                child: Row(
-                  children: [
-                    EditorStyleDropdown(
-                      templates: templates,
-                      mannequinId: editor.mannequinId,
-                      selectedTemplateId: template.id,
-                      buildStyleMode: editor.buildStyleMode,
-                      onReset: () {
-                        notifier.setConfiguratorSlotIndex(0);
-                        notifier.resetConfiguratorBuild(templates);
-                      },
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: slots.length,
-                        separatorBuilder: (_, __) => const SizedBox(width: 4),
-                        itemBuilder: (context, index) {
-                          final s = slots[index];
-                          final selected = slotIndex == index;
-                          return _SlotTab(
-                            label: s.titleEn,
-                            selected: selected,
-                            onTap: () =>
-                                notifier.setConfiguratorSlotIndex(index),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              chips: [
+                for (var index = 0; index < slots.length; index++)
+                  EditorHeaderChipData(
+                    label: slots[index].titleEn,
+                    selected: slotIndex == index,
+                    onTap: () => notifier.setConfiguratorSlotIndex(index),
+                  ),
+              ],
             ),
             Expanded(
               child: _aiExpanded
@@ -260,53 +258,9 @@ class _EditorDesignPanelState extends ConsumerState<EditorDesignPanel> {
     for (final t in templates) {
       if (t.id == selectedId) return t;
     }
-    final gender = ref.read(userGenderProvider);
-    return preferredConfiguratorTemplateForGender(templates, gender) ??
+    final lane = mannequinGenderLane(editor.mannequinId);
+    return preferredConfiguratorTemplateForGender(templates, lane) ??
         templates.first;
-  }
-}
-
-class _SlotTab extends StatelessWidget {
-  const _SlotTab({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppRadius.pill),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 160),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          decoration: BoxDecoration(
-            color: selected
-                ? AppColors.gold.withValues(alpha: 0.14)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(AppRadius.pill),
-            border: Border.all(
-              color: selected ? AppColors.gold : Colors.transparent,
-            ),
-          ),
-          child: Text(
-            label,
-            style: AppTextStyles.bodySmall.copyWith(
-              fontSize: 11,
-              color: selected ? AppColors.gold : AppColors.fog,
-              fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-            ),
-          ),
-        ),
-      ),
-    );
   }
 }
 

@@ -36,18 +36,23 @@ class _DeliveryDetailsScreenState extends ConsumerState<DeliveryDetailsScreen> {
   @override
   void initState() {
     super.initState();
+    final accessoryDraft = ref.read(accessoryCheckoutDraftProvider);
     final weddingDraft = ref.read(weddingCheckoutDraftProvider);
     final draft = ref.read(checkoutDraftProvider);
-    final activeAddress = weddingDraft?.address ?? draft?.address ?? '';
+    final activeAddress =
+        accessoryDraft?.address ?? weddingDraft?.address ?? draft?.address ?? '';
     _addressController = TextEditingController(text: activeAddress);
     _cityController =
-        TextEditingController(text: weddingDraft?.city ?? draft?.city ?? 'Doha');
-    _phoneController =
-        TextEditingController(text: weddingDraft?.phone ?? draft?.phone ?? '');
-    _notesController =
-        TextEditingController(text: weddingDraft?.notes ?? draft?.notes ?? '');
-    _deliveryLat = weddingDraft?.deliveryLat ?? draft?.deliveryLat;
-    _deliveryLng = weddingDraft?.deliveryLng ?? draft?.deliveryLng;
+        TextEditingController(
+            text: accessoryDraft?.city ?? weddingDraft?.city ?? draft?.city ?? 'Doha');
+    _phoneController = TextEditingController(
+        text: accessoryDraft?.phone ?? weddingDraft?.phone ?? draft?.phone ?? '');
+    _notesController = TextEditingController(
+        text: accessoryDraft?.notes ?? weddingDraft?.notes ?? draft?.notes ?? '');
+    _deliveryLat =
+        accessoryDraft?.deliveryLat ?? weddingDraft?.deliveryLat ?? draft?.deliveryLat;
+    _deliveryLng =
+        accessoryDraft?.deliveryLng ?? weddingDraft?.deliveryLng ?? draft?.deliveryLng;
     WidgetsBinding.instance.addPostFrameCallback(
       (_) => _collectLocation(
         preferCached: _deliveryLat != null && _deliveryLng != null,
@@ -91,9 +96,10 @@ class _DeliveryDetailsScreenState extends ConsumerState<DeliveryDetailsScreen> {
 
   void _saveAndContinue() {
     if (!_formKey.currentState!.validate()) return;
+    final accessoryDraft = ref.read(accessoryCheckoutDraftProvider);
     final weddingDraft = ref.read(weddingCheckoutDraftProvider);
     final draft = ref.read(checkoutDraftProvider);
-    if (weddingDraft == null && draft == null) {
+    if (accessoryDraft == null && weddingDraft == null && draft == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Checkout session expired. Restart.')),
       );
@@ -113,6 +119,20 @@ class _DeliveryDetailsScreenState extends ConsumerState<DeliveryDetailsScreen> {
     final notes = _notesController.text.trim().isEmpty
         ? null
         : _notesController.text.trim();
+    if (accessoryDraft != null) {
+      ref.read(accessoryCheckoutDraftProvider.notifier).state =
+          accessoryDraft.copyWith(
+        address: address,
+        city: city,
+        phone: phone,
+        notes: notes,
+        deliveryLat: lat,
+        deliveryLng: lng,
+        quote: null,
+      );
+      context.push('/order/accessory-quote-review');
+      return;
+    }
     if (weddingDraft != null) {
       ref.read(weddingCheckoutDraftProvider.notifier).state =
           weddingDraft.copyWith(

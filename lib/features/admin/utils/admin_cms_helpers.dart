@@ -4,6 +4,8 @@ import 'package:lolipants/core/errors/app_exception_message_mapper.dart';
 import 'package:lolipants/features/browse/providers/preset_providers.dart';
 import 'package:lolipants/features/editor/providers/configurator_providers.dart';
 import 'package:lolipants/features/editor/providers/design_catalog_providers.dart';
+import 'package:lolipants/features/accessories/models/accessory.dart';
+import 'package:lolipants/features/accessories/providers/accessories_providers.dart';
 import 'package:lolipants/features/wedding/models/wedding_dress.dart';
 import 'package:lolipants/features/wedding/providers/wedding_providers.dart';
 
@@ -35,6 +37,12 @@ void invalidatePublicCmsCache(WidgetRef ref, String resource) {
       for (final filter in WeddingCategoryFilter.values) {
         ref.invalidate(weddingDressesProvider(filter));
       }
+    case 'accessories':
+      ref.invalidate(accessoriesListProvider);
+      for (final filter in AccessoryCategoryFilter.values) {
+        ref.invalidate(accessoriesListProvider(filter));
+      }
+      ref.invalidate(addonAccessoriesProvider);
     case 'configurator_templates':
     case 'configurator_slots':
     case 'configurator_options':

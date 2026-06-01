@@ -107,6 +107,12 @@ class _OrderSummaryScreenState extends ConsumerState<OrderSummaryScreen> {
                     _Row(label: 'Fabric', value: fabric),
                     _Row(label: 'Pattern', value: pattern),
                     _Row(label: 'Primary colour', value: colour),
+                    if (design.accessoriesSummary != null &&
+                        design.accessoriesSummary!.trim().isNotEmpty)
+                      _Row(
+                        label: 'Accessories',
+                        value: design.accessoriesSummary!.trim(),
+                      ),
                   ],
                 ),
               ),

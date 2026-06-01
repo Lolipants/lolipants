@@ -5,7 +5,6 @@ import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/features/editor/logic/configurator_gender.dart';
-import 'package:lolipants/features/editor/logic/mannequin_gender.dart';
 import 'package:lolipants/features/editor/models/configurator_catalog.dart';
 import 'package:lolipants/features/editor/providers/editor_provider.dart';
 
@@ -17,13 +16,19 @@ const String kResetBuildStyleValue = '__reset__';
 
 /// Width of the style trigger so it does not shift when the label changes.
 double editorStyleDropdownTriggerWidth({
-  required List<ConfiguratorTemplate> templates,
+  required List<ConfiguratorTemplate> laneTemplates,
+  required bool catalogOnly,
   required bool dense,
 }) {
   final labels = [
-    for (final t in templates) t.nameEn,
+    for (final t in laneTemplates) t.nameEn,
     AppStrings.editorStyleCatalogMode,
   ];
+  if (catalogOnly) {
+    labels
+      ..clear()
+      ..add(AppStrings.editorStyleCatalogMode);
+  }
   final textStyle = AppTextStyles.bodySmall.copyWith(
     color: dense ? AppColors.fog : AppColors.sand,
     fontSize: dense ? 10 : null,
@@ -53,8 +58,10 @@ class EditorStyleDropdown extends ConsumerWidget {
     required this.mannequinId,
     required this.selectedTemplateId,
     required this.buildStyleMode,
+    this.catalogOnly = false,
     this.onReset,
     this.dense = false,
+    this.compactMaxWidth,
     super.key,
   });
 
@@ -62,30 +69,84 @@ class EditorStyleDropdown extends ConsumerWidget {
   final String mannequinId;
   final String selectedTemplateId;
   final EditorBuildStyleMode buildStyleMode;
+  final bool catalogOnly;
   final VoidCallback? onReset;
   final bool dense;
 
+  /// Caps trigger width in dense header rows (e.g. beside filter chips).
+  final double? compactMaxWidth;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final laneTemplates =
+        configuratorTemplatesForMannequin(templates, mannequinId);
+    final onlyCatalog = catalogOnly || laneTemplates.isEmpty;
+
     ConfiguratorTemplate? current;
-    for (final t in templates) {
-      if (t.id == selectedTemplateId) {
-        current = t;
-        break;
+    if (!onlyCatalog) {
+      for (final t in laneTemplates) {
+        if (t.id == selectedTemplateId) {
+          current = t;
+          break;
+        }
       }
     }
 
-    final label = buildStyleMode == EditorBuildStyleMode.catalog
+    final label = onlyCatalog || buildStyleMode == EditorBuildStyleMode.catalog
         ? AppStrings.editorStyleCatalogMode
         : (current?.nameEn ?? 'Style');
 
-    final genderLane = mannequinGenderLane(mannequinId);
-    final orderedTemplates =
-        sortConfiguratorTemplatesForGender(templates, genderLane);
-    final triggerWidth = editorStyleDropdownTriggerWidth(
-      templates: templates,
+    var triggerWidth = editorStyleDropdownTriggerWidth(
+      laneTemplates: laneTemplates,
+      catalogOnly: onlyCatalog,
       dense: dense,
     );
+    if (dense && compactMaxWidth != null) {
+      triggerWidth = triggerWidth.clamp(72, compactMaxWidth!);
+    }
+
+    final trigger = SizedBox(
+      width: triggerWidth,
+      child: Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: dense ? 4 : 8,
+          vertical: dense ? 4 : 5,
+        ),
+        decoration: BoxDecoration(
+          color: dense ? Colors.transparent : AppColors.smoke,
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+          border: dense ? null : Border.all(color: AppColors.borderSubtle),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: dense ? AppColors.fog : AppColors.sand,
+                  fontSize: dense ? 10 : null,
+                ),
+              ),
+            ),
+            if (!onlyCatalog)
+              Icon(
+                Icons.expand_more,
+                size: dense ? 18 : 14,
+                color: AppColors.fog,
+              ),
+          ],
+        ),
+      ),
+    );
+
+    if (onlyCatalog) {
+      return Tooltip(
+        message: AppStrings.editorStyleCatalogMode,
+        child: trigger,
+      );
+    }
 
     return PopupMenuButton<String>(
       tooltip: AppStrings.editorBuildChangeStyle,
@@ -105,10 +166,10 @@ class EditorStyleDropdown extends ConsumerWidget {
           notifier.enterCatalogBuildMode(mannequinId);
           return;
         }
-        notifier.setConfiguratorTemplate(value, templates);
+        notifier.setConfiguratorTemplate(value, laneTemplates);
       },
       itemBuilder: (context) => [
-        for (final t in orderedTemplates)
+        for (final t in laneTemplates)
           PopupMenuItem(
             value: t.id,
             child: Text(
@@ -149,42 +210,7 @@ class EditorStyleDropdown extends ConsumerWidget {
             ),
           ),
       ],
-      child: SizedBox(
-        width: triggerWidth,
-        child: Container(
-          padding: EdgeInsets.symmetric(
-            horizontal: dense ? 4 : 8,
-            vertical: dense ? 4 : 5,
-          ),
-          decoration: BoxDecoration(
-            color: dense ? Colors.transparent : AppColors.smoke,
-            borderRadius: BorderRadius.circular(AppRadius.pill),
-            border: dense
-                ? null
-                : Border.all(color: AppColors.borderSubtle),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: dense ? AppColors.fog : AppColors.sand,
-                    fontSize: dense ? 10 : null,
-                  ),
-                ),
-              ),
-              Icon(
-                Icons.expand_more,
-                size: dense ? 18 : 14,
-                color: AppColors.fog,
-              ),
-            ],
-          ),
-        ),
-      ),
+      child: trigger,
     );
   }
 }

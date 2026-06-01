@@ -21,6 +21,7 @@ import 'package:lolipants/features/editor/constants/ai_look_prompt_suffix.dart';
 import 'package:lolipants/features/editor/data/built_in_mannequin_assets.dart';
 import 'package:lolipants/features/editor/data/bundled_design_assets.dart';
 import 'package:lolipants/features/editor/data/bundled_fabric_catalog.dart';
+import 'package:lolipants/features/editor/logic/catalog_design_gender_filter.dart';
 import 'package:lolipants/features/editor/models/catalog_design_pick.dart';
 import 'package:lolipants/features/editor/providers/design_catalog_providers.dart';
 import 'package:lolipants/features/editor/data/configurator_defaults.dart';
@@ -31,6 +32,7 @@ import 'package:lolipants/features/editor/widgets/editor_resize_handle.dart';
 import 'package:lolipants/core/preferences/user_gender_provider.dart';
 import 'package:lolipants/features/editor/logic/configurator_compat.dart';
 import 'package:lolipants/features/editor/logic/configurator_gender.dart';
+import 'package:lolipants/features/editor/logic/mannequin_gender.dart';
 import 'package:lolipants/features/editor/models/configurator_catalog.dart';
 import 'package:lolipants/features/wedding/models/wedding_dress.dart';
 
@@ -120,13 +122,16 @@ class EditorState {
     required this.weddingCategoryFilter,
     required this.weddingFulfillment,
     required this.rentalDays,
+    required this.selectedAccessoryIds,
+    required this.accessoriesSummary,
   });
 
   factory EditorState.initial() {
     final useMensDefaults = kFeatureMens;
     return EditorState(
       designName: '',
-      mannequinId: useMensDefaults ? 'standard_male' : kPresetCatalogMannequinId,
+      mannequinId:
+          useMensDefaults ? 'standard_male' : kPresetCatalogMannequinId,
       garmentType: useMensDefaults ? 'thobe' : 'abaya',
       primaryColour: AppColors.teal,
       accentColour: AppColors.gold,
@@ -167,6 +172,8 @@ class EditorState {
       weddingCategoryFilter: WeddingCategoryFilter.all,
       weddingFulfillment: WeddingFulfillment.rent,
       rentalDays: 3,
+      selectedAccessoryIds: const [],
+      accessoriesSummary: '',
     );
   }
 
@@ -189,9 +196,11 @@ class EditorState {
   final bool isPrintOverlaySelected;
 
   final String? printImagePath;
+
   /// Local path or uploaded HTTPS URL for optional silhouette/sketch reference.
   final String? sketchImagePath;
   final String? customMannequinImagePath;
+
   /// Bundled flat-lay PNG path under `assets/images/designs/`.
   final String selectedCatalogDesignPath;
 
@@ -247,6 +256,12 @@ class EditorState {
   final WeddingFulfillment weddingFulfillment;
   final int rentalDays;
 
+  /// Garment order add-on accessory ids.
+  final List<String> selectedAccessoryIds;
+
+  /// Human-readable accessory labels for checkout summary.
+  final String accessoriesSummary;
+
   bool get isWeddingTab => activeTab == EditorTab.wedding;
 
   /// True when the user has explicitly picked a fabric from the catalogue.
@@ -299,6 +314,8 @@ class EditorState {
     WeddingCategoryFilter? weddingCategoryFilter,
     WeddingFulfillment? weddingFulfillment,
     int? rentalDays,
+    List<String>? selectedAccessoryIds,
+    String? accessoriesSummary,
   }) {
     return EditorState(
       designName: designName ?? this.designName,
@@ -358,6 +375,9 @@ class EditorState {
           weddingCategoryFilter ?? this.weddingCategoryFilter,
       weddingFulfillment: weddingFulfillment ?? this.weddingFulfillment,
       rentalDays: rentalDays ?? this.rentalDays,
+      selectedAccessoryIds:
+          selectedAccessoryIds ?? this.selectedAccessoryIds,
+      accessoriesSummary: accessoriesSummary ?? this.accessoriesSummary,
     );
   }
 }
@@ -384,8 +404,9 @@ class EditorNotifier extends StateNotifier<EditorState> {
   void setMannequin(String id) {
     if (state.buildStyleMode == EditorBuildStyleMode.catalog) {
       final sections = ref.read(mergedCatalogSectionsProvider(id));
-      final paths =
-          sections.expand((s) => s.$2.map((p) => p.ref)).toList(growable: false);
+      final paths = sections
+          .expand((s) => s.$2.map((p) => p.ref))
+          .toList(growable: false);
       var path = state.selectedCatalogDesignPath;
       if (paths.isNotEmpty && !paths.contains(path)) {
         path = paths.first;
@@ -398,6 +419,24 @@ class EditorNotifier extends StateNotifier<EditorState> {
       return;
     }
     state = state.copyWith(mannequinId: id, hasUnsavedChanges: true);
+  }
+
+  /// When [mannequinTemplates] is empty, switches to design-catalogue build.
+  void syncBuildLaneForMannequin(List<ConfiguratorTemplate> mannequinTemplates) {
+    if (mannequinTemplates.isNotEmpty) {
+      if (state.buildStyleMode == EditorBuildStyleMode.catalog) return;
+      ensureDefaultConfiguratorTemplate(mannequinTemplates);
+      return;
+    }
+    if (state.activeTab == EditorTab.wedding) {
+      setTab(EditorTab.build);
+    }
+    if (state.heroMode == EditorHeroMode.look) {
+      setHeroMode(EditorHeroMode.compose);
+    }
+    if (state.buildStyleMode != EditorBuildStyleMode.catalog) {
+      enterCatalogBuildMode(state.mannequinId);
+    }
   }
 
   void setCustomMannequinImagePath(String? path) {
@@ -414,35 +453,54 @@ class EditorNotifier extends StateNotifier<EditorState> {
         cmsId != null ? lookup[cmsId]?.garmentType?.trim() : null;
     final isCasual = isCasualCatalogDesignPath(assetPath) ||
         (cmsGarment != null && kCasualGarmentTypes.contains(cmsGarment));
+    final isLook = isRenderedCatalogLookPath(assetPath);
+    final fromPath = garmentTypeFromCatalogDesignPathName(assetPath);
     final resolvedGarment = (cmsGarment != null && cmsGarment.isNotEmpty)
         ? cmsGarment
-        : isCasual
-            ? garmentTypeFromCatalogDesignPath(assetPath)
-            : null;
+        : (fromPath != null && fromPath.isNotEmpty)
+            ? fromPath
+            : isCasual
+                ? garmentTypeFromCatalogDesignPath(assetPath)
+                : isLook
+                    ? state.garmentType
+                    : null;
+    final customizable = isCasualBasicFlatlayPath(assetPath);
     state = state.copyWith(
       selectedCatalogDesignPath: assetPath,
+      buildStyleMode: EditorBuildStyleMode.catalog,
       garmentType: resolvedGarment ?? state.garmentType,
+      heroMode: EditorHeroMode.compose,
       hasUnsavedChanges: true,
+      textLayers: customizable ? state.textLayers : const [],
+      printImagePath: customizable ? state.printImagePath : null,
+      selectedTextLayerId: customizable ? state.selectedTextLayerId : null,
+      isPrintOverlaySelected:
+          customizable ? state.isPrintOverlaySelected : false,
     );
-    if (isCasual) {
+    if (isCasual && state.buildStyleMode != EditorBuildStyleMode.catalog) {
       loadFabrics();
     }
   }
 
   void setCatalogFilter(DesignCatalogFilter filter) {
-    final sections = catalogSectionsFor(filter);
+    final sections = bundledCatalogSectionsForMannequin(
+      state.mannequinId,
+      catalogFilter: filter,
+    );
     var path = state.selectedCatalogDesignPath;
     if (sections.isNotEmpty) {
-      final visible = sections.expand((e) => e.$2).toSet();
+      final visible = sections.expand((e) => e.$2.map((p) => p.ref)).toSet();
       if (!visible.contains(path)) {
-        path = sections.first.$2.first;
+        path = sections.first.$2.first.ref;
       }
     }
-    final isCasual = filter == DesignCatalogFilter.casual ||
-        isCasualCatalogDesignPath(path);
+    final isCasual =
+        filter == DesignCatalogFilter.casual || isCasualCatalogDesignPath(path);
     state = state.copyWith(
       catalogFilter: filter,
       selectedCatalogDesignPath: path,
+      buildStyleMode: EditorBuildStyleMode.catalog,
+      heroMode: EditorHeroMode.compose,
       garmentType:
           isCasual ? garmentTypeFromCatalogDesignPath(path) : state.garmentType,
       hasUnsavedChanges: true,
@@ -500,6 +558,25 @@ class EditorNotifier extends StateNotifier<EditorState> {
     state = state.copyWith(selectedWeddingDressId: dressId);
   }
 
+  void setSelectedAccessories({
+    required List<String> ids,
+    required String summary,
+  }) {
+    state = state.copyWith(
+      selectedAccessoryIds: ids,
+      accessoriesSummary: summary,
+      hasUnsavedChanges: true,
+    );
+  }
+
+  void clearAccessories() {
+    state = state.copyWith(
+      selectedAccessoryIds: const [],
+      accessoriesSummary: '',
+      hasUnsavedChanges: true,
+    );
+  }
+
   void setWeddingCategoryFilter(WeddingCategoryFilter filter) {
     state = state.copyWith(weddingCategoryFilter: filter);
   }
@@ -514,7 +591,10 @@ class EditorNotifier extends StateNotifier<EditorState> {
 
   /// Applies [kDefaultConfiguratorTemplateId] when build has no valid template.
   void ensureDefaultConfiguratorTemplate(List<ConfiguratorTemplate> templates) {
-    if (templates.isEmpty) return;
+    if (templates.isEmpty) {
+      syncBuildLaneForMannequin(const []);
+      return;
+    }
     if (state.buildStyleMode == EditorBuildStyleMode.catalog) return;
     final current = state.configuratorTemplateId.trim();
     if (current.isNotEmpty) {
@@ -528,8 +608,8 @@ class EditorNotifier extends StateNotifier<EditorState> {
         return;
       }
     }
-    final gender = ref.read(userGenderProvider);
-    final pick = preferredConfiguratorTemplateForGender(templates, gender);
+    final lane = mannequinGenderLane(state.mannequinId);
+    final pick = preferredConfiguratorTemplateForGender(templates, lane);
     final preferred = pick?.id ??
         (templates.any((t) => t.id == kDefaultConfiguratorTemplateId)
             ? kDefaultConfiguratorTemplateId
@@ -633,6 +713,22 @@ class EditorNotifier extends StateNotifier<EditorState> {
     );
   }
 
+  /// Resets catalogue filter/selection while staying in design-catalogue mode.
+  void resetCatalogBuild(String mannequinId) {
+    final sections = ref.read(mergedCatalogSectionsProvider(mannequinId));
+    final path = sections.isNotEmpty && sections.first.$2.isNotEmpty
+        ? sections.first.$2.first.ref
+        : kDefaultCatalogDesignPath;
+    state = state.copyWith(
+      catalogFilter: DesignCatalogFilter.all,
+      selectedCatalogDesignPath: path,
+      heroMode: EditorHeroMode.compose,
+      unsetRefinedLook: true,
+      lookGenerationError: null,
+      hasUnsavedChanges: true,
+    );
+  }
+
   /// Clears modular build state (call when leaving the editor).
   void resetConfigurator() {
     state = state.copyWith(
@@ -666,8 +762,8 @@ class EditorNotifier extends StateNotifier<EditorState> {
       );
       return;
     }
-    final gender = ref.read(userGenderProvider);
-    final pick = preferredConfiguratorTemplateForGender(templates, gender);
+    final lane = mannequinGenderLane(state.mannequinId);
+    final pick = preferredConfiguratorTemplateForGender(templates, lane);
     final preferred = pick?.id ??
         (templates.any((t) => t.id == kDefaultConfiguratorTemplateId)
             ? kDefaultConfiguratorTemplateId
@@ -788,6 +884,8 @@ class EditorNotifier extends StateNotifier<EditorState> {
       weddingCategoryFilter: initial.weddingCategoryFilter,
       weddingFulfillment: initial.weddingFulfillment,
       rentalDays: initial.rentalDays,
+      selectedAccessoryIds: initial.selectedAccessoryIds,
+      accessoriesSummary: initial.accessoriesSummary,
     );
   }
 
@@ -801,8 +899,8 @@ class EditorNotifier extends StateNotifier<EditorState> {
             trimmedCatalog.startsWith('https://'));
     final presetId = args.presetId ?? '';
     final garment = args.garmentType ?? '';
-    final isCasual = presetId.startsWith('casual_') ||
-        kCasualGarmentTypes.contains(garment);
+    final isCasual =
+        presetId.startsWith('casual_') || kCasualGarmentTypes.contains(garment);
     final nextFilter =
         isCasual ? DesignCatalogFilter.casual : DesignCatalogFilter.all;
     var nextCatalogPath = state.selectedCatalogDesignPath;
@@ -814,6 +912,7 @@ class EditorNotifier extends StateNotifier<EditorState> {
         nextCatalogPath = casualSections.first.$2.first;
       }
     }
+    final useCatalogLane = catalogOk || isCasual;
     state = state.copyWith(
       designName: args.designName ?? state.designName,
       garmentType: args.garmentType ?? state.garmentType,
@@ -824,6 +923,9 @@ class EditorNotifier extends StateNotifier<EditorState> {
       mannequinId: args.mannequinId ?? state.mannequinId,
       selectedCatalogDesignPath: nextCatalogPath,
       catalogFilter: nextFilter,
+      buildStyleMode: useCatalogLane
+          ? EditorBuildStyleMode.catalog
+          : state.buildStyleMode,
       activeTool: EditorTool.colour,
       activeTab: EditorTab.build,
       remoteDesignId: null,
@@ -848,19 +950,29 @@ class EditorNotifier extends StateNotifier<EditorState> {
     final buildStyleMode = _buildStyleModeFromRenderMetadata(
       design.renderMetadata,
     );
-    final hasRefinedLook =
-        refinedLookUrl != null && refinedLookUrl.isNotEmpty;
-    final resolvedMannequin =
-        editorMannequinIdFromDesign(design) ?? EditorState.initial().mannequinId;
+    final hasRefinedLook = refinedLookUrl != null && refinedLookUrl.isNotEmpty;
+    final resolvedMannequin = editorMannequinIdFromDesign(design) ??
+        EditorState.initial().mannequinId;
     final customMannequin = editorCustomMannequinFromRenderMetadata(meta);
     final aiPrompt = meta['aiLookUserPrompt']?.toString().trim() ?? '';
+    final accessoriesBlock = meta['accessories'];
+    var accessoryIds = const <String>[];
+    var accessoriesSummary = '';
+    if (accessoriesBlock is Map) {
+      final rawIds = accessoriesBlock['ids'];
+      if (rawIds is List) {
+        accessoryIds = rawIds.map((e) => e.toString()).toList(growable: false);
+      }
+      accessoriesSummary = accessoriesBlock['summary']?.toString() ?? '';
+    }
     state = state.copyWith(
       designName: design.name,
       garmentType: snapshot.garmentType,
       primaryColour: _parseHexColor(design.primaryColour),
-      accentColour: design.accentColour != null && design.accentColour!.isNotEmpty
-          ? _parseHexColor(design.accentColour!)
-          : _parseHexColor(design.primaryColour),
+      accentColour:
+          design.accentColour != null && design.accentColour!.isNotEmpty
+              ? _parseHexColor(design.accentColour!)
+              : _parseHexColor(design.primaryColour),
       selectedFabricId: design.fabricId ?? state.selectedFabricId,
       fabricQuality: design.fabricQuality ?? state.fabricQuality,
       selectedPatternId: design.patternId ?? state.selectedPatternId,
@@ -878,8 +990,9 @@ class EditorNotifier extends StateNotifier<EditorState> {
       activeTool: EditorTool.colour,
       activeTab: EditorTab.build,
       selectedCatalogDesignPath: snapshot.catalogDesignPath,
-      catalogFilter:
-          snapshot.isCasual ? DesignCatalogFilter.casual : DesignCatalogFilter.all,
+      catalogFilter: snapshot.isCasual
+          ? DesignCatalogFilter.casual
+          : DesignCatalogFilter.all,
       configuratorTemplateId: configurator.templateId ?? '',
       configuratorSelections: configurator.selections,
       configuratorSummary: configurator.summary ?? '',
@@ -889,6 +1002,8 @@ class EditorNotifier extends StateNotifier<EditorState> {
       heroMode: hasRefinedLook ? EditorHeroMode.look : EditorHeroMode.compose,
       isPrintOverlaySelected: false,
       unsetSelectedTextLayerId: true,
+      selectedAccessoryIds: accessoryIds,
+      accessoriesSummary: accessoriesSummary,
       hasUnsavedChanges: false,
     );
     loadFabrics();
@@ -1216,7 +1331,25 @@ class EditorNotifier extends StateNotifier<EditorState> {
   }
 
   void setHeroMode(EditorHeroMode mode) {
+    if (mode == EditorHeroMode.compose &&
+        state.buildStyleMode == EditorBuildStyleMode.catalog) {
+      state = state.copyWith(
+        heroMode: mode,
+        unsetRefinedLook: true,
+      );
+      return;
+    }
     state = state.copyWith(heroMode: mode);
+  }
+
+  /// Ensures catalogue picks always open on Compose / layers, not AI Look.
+  void ensureCatalogComposeHero() {
+    if (state.buildStyleMode != EditorBuildStyleMode.catalog) return;
+    if (state.heroMode == EditorHeroMode.compose) return;
+    state = state.copyWith(
+      heroMode: EditorHeroMode.compose,
+      unsetRefinedLook: true,
+    );
   }
 
   void setPrintPlacement(PrintPlacement placement) {
@@ -1506,6 +1639,11 @@ class EditorNotifier extends StateNotifier<EditorState> {
             aiLayerNotes: state.configuratorAiLayerNotes,
           ),
         'aiRefinedLookUrl': state.refinedLookUrl?.trim(),
+        if (state.selectedAccessoryIds.isNotEmpty)
+          'accessories': {
+            'ids': state.selectedAccessoryIds,
+            'summary': state.accessoriesSummary,
+          },
       },
       'textLayers': state.textLayers
           .map(
@@ -1561,7 +1699,8 @@ class EditorNotifier extends StateNotifier<EditorState> {
     if (trimmed.isEmpty) return;
 
     final repo = ref.read(designsRepositoryProvider);
-    final name = state.designName.trim().isEmpty ? 'My look' : state.designName.trim();
+    final name =
+        state.designName.trim().isEmpty ? 'My look' : state.designName.trim();
     final result = await repo.updateDesign(
       id: id,
       payload: {

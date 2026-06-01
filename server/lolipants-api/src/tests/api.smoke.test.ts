@@ -96,6 +96,24 @@ class MockDb {
     if (sql.includes("FROM order_status_history")) {
       return [];
     }
+    if (sql.includes("FROM order_accessories")) {
+      return [];
+    }
+    if (sql.includes("FROM accessories")) {
+      return [
+        {
+          id: "accessory_seed_scarf_01",
+          label_en: "Silk Evening Scarf",
+          label_ar: "وشاح",
+          category: "scarf",
+          image_url: "https://example.com/s.png",
+          sale_price: 85,
+          allow_addon: 1,
+          is_active: 1,
+          sort_order: 1,
+        },
+      ];
+    }
     if (sql.includes("SELECT * FROM posts")) {
       return [...this.posts.values()];
     }
@@ -215,6 +233,15 @@ class MockDb {
       if (!order) return null;
       return { status: order.status, tailor_id: order.tailor_id };
     }
+    if (sql.includes("SELECT status, tailor_id, courier_id FROM orders WHERE id = ?")) {
+      const order = this.orders.get(String(binds[0] ?? ""));
+      if (!order) return null;
+      return {
+        status: order.status,
+        tailor_id: order.tailor_id,
+        courier_id: order.courier_id ?? null,
+      };
+    }
     if (sql.includes("SELECT id FROM measurements WHERE user_id = ? ORDER BY saved_at DESC")) {
       const userId = String(binds[0] ?? "");
       const measurement = this.measurements.find((m) => m.user_id === userId);
@@ -225,6 +252,29 @@ class MockDb {
       const order = this.orders.get(String(binds[0] ?? ""));
       if (!order || order.user_id !== binds[1]) return null;
       return order;
+    }
+    if (sql.includes("WHERE o.id = ? AND o.user_id = ?")) {
+      const order = this.orders.get(String(binds[0] ?? ""));
+      if (!order || order.user_id !== binds[1]) return null;
+      const design = this.designs.get(String(order.design_id ?? ""));
+      return {
+        ...order,
+        design_name: design?.name ?? "Smoke",
+        design_garment_type: design?.garment_type ?? "thobe",
+        tailor_name: "Test Tailor",
+        tailor_shop_name: "Smoke Tailor",
+      };
+    }
+    if (sql.includes("WHERE o.id = ? AND o.tailor_id = ?")) {
+      const order = this.orders.get(String(binds[0] ?? ""));
+      if (!order || order.tailor_id !== binds[1]) return null;
+      const design = this.designs.get(String(order.design_id ?? ""));
+      return {
+        ...order,
+        design_name: design?.name ?? "Smoke",
+        design_print_image_url: design?.print_image_url ?? null,
+        design_sketch_image_url: design?.sketch_image_url ?? null,
+      };
     }
     if (sql.includes("SELECT id, status FROM orders WHERE id = ? AND user_id = ?")) {
       const order = this.orders.get(String(binds[0] ?? ""));
@@ -255,6 +305,14 @@ class MockDb {
     }
     if (sql.includes("SELECT follower_count FROM users WHERE id = ?")) {
       return { follower_count: 1 };
+    }
+    if (sql.includes("FROM payment_transactions WHERE order_id = ?")) {
+      return null;
+    }
+    if (sql.includes("SELECT user_id FROM orders WHERE id = ?")) {
+      const order = this.orders.get(String(binds[0] ?? ""));
+      if (!order) return null;
+      return { user_id: order.user_id };
     }
     return null;
   }
@@ -298,7 +356,8 @@ class MockDb {
         base_price: binds[13],
         fabric_fee: binds[14],
         delivery_fee: binds[15],
-        total_price: binds[16],
+        accessory_fee: binds[16],
+        total_price: binds[17],
       });
       return;
     }
@@ -565,6 +624,7 @@ describe("API smoke tests for CRUD flows", () => {
     })).status).toBe(200);
 
     expect((await apiRequest("GET", "/fabrics")).status).toBe(200);
+    expect((await apiRequest("GET", "/accessories")).status).toBe(200);
     expect((await apiRequest("GET", "/presets")).status).toBe(200);
     expect((await apiRequest("GET", "/mannequins", { token: "valid-user" })).status).toBe(200);
 

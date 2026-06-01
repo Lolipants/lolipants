@@ -21,6 +21,8 @@ import 'package:lolipants/features/editor/models/garment_design.dart';
 import 'package:lolipants/features/community/providers/community_providers.dart';
 import 'package:lolipants/features/editor/data/bundled_design_assets.dart';
 import 'package:lolipants/features/editor/data/editor_design_restore.dart';
+import 'package:lolipants/features/editor/logic/catalog_compose_hero.dart';
+import 'package:lolipants/features/editor/widgets/catalog_design_preview.dart';
 import 'package:lolipants/features/editor/models/configurator_catalog.dart';
 import 'package:lolipants/features/editor/providers/designs_providers.dart';
 import 'package:lolipants/features/editor/providers/editor_provider.dart';
@@ -31,6 +33,7 @@ import 'package:lolipants/features/editor/widgets/editor_compose_tool_rail.dart'
 import 'package:lolipants/features/editor/widgets/editor_bottom_panel.dart';
 import 'package:lolipants/features/editor/widgets/editor_design_summary_bar.dart';
 import 'package:lolipants/features/editor/providers/configurator_providers.dart';
+import 'package:lolipants/features/editor/widgets/editor_catalog_compose_hero.dart';
 import 'package:lolipants/features/editor/widgets/editor_hero_preview.dart';
 import 'package:lolipants/features/editor/widgets/editor_style_picker_sheet.dart';
 import 'package:lolipants/features/orders/models/wedding_order_draft.dart';
@@ -139,7 +142,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
     _pendingAiHomeDraft = false;
 
     final notifier = _editorNotifier;
-    final templates = ref.read(genderOrderedConfiguratorTemplatesProvider);
+    final templates = ref.read(mannequinConfiguratorTemplatesProvider);
     if (templates.isNotEmpty) {
       notifier.ensureDefaultConfiguratorTemplate(templates);
     }
@@ -187,10 +190,19 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
 
     final editor = ref.watch(editorProvider);
     final notifier = ref.read(editorProvider.notifier);
+    final mannequinTemplates = ref.watch(mannequinConfiguratorTemplatesProvider);
+    ref.listen<List<ConfiguratorTemplate>>(
+      mannequinConfiguratorTemplatesProvider,
+      (previous, next) {
+        notifier.syncBuildLaneForMannequin(next);
+      },
+    );
+    final hasConfigurator = mannequinTemplates.isNotEmpty;
     final quotaAsync = ref.watch(aiRenderQuotaProvider);
-    final canGenerateLook = !editor.lookGenerating &&
-        (quotaAsync.valueOrNull?.canRender ?? true);
+    final canGenerateLook =
+        !editor.lookGenerating && (quotaAsync.valueOrNull?.canRender ?? true);
     final isWedding = editor.isWeddingTab;
+    final showCatalogComposeHero = showsCatalogComposeHero(editor);
 
     return Scaffold(
       body: Stack(
@@ -211,16 +223,18 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                       onOrder: isWedding
                           ? () => _orderWeddingDress(context)
                           : () => _orderNow(context),
-                      onShare: isWedding ? null : () => _showShareOptions(context),
+                      onShare:
+                          isWedding ? null : () => _showShareOptions(context),
                       onSizing: () => context.push('/sizing'),
                       saving: editor.isSaving,
                       heroMode: editor.heroMode,
                       onHeroModeChanged: notifier.setHeroMode,
+                      aiLookEnabled: hasConfigurator,
                       isWeddingTab: isWedding,
-                      weddingOrderLabel: editor.weddingFulfillment ==
-                              WeddingFulfillment.rent
-                          ? AppStrings.weddingRentDress
-                          : AppStrings.weddingBuyDress,
+                      weddingOrderLabel:
+                          editor.weddingFulfillment == WeddingFulfillment.rent
+                              ? AppStrings.weddingRentDress
+                              : AppStrings.weddingBuyDress,
                     ),
                     Expanded(
                       child: Column(
@@ -234,130 +248,155 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                                 4,
                               ),
                               child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              color: AppColors.smoke.withValues(alpha: 0.45),
-                              borderRadius: BorderRadius.circular(AppRadius.lg),
-                              border: Border.all(
-                                color: AppColors.borderSubtle
-                                    .withValues(alpha: 0.65),
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.14),
-                                  blurRadius: 28,
-                                  offset: const Offset(0, 10),
-                                ),
-                              ],
-                            ),
-                            child: ClipRRect(
-                              borderRadius:
-                                  BorderRadius.circular(AppRadius.lg),
-                              child: Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  Positioned.fill(
-                                    child: RepaintBoundary(
-                                      key: _heroCaptureKey,
-                                      child: ColoredBox(
-                                        color: Colors.white,
-                                        child: EditorHeroPreview(
-                                          state: editor,
-                                          activeTab: editor.activeTab,
-                                        ),
-                                      ),
-                                    ),
+                                decoration: BoxDecoration(
+                                  color: showCatalogComposeHero
+                                      ? kCatalogPreviewBackground
+                                      : AppColors.smoke
+                                          .withValues(alpha: 0.45),
+                                  borderRadius:
+                                      BorderRadius.circular(AppRadius.lg),
+                                  border: Border.all(
+                                    color: AppColors.borderSubtle
+                                        .withValues(alpha: 0.65),
                                   ),
-                                  if (editor.lookGenerating)
-                                    Positioned.fill(
-                                      child: ColoredBox(
-                                        color: Colors.black
-                                            .withValues(alpha: 0.25),
-                                        child: const Center(
-                                          child: CircularProgressIndicator(),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color:
+                                          Colors.black.withValues(alpha: 0.14),
+                                      blurRadius: 28,
+                                      offset: const Offset(0, 10),
+                                    ),
+                                  ],
+                                ),
+                                child: ClipRRect(
+                                  borderRadius:
+                                      BorderRadius.circular(AppRadius.lg),
+                                  child: Stack(
+                                    fit: StackFit.expand,
+                                    alignment: Alignment.center,
+                                    children: [
+                                      Positioned.fill(
+                                        child: RepaintBoundary(
+                                          key: _heroCaptureKey,
+                                          child: showCatalogComposeHero
+                                              ? const EditorCatalogComposeHero()
+                                              : DecoratedBox(
+                                                  decoration:
+                                                      const BoxDecoration(
+                                                    color: Colors.white,
+                                                  ),
+                                                  child: SizedBox.expand(
+                                                    child: EditorHeroPreview(
+                                                      state: editor,
+                                                      activeTab:
+                                                          editor.activeTab,
+                                                    ),
+                                                  ),
+                                                ),
                                         ),
                                       ),
-                                    ),
-                                  if (!isWedding &&
-                                      editor.heroMode == EditorHeroMode.compose)
-                                    const EditorHeroFabricRail(),
-                                  if (!isWedding &&
-                                      editor.heroMode == EditorHeroMode.compose)
-                                    EditorComposeToolRail(
-                                      onPalette: () =>
-                                          _onHeroPalettePressed(context),
-                                      onAddText: () =>
-                                          _showTextToolSheet(context),
-                                      onAddImage: () =>
-                                          _showImagePrintSheet(context),
-                                    ),
-                                  if (!isWedding)
-                                    EditorRefineFab(
-                                      onPressed: canGenerateLook
-                                          ? () => _generateLook(context)
-                                          : null,
-                                    ),
-                                  if (editor.heroMode == EditorHeroMode.look &&
-                                      editor.refinedLookUrl != null &&
-                                      editor.refinedLookUrl!.isNotEmpty)
-                                    Positioned(
-                                      top: 8,
-                                      right: 8,
-                                      child: IconButton.filledTonal(
-                                        tooltip:
-                                            AppStrings.editorGenerateLook,
-                                        onPressed: canGenerateLook
-                                            ? () => _generateLook(context)
-                                            : null,
-                                        icon: const Icon(Icons.refresh),
-                                      ),
-                                    ),
-                                  if (editor.heroMode == EditorHeroMode.look &&
-                                      editor.refinedLookUrl != null &&
-                                      editor.refinedLookUrl!.isNotEmpty)
-                                    Positioned(
-                                      left: 0,
-                                      right: 0,
-                                      bottom: 0,
-                                      child: IgnorePointer(
-                                        child: DecoratedBox(
-                                          decoration: BoxDecoration(
-                                            gradient: LinearGradient(
-                                              begin: Alignment.bottomCenter,
-                                              end: Alignment.topCenter,
-                                              colors: [
-                                                AppColors.ink.withValues(
-                                                  alpha: 0.88,
-                                                ),
-                                                AppColors.ink.withValues(
-                                                  alpha: 0,
-                                                ),
-                                              ],
+                                      if (editor.lookGenerating)
+                                        Positioned.fill(
+                                          child: ColoredBox(
+                                            color: Colors.black
+                                                .withValues(alpha: 0.25),
+                                            child: const Center(
+                                              child:
+                                                  CircularProgressIndicator(),
                                             ),
                                           ),
-                                          child: Padding(
-                                            padding: const EdgeInsets.fromLTRB(
-                                              AppSpacing.md,
-                                              AppSpacing.lg,
-                                              AppSpacing.md,
-                                              AppSpacing.sm,
-                                            ),
-                                            child: Text(
-                                              AppStrings.editorLookDisclaimer,
-                                              style: AppTextStyles.bodySmall
-                                                  .copyWith(
-                                                color: AppColors.sand
-                                                    .withValues(alpha: 0.92),
+                                        ),
+                                      if (!isWedding &&
+                                          editor.heroMode ==
+                                              EditorHeroMode.compose &&
+                                          editor.buildStyleMode !=
+                                              EditorBuildStyleMode.catalog)
+                                        const EditorHeroFabricRail(),
+                                      if (!isWedding &&
+                                          editor.heroMode ==
+                                              EditorHeroMode.compose)
+                                        EditorComposeToolRail(
+                                          editor: editor,
+                                          onPalette: () =>
+                                              _onHeroPalettePressed(context),
+                                          onAddText: () =>
+                                              _showTextToolSheet(context),
+                                          onAddImage: () =>
+                                              _showImagePrintSheet(context),
+                                        ),
+                                      if (!isWedding)
+                                        EditorRefineFab(
+                                          onPressed: canGenerateLook
+                                              ? () => _generateLook(context)
+                                              : null,
+                                        ),
+                                      if (editor.heroMode ==
+                                              EditorHeroMode.look &&
+                                          editor.refinedLookUrl != null &&
+                                          editor.refinedLookUrl!.isNotEmpty)
+                                        Positioned(
+                                          top: 8,
+                                          right: 8,
+                                          child: IconButton.filledTonal(
+                                            tooltip:
+                                                AppStrings.editorGenerateLook,
+                                            onPressed: canGenerateLook
+                                                ? () => _generateLook(context)
+                                                : null,
+                                            icon: const Icon(Icons.refresh),
+                                          ),
+                                        ),
+                                      if (editor.heroMode ==
+                                              EditorHeroMode.look &&
+                                          editor.refinedLookUrl != null &&
+                                          editor.refinedLookUrl!.isNotEmpty)
+                                        Positioned(
+                                          left: 0,
+                                          right: 0,
+                                          bottom: 0,
+                                          child: IgnorePointer(
+                                            child: DecoratedBox(
+                                              decoration: BoxDecoration(
+                                                gradient: LinearGradient(
+                                                  begin: Alignment.bottomCenter,
+                                                  end: Alignment.topCenter,
+                                                  colors: [
+                                                    AppColors.ink.withValues(
+                                                      alpha: 0.88,
+                                                    ),
+                                                    AppColors.ink.withValues(
+                                                      alpha: 0,
+                                                    ),
+                                                  ],
+                                                ),
                                               ),
-                                              textAlign: TextAlign.center,
+                                              child: Padding(
+                                                padding:
+                                                    const EdgeInsets.fromLTRB(
+                                                  AppSpacing.md,
+                                                  AppSpacing.lg,
+                                                  AppSpacing.md,
+                                                  AppSpacing.sm,
+                                                ),
+                                                child: Text(
+                                                  AppStrings
+                                                      .editorLookDisclaimer,
+                                                  style: AppTextStyles.bodySmall
+                                                      .copyWith(
+                                                    color: AppColors.sand
+                                                        .withValues(
+                                                            alpha: 0.92),
+                                                  ),
+                                                  textAlign: TextAlign.center,
+                                                ),
+                                              ),
                                             ),
                                           ),
                                         ),
-                                      ),
-                                    ),
-                                ],
+                                    ],
+                                  ),
+                                ),
                               ),
-                            ),
-                          ),
                             ),
                           ),
                           if (!isWedding) const EditorDesignSummaryBar(),
@@ -380,6 +419,11 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
   }
 
   void _onHeroPalettePressed(BuildContext context) {
+    final editor = ref.read(editorProvider);
+    if (editor.buildStyleMode == EditorBuildStyleMode.catalog &&
+        !isCasualBasicFlatlayPath(editor.selectedCatalogDesignPath)) {
+      return;
+    }
     _openStylePicker(context);
   }
 
@@ -394,6 +438,11 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
   }
 
   void _showTextToolSheet(BuildContext context) {
+    final editor = ref.read(editorProvider);
+    if (editor.buildStyleMode == EditorBuildStyleMode.catalog &&
+        !isCasualBasicFlatlayPath(editor.selectedCatalogDesignPath)) {
+      return;
+    }
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -473,6 +522,11 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
   }
 
   void _showImagePrintSheet(BuildContext context) {
+    final editor = ref.read(editorProvider);
+    if (editor.buildStyleMode == EditorBuildStyleMode.catalog &&
+        !isCasualBasicFlatlayPath(editor.selectedCatalogDesignPath)) {
+      return;
+    }
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -570,8 +624,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
           content: Text('Look generated — switch to the AI preview'),
         ),
       );
-    } else if (result.message != null &&
-        result.message!.trim().isNotEmpty) {
+    } else if (result.message != null && result.message!.trim().isNotEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(result.message!)),
       );
@@ -718,6 +771,10 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
         patternId: updatedEditor.selectedPatternId,
         mannequinId: updatedEditor.mannequinId,
         configuratorSummary: updatedEditor.configuratorSummary,
+        accessoryIds: updatedEditor.selectedAccessoryIds,
+        accessoriesSummary: updatedEditor.accessoriesSummary.isEmpty
+            ? null
+            : updatedEditor.accessoriesSummary,
       ),
     );
   }
@@ -1125,6 +1182,7 @@ class _EditorTopBar extends StatelessWidget {
     required this.saving,
     required this.heroMode,
     required this.onHeroModeChanged,
+    this.aiLookEnabled = true,
     this.isWeddingTab = false,
     this.weddingOrderLabel,
   });
@@ -1137,6 +1195,7 @@ class _EditorTopBar extends StatelessWidget {
   final bool saving;
   final EditorHeroMode heroMode;
   final ValueChanged<EditorHeroMode> onHeroModeChanged;
+  final bool aiLookEnabled;
   final bool isWeddingTab;
   final String? weddingOrderLabel;
 
@@ -1165,6 +1224,7 @@ class _EditorTopBar extends StatelessWidget {
             tooltip: AppStrings.editorHeroAiLook,
             icon: const Icon(Icons.checkroom_outlined, size: 20),
             label: narrow ? null : const Text(AppStrings.editorHeroAiLook),
+            enabled: aiLookEnabled,
           ),
         ],
         style: SegmentedButton.styleFrom(

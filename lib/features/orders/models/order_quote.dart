@@ -11,6 +11,8 @@ class OrderQuote {
     required this.deliveryFee,
     required this.total,
     required this.currency,
+    this.accessoryFee = 0,
+    this.accessoryIds = const [],
     this.fabricQuality,
     this.tailorId,
     this.tailorName,
@@ -40,7 +42,13 @@ class OrderQuote {
   /// Courier fee for [city].
   final int deliveryFee;
 
-  /// `basePrice + fabricFee + deliveryFee`.
+  /// Optional accessories subtotal included in [total].
+  final int accessoryFee;
+
+  /// Accessory ids priced into this quote.
+  final List<String> accessoryIds;
+
+  /// `basePrice + fabricFee + deliveryFee + accessoryFee`.
   final int total;
 
   /// ISO 4217 currency code, e.g. `QAR`.
@@ -95,6 +103,10 @@ class OrderQuote {
       basePrice: asInt(json['basePrice']),
       fabricFee: asInt(json['fabricFee']),
       deliveryFee: asInt(json['deliveryFee']),
+      accessoryFee: asInt(json['accessoryFee']),
+      accessoryIds: json['accessoryIds'] is List
+          ? (json['accessoryIds'] as List).map((e) => e.toString()).toList()
+          : const [],
       total: asInt(json['total']),
       currency: json['currency']?.toString() ?? 'QAR',
       fabricQuality: json['fabricQuality']?.toString(),

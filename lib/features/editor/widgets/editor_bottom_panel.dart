@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lolipants/core/config/app_features.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
+import 'package:lolipants/features/editor/providers/configurator_providers.dart';
 import 'package:lolipants/features/editor/providers/editor_provider.dart';
 import 'package:lolipants/features/editor/widgets/editor_design_panel.dart';
 import 'package:lolipants/features/editor/widgets/editor_panel_tabs.dart';
@@ -23,6 +24,7 @@ class EditorBottomPanel extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final editor = ref.watch(editorProvider);
     final notifier = ref.read(editorProvider.notifier);
+    final hasConfigurator = ref.watch(mannequinHasConfiguratorBuildProvider);
     final isWedding =
         editor.activeTab == EditorTab.wedding && kFeatureWeddingTab;
 
@@ -53,6 +55,7 @@ class EditorBottomPanel extends ConsumerWidget {
               EditorPanelTabs(
                 activeTab: editor.activeTab,
                 onTabChanged: notifier.setTab,
+                weddingTabEnabled: hasConfigurator,
               ),
             Expanded(
               child: isWedding

@@ -14,6 +14,8 @@ class OrderDesignDraft {
     this.designerId,
     this.designerName,
     this.configuratorSummary,
+    this.accessoryIds = const [],
+    this.accessoriesSummary,
   });
 
   final String? designId;
@@ -39,6 +41,12 @@ class OrderDesignDraft {
   /// Human-readable configurator summary from the editor.
   final String? configuratorSummary;
 
+  /// Optional garment add-on accessory ids.
+  final List<String> accessoryIds;
+
+  /// Display summary for selected accessories.
+  final String? accessoriesSummary;
+
   Map<String, dynamic> toMap() {
     return {
       'designId': designId,
@@ -54,6 +62,8 @@ class OrderDesignDraft {
       'designerId': designerId,
       'designerName': designerName,
       'configuratorSummary': configuratorSummary,
+      'accessoryIds': accessoryIds,
+      'accessoriesSummary': accessoriesSummary,
     };
   }
 }

@@ -4,16 +4,18 @@ import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
-import 'package:lolipants/core/preferences/user_gender_provider.dart';
+import 'package:lolipants/features/editor/data/bundled_design_assets.dart';
+import 'package:lolipants/features/editor/data/configurator_bundled_catalog.dart';
 import 'package:lolipants/features/editor/logic/configurator_compat.dart';
 import 'package:lolipants/features/editor/logic/configurator_gender.dart';
+import 'package:lolipants/features/editor/logic/mannequin_gender.dart';
 import 'package:lolipants/features/editor/models/configurator_catalog.dart';
 import 'package:lolipants/features/editor/providers/configurator_providers.dart';
 import 'package:lolipants/features/editor/providers/editor_provider.dart';
 import 'package:lolipants/features/editor/utils/layer_tint.dart';
 import 'package:lolipants/features/editor/widgets/configurator_option_image.dart';
-import 'package:lolipants/features/editor/logic/catalog_design_gender_filter.dart';
 import 'package:lolipants/features/editor/providers/design_catalog_providers.dart';
+import 'package:lolipants/features/editor/widgets/catalog_design_header.dart';
 import 'package:lolipants/features/editor/widgets/catalog_design_picker.dart';
 import 'package:lolipants/features/editor/widgets/editor_asset_thumb_card.dart';
 import 'package:lolipants/features/editor/widgets/editor_style_dropdown.dart';
@@ -36,15 +38,19 @@ class _EditorBuildPanelState extends ConsumerState<EditorBuildPanel> {
   Widget build(BuildContext context) {
     final editor = ref.watch(editorProvider);
     final catalogAsync = ref.watch(configuratorCatalogProvider);
-    final templates = ref.watch(genderOrderedConfiguratorTemplatesProvider);
+    final catalogTemplates =
+        ref.watch(configuratorCatalogProvider).valueOrNull?.templates ??
+            bundledConfiguratorCatalog().templates;
+    final templates = ref.watch(mannequinConfiguratorTemplatesProvider);
+    final catalogOnly = templates.isEmpty;
     final panelHeight = widget.height ??
         (MediaQuery.sizeOf(context).height * 0.40).clamp(280.0, 380.0);
 
     ref.listen<AsyncValue<ConfiguratorCatalog>>(configuratorCatalogProvider,
         (previous, next) {
       next.whenData((_) {
-        ref.read(editorProvider.notifier).ensureDefaultConfiguratorTemplate(
-              ref.read(genderOrderedConfiguratorTemplatesProvider),
+        ref.read(editorProvider.notifier).syncBuildLaneForMannequin(
+              ref.read(mannequinConfiguratorTemplatesProvider),
             );
       });
     });
@@ -67,86 +73,35 @@ class _EditorBuildPanelState extends ConsumerState<EditorBuildPanel> {
             ),
           ),
           data: (_) {
-            if (templates.isEmpty) {
-              return Center(
-                child: Text(
-                  AppStrings.editorBuildPickTemplate,
-                  style: AppTextStyles.bodyMedium,
-                ),
-              );
-            }
-
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (!mounted) return;
               ref
                   .read(editorProvider.notifier)
-                  .ensureDefaultConfiguratorTemplate(templates);
+                  .syncBuildLaneForMannequin(templates);
             });
 
-            final selectedId = editor.configuratorTemplateId.trim();
-            ConfiguratorTemplate? template;
-            for (final t in templates) {
-              if (t.id == selectedId) {
-                template = t;
-                break;
-              }
-            }
-            template ??=
-                preferredConfiguratorTemplateForGender(
-                  templates,
-                  ref.read(userGenderProvider),
-                ) ??
-                templates.first;
-            final activeTemplate = template;
-
-            if (editor.buildStyleMode == EditorBuildStyleMode.catalog) {
-              final sections =
+            if (catalogOnly || editor.buildStyleMode == EditorBuildStyleMode.catalog) {
+              final allSections =
                   ref.watch(mergedCatalogSectionsProvider(editor.mannequinId));
+              final sections = filterCatalogSectionsByMode(
+                allSections,
+                editor.catalogFilter,
+              );
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.sm,
-                      AppSpacing.sm,
-                      AppSpacing.sm,
-                      AppSpacing.xs,
-                    ),
-                    child: Row(
-                      children: [
-                        EditorStyleDropdown(
-                          templates: templates,
-                          mannequinId: editor.mannequinId,
-                          selectedTemplateId: activeTemplate.id,
-                          buildStyleMode: editor.buildStyleMode,
-                          dense: true,
-                          onReset: () {
+                  CatalogDesignHeader(
+                    templates: catalogTemplates,
+                    mannequinId: editor.mannequinId,
+                    catalogOnly: catalogOnly,
+                    onReset: catalogOnly
+                        ? null
+                        : () {
                             setState(() => _slotIndex = 0);
                             ref
                                 .read(editorProvider.notifier)
-                                .resetConfiguratorBuild(templates);
+                                .resetCatalogBuild(editor.mannequinId);
                           },
-                        ),
-                        const Spacer(),
-                        IconButton(
-                          tooltip: AppStrings.editorBuildReset,
-                          visualDensity: VisualDensity.compact,
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(
-                            minWidth: 36,
-                            minHeight: 36,
-                          ),
-                          onPressed: () {
-                            setState(() => _slotIndex = 0);
-                            ref
-                                .read(editorProvider.notifier)
-                                .resetConfiguratorBuild(templates);
-                          },
-                          icon: const Icon(Icons.restart_alt, size: 20),
-                          color: AppColors.fog,
-                        ),
-                      ],
-                    ),
                   ),
                   Expanded(
                     child: CatalogDesignPicker(
@@ -160,6 +115,31 @@ class _EditorBuildPanelState extends ConsumerState<EditorBuildPanel> {
                 ],
               );
             }
+
+            if (templates.isEmpty) {
+              return Center(
+                child: Text(
+                  AppStrings.editorBuildPickTemplate,
+                  style: AppTextStyles.bodyMedium,
+                ),
+              );
+            }
+
+            final selectedId = editor.configuratorTemplateId.trim();
+            ConfiguratorTemplate? template;
+            for (final t in templates) {
+              if (t.id == selectedId) {
+                template = t;
+                break;
+              }
+            }
+            template ??=
+                preferredConfiguratorTemplateForGender(
+                  templates,
+                  mannequinGenderLane(editor.mannequinId),
+                ) ??
+                templates.first;
+            final activeTemplate = template;
 
             final slots = activeConfiguratorSlots(
               template: activeTemplate,
@@ -223,7 +203,7 @@ class _EditorBuildPanelState extends ConsumerState<EditorBuildPanel> {
                       ),
                       const SizedBox(width: 4),
                       _TemplateMenu(
-                        templates: templates,
+                        templates: catalogTemplates,
                         selectedId: activeTemplate.id,
                         mannequinId: editor.mannequinId,
                         buildStyleMode: editor.buildStyleMode,

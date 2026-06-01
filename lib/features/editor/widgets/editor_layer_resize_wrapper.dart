@@ -55,7 +55,7 @@ class _EditorLayerResizeWrapperState extends State<EditorLayerResizeWrapper> {
   void didUpdateWidget(EditorLayerResizeWrapper oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.contentSize != oldWidget.contentSize) {
-      setState(() {});
+      if (mounted) setState(() {});
     }
     WidgetsBinding.instance.addPostFrameCallback(_measureContent);
   }
@@ -159,12 +159,18 @@ class _EditorLayerResizeWrapperState extends State<EditorLayerResizeWrapper> {
     return EditorResizeHandle.values.map((handle) {
       final pos = anchor(handle);
       return Positioned(
+        key: ValueKey<EditorResizeHandle>(handle),
         left: pos.dx,
         top: pos.dy,
         child: _ResizeHandle(
+          key: ValueKey<String>('handle_${handle.name}'),
           handle: handle,
-          onDragStart: () => setState(() => _resizing = true),
-          onDragEnd: () => setState(() => _resizing = false),
+          onDragStart: () {
+            if (mounted) setState(() => _resizing = true);
+          },
+          onDragEnd: () {
+            if (mounted) setState(() => _resizing = false);
+          },
           onDrag: (delta) => widget.onResize!(handle, delta),
           visualHalf: visualHalf,
         ),
@@ -180,6 +186,7 @@ class _ResizeHandle extends StatefulWidget {
     required this.onDragStart,
     required this.onDragEnd,
     required this.visualHalf,
+    super.key,
   });
 
   final EditorResizeHandle handle;
@@ -205,7 +212,7 @@ class _ResizeHandleState extends State<_ResizeHandle> {
         behavior: HitTestBehavior.opaque,
         onPointerDown: (event) {
           widget.onDragStart();
-          setState(() => _activePointer = event.pointer);
+          if (mounted) setState(() => _activePointer = event.pointer);
         },
         onPointerMove: (event) {
           if (_activePointer != event.pointer) return;
@@ -215,12 +222,12 @@ class _ResizeHandleState extends State<_ResizeHandle> {
         },
         onPointerUp: (event) {
           if (_activePointer != event.pointer) return;
-          setState(() => _activePointer = null);
+          if (mounted) setState(() => _activePointer = null);
           widget.onDragEnd();
         },
         onPointerCancel: (event) {
           if (_activePointer != event.pointer) return;
-          setState(() => _activePointer = null);
+          if (mounted) setState(() => _activePointer = null);
           widget.onDragEnd();
         },
         child: SizedBox(

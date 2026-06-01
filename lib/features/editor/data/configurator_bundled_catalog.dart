@@ -35,6 +35,7 @@ Map<String, dynamic> _cfgOption({
   Map<String, String>? visibleWhen,
   List<String>? excludesOptionKeys,
   List<String>? suppressesSlotKeys,
+  bool requiresSleeveless = false,
   bool skipLayerRender = false,
   ConfiguratorTintRole tintRole = ConfiguratorTintRole.primary,
 }) {
@@ -54,6 +55,7 @@ Map<String, dynamic> _cfgOption({
   if (suppressesSlotKeys != null && suppressesSlotKeys.isNotEmpty) {
     metadata['suppressesSlotKeys'] = suppressesSlotKeys;
   }
+  if (requiresSleeveless) metadata['requiresSleeveless'] = true;
   if (skipLayerRender) metadata['skipLayerRender'] = true;
   return {
     'id': id,
@@ -400,7 +402,7 @@ final List<Map<String, dynamic>> _bundledJson = [
             stem: 'cfg_west_bodice_halter_NEUTRAL',
             layerZ: 1,
             sortOrder: 3,
-            suppressesSlotKeys: const ['sleeve'],
+            requiresSleeveless: true,
           ),
           _cfgOption(
             id: 'opt_west_bodice_corset',
@@ -428,7 +430,7 @@ final List<Map<String, dynamic>> _bundledJson = [
             stem: 'cfg_west_bodice_bardot_NEUTRAL',
             layerZ: 1,
             sortOrder: 6,
-            excludesOptionKeys: const ['long_wine', 'bishop'],
+            requiresSleeveless: true,
           ),
           _cfgOption(
             id: 'opt_west_bodice_plunge',
@@ -520,7 +522,6 @@ final List<Map<String, dynamic>> _bundledJson = [
             stem: 'cfg_west_sleeve_cold_NEUTRAL',
             layerZ: 2,
             sortOrder: 7,
-            visibleWhen: const {'slotKey': 'bodice', 'optionKey': 'bardot'},
           ),
         ],
       ),

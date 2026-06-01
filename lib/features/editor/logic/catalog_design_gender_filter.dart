@@ -55,6 +55,15 @@ bool catalogDesignPathMatchesGenderLane(String path, String gender) {
   if (!UserGenderPreference.all.contains(gender)) return true;
 
   final p = path.trim().toLowerCase();
+  if (p.contains('design_casual_')) {
+    return true;
+  }
+  if (p.contains('design_womens_look_')) {
+    return gender == UserGenderPreference.women;
+  }
+  if (p.contains('design_mens_look_')) {
+    return gender == UserGenderPreference.men;
+  }
   if (p.contains('design_mod_mens_') || p.contains('_mens_')) {
     return gender == UserGenderPreference.men;
   }
@@ -79,15 +88,16 @@ bool _cmsDesignMatchesGenderLane(DesignCatalogItem item, String gender) {
 CatalogDesignPick _bundledPick(String path) => CatalogDesignPick(
       ref: path,
       label: catalogDesignLabel(path),
-      imageSource: path,
+      imageSource: catalogDesignDisplayPath(path),
     );
 
 /// Bundled design sections filtered for [mannequinId].
 List<CatalogDesignSection> bundledCatalogSectionsForMannequin(
-  String mannequinId,
-) {
+  String mannequinId, {
+  DesignCatalogFilter catalogFilter = DesignCatalogFilter.all,
+}) {
   final lane = mannequinGenderLane(mannequinId);
-  return kBundledDesignCatalog
+  final genderFiltered = kBundledDesignCatalog
       .map((section) {
         final picks = section.$2
             .where((p) => catalogDesignPathMatchesGenderLane(p, lane))
@@ -97,6 +107,7 @@ List<CatalogDesignSection> bundledCatalogSectionsForMannequin(
       })
       .where((section) => section.$2.isNotEmpty)
       .toList(growable: false);
+  return filterCatalogSectionsByMode(genderFiltered, catalogFilter);
 }
 
 List<CatalogDesignSection> _cmsSectionsForMannequin(
@@ -123,11 +134,13 @@ List<CatalogDesignSection> _cmsSectionsForMannequin(
 List<CatalogDesignSection> mergedCatalogSectionsForMannequin({
   required String mannequinId,
   List<DesignCatalogItem>? cmsItems,
+  DesignCatalogFilter catalogFilter = DesignCatalogFilter.all,
 }) {
-  final bundled = bundledCatalogSectionsForMannequin(mannequinId);
+  final bundled =
+      bundledCatalogSectionsForMannequin(mannequinId, catalogFilter: catalogFilter);
   final cms = _cmsSectionsForMannequin(mannequinId, cmsItems ?? const []);
   if (cms.isEmpty) return bundled;
-  if (bundled.isEmpty) return cms;
+  if (bundled.isEmpty) return filterCatalogSectionsByMode(cms, catalogFilter);
 
   final merged = <String, List<CatalogDesignPick>>{};
   for (final (title, picks) in bundled) {
@@ -136,7 +149,9 @@ List<CatalogDesignSection> mergedCatalogSectionsForMannequin({
   for (final (title, picks) in cms) {
     merged.putIfAbsent(title, () => []).addAll(picks);
   }
-  return merged.entries.map((e) => (e.key, e.value)).toList(growable: false);
+  final sections =
+      merged.entries.map((e) => (e.key, e.value)).toList(growable: false);
+  return filterCatalogSectionsByMode(sections, catalogFilter);
 }
 
 /// Bundled design sections filtered for [mannequinId] (legacy path list).
