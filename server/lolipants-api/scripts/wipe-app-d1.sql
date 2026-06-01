@@ -1,0 +1,42 @@
+-- Wipe all app data for a production reset. Keeps Cloudflare internal _cf_KV.
+PRAGMA foreign_keys = OFF;
+
+DROP TABLE IF EXISTS order_accessories;
+DROP TABLE IF EXISTS accessories;
+DROP TABLE IF EXISTS quote_negotiation_messages;
+DROP TABLE IF EXISTS quote_negotiations;
+DROP TABLE IF EXISTS design_catalog_items;
+DROP TABLE IF EXISTS tailor_wedding_prices;
+DROP TABLE IF EXISTS wedding_dresses;
+DROP TABLE IF EXISTS tailor_delivery_fees;
+DROP TABLE IF EXISTS tailor_garment_prices;
+DROP TABLE IF EXISTS tailor_price_plans;
+DROP TABLE IF EXISTS tailor_profiles;
+DROP TABLE IF EXISTS configurator_options;
+DROP TABLE IF EXISTS configurator_slots;
+DROP TABLE IF EXISTS configurator_templates;
+DROP TABLE IF EXISTS design_render_jobs;
+DROP TABLE IF EXISTS role_requests;
+DROP TABLE IF EXISTS complaints;
+DROP TABLE IF EXISTS commissions;
+DROP TABLE IF EXISTS order_idempotency_keys;
+DROP TABLE IF EXISTS payment_transactions;
+DROP TABLE IF EXISTS mannequin_jobs;
+DROP TABLE IF EXISTS order_status_history;
+DROP TABLE IF EXISTS orders;
+DROP TABLE IF EXISTS post_comments;
+DROP TABLE IF EXISTS post_reactions;
+DROP TABLE IF EXISTS posts;
+DROP TABLE IF EXISTS follows;
+DROP TABLE IF EXISTS consultations;
+DROP TABLE IF EXISTS bookings;
+DROP TABLE IF EXISTS push_tokens;
+DROP TABLE IF EXISTS measurements;
+DROP TABLE IF EXISTS designs;
+DROP TABLE IF EXISTS presets;
+DROP TABLE IF EXISTS fabric_options;
+DROP TABLE IF EXISTS mannequin_options;
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS d1_migrations;
+
+PRAGMA foreign_keys = ON;
