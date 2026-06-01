@@ -44,6 +44,7 @@ class UserGenderNotifier extends StateNotifier<String?> {
 
   /// Loads gender from `GET /users/me` when authenticated; falls back to local.
   Future<void> syncFromApi() async {
+    final prefs = _ref.read(sharedPreferencesProvider);
     final repo = _ref.read(userProfileRepositoryProvider);
     final result = await repo.fetchGender();
     await result.fold(
@@ -51,8 +52,10 @@ class UserGenderNotifier extends StateNotifier<String?> {
       (gender) async {
         if (gender != null && UserGenderPreference.all.contains(gender)) {
           state = gender;
-          final prefs = _ref.read(sharedPreferencesProvider);
           await prefs.setString(kUserGenderPreferenceKey, gender);
+        } else {
+          await prefs.remove(kUserGenderPreferenceKey);
+          state = null;
         }
       },
     );

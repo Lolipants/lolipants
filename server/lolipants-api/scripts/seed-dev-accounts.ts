@@ -205,15 +205,22 @@ function sqlLiteral(value: string): string {
 /** Run SQL via a temp file so JSON in admin_scopes is not mangled by the shell. */
 function d1Execute(remote: boolean, sql: string): void {
   const apiDir = join(__dirname, "..");
-  const flag = remote ? "--remote" : "--local";
   const dir = mkdtempSync(join(tmpdir(), "lolipants-seed-"));
   const file = join(dir, "stmt.sql");
   writeFileSync(file, sql, "utf8");
   try {
-    execSync(`wrangler d1 execute lolipants-db ${flag} --file=${JSON.stringify(file)}`, {
-      cwd: apiDir,
-      stdio: "inherit",
-    });
+    if (remote) {
+      const helper = join(apiDir, "scripts", "d1-remote-exec.sh");
+      execSync(`bash ${JSON.stringify(helper)} lolipants-db ${JSON.stringify(file)}`, {
+        cwd: apiDir,
+        stdio: "inherit",
+      });
+    } else {
+      execSync(`wrangler d1 execute lolipants-db --local --file=${JSON.stringify(file)}`, {
+        cwd: apiDir,
+        stdio: "inherit",
+      });
+    }
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
