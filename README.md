@@ -35,7 +35,7 @@ Before generating a release binary for Store review, make sure the app uses real
    - Do **not** set `--dart-define=FEATURE_MOCK_PAYMENT=true`
    - For CI safety, you can pass `--dart-define=FEATURE_MOCK_PAYMENT=false`
 
-For **Google Play**, add `android/key.properties` and your upload keystore so the release AAB is signed with your production key (without it, Gradle falls back to debug signing and Play will reject the upload).
+For **Google Play**, run `bash scripts/android/setup_upload_signing.sh` once (or follow [`docs/android-play-signing.md`](docs/android-play-signing.md)) so `android/key.properties` and `upload-keystore.jks` sign release AABs — without them, Gradle uses debug signing and Play rejects the upload.
 
 Typical build commands:
 

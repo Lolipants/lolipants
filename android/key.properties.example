@@ -1,0 +1,8 @@
+# Copy to key.properties (same folder) and fill in real values.
+# Never commit key.properties or *.jks / *.keystore — they are in android/.gitignore.
+#
+# storeFile is relative to android/app/ (see android/app/build.gradle.kts).
+storePassword=YOUR_KEYSTORE_PASSWORD
+keyPassword=YOUR_KEY_PASSWORD
+keyAlias=upload
+storeFile=../upload-keystore.jks
