@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lolipants/core/config/app_features.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
+import 'package:lolipants/features/settings/providers/settings_provider.dart';
 
 /// Bottom navigation for the main customer shell: maps each visible tab to a
 /// [StatefulNavigationShell] branch index (0=home, 1=browse, 2=orders,
 /// 3=community, 4=profile). When [kFeatureCommunity] is false, community
 /// is omitted and four tabs target branches `0,1,2,4`.
-class LolipantsBottomNavBar extends StatelessWidget {
+class LolipantsBottomNavBar extends ConsumerWidget {
   /// Creates the tab bar for the current [shellBranchIndex].
   const LolipantsBottomNavBar({
     required this.shellBranchIndex,
@@ -67,7 +70,8 @@ class LolipantsBottomNavBar extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final locale = ref.watch(settingsLocaleProvider);
     final defs = _defs();
     return DecoratedBox(
       decoration: const BoxDecoration(
@@ -88,6 +92,7 @@ class LolipantsBottomNavBar extends StatelessWidget {
               return Expanded(
                 child: _NavEntry(
                   spec: def.spec,
+                  locale: locale,
                   selected: selected,
                   onTap: () => onShellBranchSelected(def.branchIndex),
                 ),
@@ -128,24 +133,28 @@ class _NavSpec {
 class _NavEntry extends StatelessWidget {
   const _NavEntry({
     required this.spec,
+    required this.locale,
     required this.selected,
     required this.onTap,
   });
 
   final _NavSpec spec;
+  final Locale locale;
   final bool selected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final color = selected ? AppColors.gold : AppColors.fog;
+    final isAr = locale.languageCode == 'ar';
+    final label = localizedFromLocale(locale, spec.labelEn, spec.labelAr);
 
     return InkWell(
       onTap: onTap,
       splashFactory: NoSplash.splashFactory,
       highlightColor: Colors.transparent,
       child: Semantics(
-        label: '${spec.labelEn} tab',
+        label: '$label tab',
         button: true,
         selected: selected,
         child: ConstrainedBox(
@@ -155,25 +164,29 @@ class _NavEntry extends StatelessWidget {
             children: [
               Icon(spec.icon, color: color, size: 22),
               const SizedBox(height: AppSpacing.xs / 2),
-              Text(
-                spec.labelAr,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.arabicLabel.copyWith(
-                  fontSize: 9,
-                  color: color,
-                ),
-              ),
-              Text(
-                spec.labelEn,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.labelGold.copyWith(
-                  fontSize: 8,
-                  color: color,
-                  letterSpacing: 0,
-                ),
-              ),
+              isAr
+                  ? Directionality(
+                      textDirection: TextDirection.rtl,
+                      child: Text(
+                        label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.arabicLabel.copyWith(
+                          fontSize: 10,
+                          color: color,
+                        ),
+                      ),
+                    )
+                  : Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.labelGold.copyWith(
+                        fontSize: 10,
+                        color: color,
+                        letterSpacing: 0,
+                      ),
+                    ),
               const SizedBox(height: AppSpacing.xs),
               AnimatedContainer(
                 duration: const Duration(milliseconds: 180),

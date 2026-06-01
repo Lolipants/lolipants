@@ -77,7 +77,10 @@ class _SocialAuthRowState extends ConsumerState<SocialAuthRow> {
           if (e is AuthException && e.message == 'oauth_in_progress') {
             return;
           }
-          final msg = mapAuthExceptionToUserMessage(e);
+          final msg = mapAuthExceptionToUserMessage(
+            e,
+            locale: Localizations.localeOf(context),
+          );
           widget.onError?.call(msg);
         },
         (user) {
@@ -111,16 +114,22 @@ class _SocialAuthRowState extends ConsumerState<SocialAuthRow> {
     try {
       final result =
           await ref.read(authProvider.notifier).signInWithGoogle();
-      if (!mounted) return;
       result.fold(
         (e) {
+          if (!mounted) return;
           if (e is AuthException && e.message == 'oauth_in_progress') {
             return;
           }
-          final msg = mapAuthExceptionToUserMessage(e);
+          final msg = mapAuthExceptionToUserMessage(
+            e,
+            locale: Localizations.localeOf(context),
+          );
           widget.onError?.call(msg);
         },
         (user) {
+          // Gender prompt runs from [_afterAuthenticated] via root navigator
+          // (this widget is often disposed before we get here).
+          if (!mounted) return;
           final returnTo = ref.read(pendingAuthReturnToProvider);
           ref.read(pendingAuthReturnToProvider.notifier).state = null;
           context.go(postAuthLocation(user, returnTo));

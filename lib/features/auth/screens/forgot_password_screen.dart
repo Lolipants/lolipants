@@ -14,6 +14,8 @@ import 'package:lolipants/shared/widgets/error_banner.dart';
 import 'package:lolipants/shared/widgets/loading_overlay.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
 import 'package:lolipants/shared/widgets/lolipants_text_field.dart';
+import 'package:lolipants/shared/widgets/locale_bilingual_text.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 
 /// Password reset request screen.
 class ForgotPasswordScreen extends ConsumerStatefulWidget {
@@ -40,11 +42,20 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
 
   Future<void> _submit() async {
     final key = Validators.emailErrorKey(_email.text);
+    final locale = Localizations.localeOf(context);
     setState(() {
       _banner = null;
       _emailError = switch (key) {
-        'required' => AppStrings.errorRequired,
-        'invalid_email' => AppStrings.errorInvalidEmail,
+        'required' => AppStrings.localized(
+          locale,
+          AppStrings.errorRequired,
+          AppStrings.errorRequiredAr,
+        ),
+        'invalid_email' => AppStrings.localized(
+          locale,
+          AppStrings.errorInvalidEmail,
+          AppStrings.errorInvalidEmailAr,
+        ),
         _ => null,
       };
     });
@@ -64,7 +75,12 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
     }
     setState(() => _loading = false);
     result.fold(
-      (e) => setState(() => _banner = mapAuthExceptionToUserMessage(e)),
+      (e) => setState(
+            () => _banner = mapAuthExceptionToUserMessage(
+              e,
+              locale: Localizations.localeOf(context),
+            ),
+          ),
       (_) => setState(() => _sent = true),
     );
   }
@@ -124,16 +140,11 @@ class _Form extends StatelessWidget {
             ),
           ],
         ),
-        Text(
-          AppStrings.resetPasswordTitle,
-          style: AppTextStyles.titleLarge,
-        ),
-        Directionality(
-          textDirection: TextDirection.rtl,
-          child: Text(
-            AppStrings.resetPasswordTitleAr,
-            style: AppTextStyles.arabicLabel,
-          ),
+        LocaleBilingualText(
+          en: AppStrings.resetPasswordTitle,
+          ar: AppStrings.resetPasswordTitleAr,
+          enStyle: AppTextStyles.titleLarge,
+          arStyle: AppTextStyles.arabicLabel,
         ),
         const SizedBox(height: AppSpacing.xl),
         if (banner != null)
@@ -152,7 +163,7 @@ class _Form extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.xl),
         LolipantsButton(
-          label: '${AppStrings.sendResetLink} / ${AppStrings.sendResetLinkAr}',
+          label: localizedFromContext(context, AppStrings.sendResetLink, AppStrings.sendResetLinkAr),
           onPressed: onSubmit,
         ),
       ],
@@ -174,7 +185,7 @@ class _Success extends StatelessWidget {
             size: 48, color: AppColors.gold),
         const SizedBox(height: AppSpacing.lg),
         Text(
-          '${AppStrings.checkYourInbox} / ${AppStrings.checkYourInboxAr}',
+          localizedFromContext(context, AppStrings.checkYourInbox, AppStrings.checkYourInboxAr),
           style: AppTextStyles.titleLarge,
           textAlign: TextAlign.center,
         ),
@@ -186,7 +197,7 @@ class _Success extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.xl),
         LolipantsButton(
-          label: '${AppStrings.backToLogIn} / ${AppStrings.backToLogInAr}',
+          label: localizedFromContext(context, AppStrings.backToLogIn, AppStrings.backToLogInAr),
           variant: LolipantsButtonVariant.secondary,
           onPressed: () => context.go('/login'),
         ),

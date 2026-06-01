@@ -61,7 +61,12 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
     if (!mounted) return;
     setState(() => _loading = false);
     result.fold(
-      (e) => setState(() => _banner = mapAuthExceptionToUserMessage(e)),
+      (e) => setState(
+            () => _banner = mapAuthExceptionToUserMessage(
+              e,
+              locale: Localizations.localeOf(context),
+            ),
+          ),
       (_) => setState(() => _step = _OtpStep.enterCode),
     );
   }
@@ -87,7 +92,12 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
     if (!mounted) return;
     setState(() => _loading = false);
     result.fold(
-      (e) => setState(() => _banner = mapAuthExceptionToUserMessage(e)),
+      (e) => setState(
+            () => _banner = mapAuthExceptionToUserMessage(
+              e,
+              locale: Localizations.localeOf(context),
+            ),
+          ),
       (user) {
         final returnTo = ref.read(pendingAuthReturnToProvider);
         ref.read(pendingAuthReturnToProvider.notifier).state = null;

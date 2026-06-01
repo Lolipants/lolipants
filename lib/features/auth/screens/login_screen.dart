@@ -16,6 +16,8 @@ import 'package:lolipants/shared/widgets/error_banner.dart';
 import 'package:lolipants/shared/widgets/gold_divider.dart';
 import 'package:lolipants/shared/widgets/loading_overlay.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
+import 'package:lolipants/shared/widgets/locale_bilingual_text.dart';
 import 'package:lolipants/shared/widgets/lolipants_text_field.dart';
 
 /// Email/password login.
@@ -46,13 +48,27 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final emailKey = Validators.emailErrorKey(_email.text);
     setState(() {
       _banner = null;
+      final locale = Localizations.localeOf(context);
       _emailError = switch (emailKey) {
-        'required' => AppStrings.errorRequired,
-        'invalid_email' => AppStrings.errorInvalidEmail,
+        'required' => AppStrings.localized(
+          locale,
+          AppStrings.errorRequired,
+          AppStrings.errorRequiredAr,
+        ),
+        'invalid_email' => AppStrings.localized(
+          locale,
+          AppStrings.errorInvalidEmail,
+          AppStrings.errorInvalidEmailAr,
+        ),
         _ => null,
       };
-      _passwordError =
-          _password.text.isEmpty ? AppStrings.errorRequired : null;
+      _passwordError = _password.text.isEmpty
+          ? AppStrings.localized(
+              locale,
+              AppStrings.errorRequired,
+              AppStrings.errorRequiredAr,
+            )
+          : null;
     });
     if (_emailError != null || _passwordError != null) {
       return;
@@ -72,7 +88,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
     setState(() => _loading = false);
     result.fold(
-      (e) => setState(() => _banner = mapAuthExceptionToUserMessage(e)),
+      (e) => setState(
+            () => _banner = mapAuthExceptionToUserMessage(
+              e,
+              locale: Localizations.localeOf(context),
+            ),
+          ),
       (user) {
         final returnTo = ref.read(pendingAuthReturnToProvider);
         ref.read(pendingAuthReturnToProvider.notifier).state = null;
@@ -102,19 +123,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                     ],
                   ),
-                  Text(
-                    AppStrings.welcomeBack,
-                    style: AppTextStyles.titleLarge,
+                  LocaleBilingualText(
+                    en: AppStrings.welcomeBack,
+                    ar: AppStrings.welcomeBackAr,
+                    enStyle: AppTextStyles.titleLarge,
+                    arStyle: AppTextStyles.arabicLabel,
                     textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  Directionality(
-                    textDirection: TextDirection.rtl,
-                    child: Text(
-                      AppStrings.welcomeBackAr,
-                      style: AppTextStyles.arabicLabel,
-                      textAlign: TextAlign.center,
-                    ),
                   ),
                   const SizedBox(height: AppSpacing.md),
                   const GoldDivider(width: 40),
@@ -150,7 +164,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     child: TextButton(
                       onPressed: () => context.push('/forgot'),
                       child: Text(
-                        '${AppStrings.forgotPassword} ${AppStrings.forgotPasswordAr}',
+                        localizedFromContext(
+                          context,
+                          AppStrings.forgotPassword,
+                          AppStrings.forgotPasswordAr,
+                        ),
                         style: AppTextStyles.titleSmall.copyWith(
                           color: AppColors.gold,
                           fontSize: 13,
@@ -160,7 +178,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   LolipantsButton(
-                    label: AppStrings.logInCta,
+                    label: localizedFromContext(
+                      context,
+                      AppStrings.logInCta,
+                      AppStrings.logInCtaAr,
+                    ),
                     onPressed: _submit,
                     loading: _loading,
                   ),
@@ -181,7 +203,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       TextButton(
                         onPressed: () => context.push('/signup'),
                         child: Text(
-                          '${AppStrings.signUp} / ${AppStrings.signUpAr}',
+                          localizedFromContext(context, AppStrings.signUp, AppStrings.signUpAr),
                           style: AppTextStyles.titleSmall.copyWith(
                             color: AppColors.gold,
                           ),

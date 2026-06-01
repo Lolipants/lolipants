@@ -8,6 +8,7 @@ import 'package:lolipants/core/push/onesignal_bootstrap.dart';
 import 'package:lolipants/features/auth/data/auth_local_storage.dart';
 import 'package:lolipants/features/auth/data/auth_repository.dart';
 import 'package:lolipants/features/auth/models/user.dart';
+import 'package:lolipants/features/home/logic/ensure_design_gender.dart';
 import 'package:lolipants/features/settings/data/push_repository.dart';
 import 'package:lolipants/features/settings/providers/settings_provider.dart';
 
@@ -102,6 +103,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     try {
       await linkOneSignalUser(user.id);
       await ref.read(userGenderProvider.notifier).syncFromApi();
+      await promptGenderAfterAuth(ref);
       if (ref.read(settingsProvider).pushEnabled) {
         final playerId = await currentPlayerId();
         if (playerId != null && playerId.isNotEmpty) {

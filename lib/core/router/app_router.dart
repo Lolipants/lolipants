@@ -79,6 +79,7 @@ import 'package:lolipants/features/sizing/screens/manual_size_screen.dart';
 import 'package:lolipants/features/sizing/screens/sizing_method_screen.dart';
 import 'package:lolipants/features/sizing/screens/workshop_booking_screen.dart';
 import 'package:lolipants/features/shell/main_shell.dart';
+import 'package:lolipants/features/settings/providers/settings_provider.dart';
 import 'package:lolipants/features/splash/screens/splash_screen.dart';
 
 /// Root navigator key for imperative navigation from interceptors.
@@ -229,6 +230,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   final refresh = ValueNotifier<int>(0);
   ref.listen<AsyncValue<AuthState>>(authProvider, (_, __) {
     refresh.value++;
+  });
+  ref.listen<Locale>(settingsLocaleProvider, (previous, next) {
+    if (previous != next) refresh.value++;
   });
 
   return GoRouter(

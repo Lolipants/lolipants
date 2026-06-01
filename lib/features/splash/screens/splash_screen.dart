@@ -15,6 +15,7 @@ import 'package:lolipants/features/auth/providers/auth_providers.dart';
 import 'package:lolipants/features/splash/widgets/mascot_animation.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
 import 'package:lolipants/shared/widgets/gold_divider.dart';
+import 'package:lolipants/shared/widgets/locale_bilingual_text.dart';
 
 /// Branded splash with session routing.
 class SplashScreen extends ConsumerStatefulWidget {
@@ -92,14 +93,16 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                     .animate()
                     .fadeIn(duration: 600.ms),
                 const SizedBox(height: AppSpacing.lg),
-                Directionality(
-                  textDirection: TextDirection.rtl,
-                  child: Text(
-                    AppStrings.appNameAr,
-                    style: AppTextStyles.displayMedium.copyWith(
-                      color: AppColors.gold,
-                      letterSpacing: 0.15,
-                    ),
+                LocaleBilingualText(
+                  en: AppStrings.appName,
+                  ar: AppStrings.appNameAr,
+                  enStyle: AppTextStyles.displayMedium.copyWith(
+                    color: AppColors.gold,
+                    letterSpacing: 0.15,
+                  ),
+                  arStyle: AppTextStyles.displayMedium.copyWith(
+                    color: AppColors.gold,
+                    letterSpacing: 0.15,
                   ),
                 )
                     .animate()
@@ -122,16 +125,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                       alignment: Alignment.center,
                     ),
                 const SizedBox(height: AppSpacing.md),
-                Text(
-                  AppStrings.tagline,
-                  style: AppTextStyles.bodySmall,
-                ).animate().fadeIn(duration: 300.ms, delay: 1100.ms),
-                Directionality(
-                  textDirection: TextDirection.rtl,
-                  child: Text(
-                    AppStrings.taglineAr,
-                    style: AppTextStyles.arabicBody.copyWith(fontSize: 11),
-                  ),
+                LocaleBilingualText(
+                  en: AppStrings.tagline,
+                  ar: AppStrings.taglineAr,
+                  enStyle: AppTextStyles.bodySmall,
+                  arStyle: AppTextStyles.arabicBody.copyWith(fontSize: 11),
                 ).animate().fadeIn(duration: 300.ms, delay: 1100.ms),
               ],
             ),

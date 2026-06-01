@@ -8,6 +8,8 @@ import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/core/preferences/shared_preferences_provider.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
+import 'package:lolipants/shared/widgets/locale_bilingual_text.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 
 /// Three-slide onboarding flow.
 class OnboardingScreen extends ConsumerStatefulWidget {
@@ -23,12 +25,14 @@ class _Slide {
     required this.titleEn,
     required this.titleAr,
     required this.bodyEn,
+    required this.bodyAr,
     required this.imageAsset,
   });
 
   final String titleEn;
   final String titleAr;
   final String bodyEn;
+  final String bodyAr;
   final String imageAsset;
 }
 
@@ -42,18 +46,21 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       titleEn: 'Design your fashion',
       titleAr: 'صمم أزياءك',
       bodyEn: AppStrings.onboardingSlide1Body,
+      bodyAr: AppStrings.onboardingSlide1BodyAr,
       imageAsset: 'assets/images/onboarding_screen1.jpg',
     ),
     _Slide(
       titleEn: 'Rooted in heritage',
       titleAr: 'مستوحى من تراثك',
       bodyEn: AppStrings.onboardingSlide2Body,
+      bodyAr: AppStrings.onboardingSlide2BodyAr,
       imageAsset: 'assets/images/onboarding_screen2.jpg',
     ),
     _Slide(
       titleEn: 'Made by master tailors',
       titleAr: 'مصنوع بأيدي محترفين',
       bodyEn: AppStrings.onboardingSlide3Body,
+      bodyAr: AppStrings.onboardingSlide3BodyAr,
       imageAsset: 'assets/images/onboarding_screen3.jpg',
     ),
   ];
@@ -93,7 +100,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     alignment: Alignment.centerRight,
                     child: TextButton(
                       onPressed: _skipToLogin,
-                      child: Text('${AppStrings.skip} / ${AppStrings.skipAr}'),
+                      child: Text(localizedFromContext(context, AppStrings.skip, AppStrings.skipAr)),
                     ),
                   )
                 else
@@ -146,22 +153,25 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Directionality(
-                                    textDirection: TextDirection.rtl,
-                                    child: Text(
-                                      s.titleAr,
-                                      style: AppTextStyles.displayMedium
-                                          .copyWith(color: AppColors.gold),
-                                    ),
+                                  LocaleBilingualText(
+                                    en: s.titleEn,
+                                    ar: s.titleAr,
+                                    enStyle: AppTextStyles.titleLarge,
+                                    arStyle: AppTextStyles.displayMedium
+                                        .copyWith(color: AppColors.gold),
                                   ),
-                                  Text(s.titleEn, style: AppTextStyles.titleLarge),
                                   const SizedBox(height: AppSpacing.md),
-                                  Text(s.bodyEn, style: AppTextStyles.bodyMedium),
+                                  LocaleBilingualText(
+                                    en: s.bodyEn,
+                                    ar: s.bodyAr,
+                                    enStyle: AppTextStyles.bodyMedium,
+                                    arStyle: AppTextStyles.bodyMedium,
+                                  ),
                                   const SizedBox(height: AppSpacing.xxl),
                                   if (index == 2)
                                     LolipantsButton(
                                       label:
-                                          '${AppStrings.getStarted} / ${AppStrings.getStartedAr}',
+                                          localizedFromContext(context, AppStrings.getStarted, AppStrings.getStartedAr),
                                       onPressed: _finishToSignup,
                                     ),
                                   const Spacer(),

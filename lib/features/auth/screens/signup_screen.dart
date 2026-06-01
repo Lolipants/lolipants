@@ -23,6 +23,8 @@ import 'package:lolipants/shared/widgets/gold_divider.dart';
 import 'package:lolipants/shared/widgets/loading_overlay.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
 import 'package:lolipants/shared/widgets/lolipants_text_field.dart';
+import 'package:lolipants/shared/widgets/locale_bilingual_text.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 
 /// Registration screen with gender choice and optional profile photo.
 class SignupScreen extends ConsumerStatefulWidget {
@@ -64,28 +66,65 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     final nameKey = Validators.nameErrorKey(_name.text);
     final emailKey = Validators.emailErrorKey(_email.text);
     final pwKey = Validators.passwordSignupErrorKey(_password.text);
+    final locale = Localizations.localeOf(context);
     setState(() {
       _nameError = switch (nameKey) {
-        'name_short' => AppStrings.errorNameShort,
-        'required' => AppStrings.errorRequired,
+        'name_short' => AppStrings.localized(
+          locale,
+          AppStrings.errorNameShort,
+          AppStrings.errorNameShortAr,
+        ),
+        'required' => AppStrings.localized(
+          locale,
+          AppStrings.errorRequired,
+          AppStrings.errorRequiredAr,
+        ),
         _ => null,
       };
       _emailError = switch (emailKey) {
-        'required' => AppStrings.errorRequired,
-        'invalid_email' => AppStrings.errorInvalidEmail,
+        'required' => AppStrings.localized(
+          locale,
+          AppStrings.errorRequired,
+          AppStrings.errorRequiredAr,
+        ),
+        'invalid_email' => AppStrings.localized(
+          locale,
+          AppStrings.errorInvalidEmail,
+          AppStrings.errorInvalidEmailAr,
+        ),
         _ => null,
       };
       _passwordError = switch (pwKey) {
-        'required' => AppStrings.errorRequired,
-        'password_short' => AppStrings.errorPasswordShort,
-        'password_no_digit' => AppStrings.errorPasswordDigit,
+        'required' => AppStrings.localized(
+          locale,
+          AppStrings.errorRequired,
+          AppStrings.errorRequiredAr,
+        ),
+        'password_short' => AppStrings.localized(
+          locale,
+          AppStrings.errorPasswordShort,
+          AppStrings.errorPasswordShortAr,
+        ),
+        'password_no_digit' => AppStrings.localized(
+          locale,
+          AppStrings.errorPasswordDigit,
+          AppStrings.errorPasswordDigitAr,
+        ),
         _ => null,
       };
       _confirmError = _password.text != _confirm.text
-          ? AppStrings.errorPasswordMismatch
+          ? AppStrings.localized(
+              locale,
+              AppStrings.errorPasswordMismatch,
+              AppStrings.errorPasswordMismatchAr,
+            )
           : null;
       _genderError = _selectedGender == null
-          ? AppStrings.signupGenderRequired
+          ? AppStrings.localized(
+              locale,
+              AppStrings.signupGenderRequired,
+              AppStrings.signupGenderRequiredAr,
+            )
           : null;
     });
     return _nameError == null &&
@@ -174,7 +213,12 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     final returnToNotifier = ref.read(pendingAuthReturnToProvider.notifier);
 
     await result.fold(
-      (e) async => setState(() => _banner = mapAuthExceptionToUserMessage(e)),
+      (e) async => setState(
+            () => _banner = mapAuthExceptionToUserMessage(
+              e,
+              locale: Localizations.localeOf(context),
+            ),
+          ),
       (user) async {
         // User is now authenticated — upload avatar and persist to Better Auth.
         final avatarUrl = await _uploadAvatarIfNeeded();
@@ -210,18 +254,12 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                       ),
                     ],
                   ),
-                  Text(
-                    AppStrings.createAccount,
-                    style: AppTextStyles.titleLarge,
+                  LocaleBilingualText(
+                    en: AppStrings.createAccount,
+                    ar: AppStrings.createAccountAr,
+                    enStyle: AppTextStyles.titleLarge,
+                    arStyle: AppTextStyles.arabicLabel,
                     textAlign: TextAlign.center,
-                  ),
-                  Directionality(
-                    textDirection: TextDirection.rtl,
-                    child: Text(
-                      AppStrings.createAccountAr,
-                      style: AppTextStyles.arabicLabel,
-                      textAlign: TextAlign.center,
-                    ),
                   ),
                   const SizedBox(height: AppSpacing.md),
                   const GoldDivider(width: 40),
@@ -281,30 +319,19 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                     ),
                   ),
                   const SizedBox(height: AppSpacing.sm),
-                  Text(
-                    AppStrings.signupPhotoHint,
-                    style: AppTextStyles.bodySmall.copyWith(color: AppColors.fog),
+                  LocaleBilingualText(
+                    en: AppStrings.signupPhotoHint,
+                    ar: AppStrings.signupPhotoHintAr,
+                    enStyle: AppTextStyles.bodySmall.copyWith(color: AppColors.fog),
+                    arStyle: AppTextStyles.arabicBody.copyWith(fontSize: 10),
                     textAlign: TextAlign.center,
                   ),
-                  Directionality(
-                    textDirection: TextDirection.rtl,
-                    child: Text(
-                      AppStrings.signupPhotoHintAr,
-                      style: AppTextStyles.arabicBody.copyWith(fontSize: 10),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
                   const SizedBox(height: AppSpacing.xl),
-                  Text(
-                    AppStrings.signupGenderLabel,
-                    style: AppTextStyles.bodyMedium,
-                  ),
-                  Directionality(
-                    textDirection: TextDirection.rtl,
-                    child: Text(
-                      AppStrings.signupGenderLabelAr,
-                      style: AppTextStyles.arabicLabel.copyWith(fontSize: 11),
-                    ),
+                  LocaleBilingualText(
+                    en: AppStrings.signupGenderLabel,
+                    ar: AppStrings.signupGenderLabelAr,
+                    enStyle: AppTextStyles.bodyMedium,
+                    arStyle: AppTextStyles.arabicLabel.copyWith(fontSize: 11),
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   Wrap(
@@ -369,7 +396,11 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                   ),
                   const SizedBox(height: AppSpacing.xl),
                   LolipantsButton(
-                    label: AppStrings.createAccountCta,
+                    label: localizedFromContext(
+                      context,
+                      AppStrings.createAccountCta,
+                      AppStrings.createAccountCtaAr,
+                    ),
                     onPressed: _submit,
                     loading: _loading || _uploadingAvatar,
                   ),
@@ -410,7 +441,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                       TextButton(
                         onPressed: () => context.push('/login'),
                         child: Text(
-                          '${AppStrings.logIn} / ${AppStrings.logInAr}',
+                          localizedFromContext(context, AppStrings.logIn, AppStrings.logInAr),
                           style: AppTextStyles.titleSmall.copyWith(
                             color: AppColors.gold,
                           ),

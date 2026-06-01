@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lolipants/core/config/app_features.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/features/community/providers/community_providers.dart';
+import 'package:lolipants/features/settings/providers/settings_provider.dart';
 import 'package:lolipants/features/music/widgets/music_mini_player.dart';
 import 'package:lolipants/shared/widgets/bottom_nav_bar.dart';
 
@@ -20,6 +21,8 @@ class MainShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Rebuild shell (tabs, FAB, nav labels) when language changes.
+    ref.watch(settingsLocaleProvider);
     final communityTab = ref.watch(communityHubTabIndexProvider);
     final hideGlobalDesignFab = kFeatureCommunity &&
         navigationShell.currentIndex == kCommunityShellBranchIndex &&
@@ -44,7 +47,12 @@ class MainShell extends ConsumerWidget {
                 child: const Icon(Icons.design_services_outlined),
               ),
             ),
-      body: navigationShell,
+      body: KeyedSubtree(
+        key: ValueKey<String>(
+          'main_shell_${ref.watch(settingsLocaleProvider).languageCode}',
+        ),
+        child: navigationShell,
+      ),
       bottomNavigationBar: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
