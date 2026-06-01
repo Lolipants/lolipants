@@ -6,9 +6,11 @@ import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/constants/community_strings.dart';
+import 'package:lolipants/core/constants/profile_strings.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/features/community/utils/publish_showcase_feedback.dart';
 import 'package:lolipants/features/community/widgets/publish_showcase_dialog.dart';
-import 'package:lolipants/features/editor/providers/designs_providers.dart';
 import 'package:lolipants/features/editor/data/editor_design_restore.dart';
 import 'package:lolipants/features/editor/models/garment_design.dart';
 import 'package:lolipants/features/editor/providers/design_catalog_providers.dart';
@@ -38,11 +40,25 @@ class _MyDesignsScreenState extends ConsumerState<MyDesignsScreen> {
     final designs = designsState.valueOrNull ?? const <GarmentDesign>[];
 
     return Scaffold(
-      appBar: AppBar(title: const Text(AppStrings.myDesigns)),
+      appBar: AppBar(
+        title: Text(
+          localizedFromContext(
+            context,
+            ProfileStrings.myDesigns,
+            ProfileStrings.myDesignsAr,
+          ),
+        ),
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _isCreating ? null : () => _openCreateDesignSheet(context),
         icon: const Icon(Icons.add_circle_outline),
-        label: const Text('New design'),
+        label: Text(
+          localizedFromContext(
+            context,
+            ProfileStrings.newDesign,
+            ProfileStrings.newDesignAr,
+          ),
+        ),
       ),
       body: Stack(
         children: [
@@ -51,9 +67,17 @@ class _MyDesignsScreenState extends ConsumerState<MyDesignsScreen> {
             onRefresh: () => ref.read(myDesignsProvider.notifier).reload(),
             child: designs.isEmpty && !designsState.isLoading
                 ? ListView(
-                    children: const [
-                      SizedBox(height: 220),
-                      Center(child: Text('No designs saved yet')),
+                    children: [
+                      const SizedBox(height: 220),
+                      Center(
+                        child: Text(
+                          localizedFromContext(
+                            context,
+                            ProfileStrings.noDesignsSaved,
+                            ProfileStrings.noDesignsSavedAr,
+                          ),
+                        ),
+                      ),
                     ],
                   )
                 : GridView.builder(
@@ -101,18 +125,36 @@ class _MyDesignsScreenState extends ConsumerState<MyDesignsScreen> {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: const Text('Delete design?'),
+          title: Text(
+            localizedFromContext(
+              dialogContext,
+              ProfileStrings.deleteDesignTitle,
+              ProfileStrings.deleteDesignTitleAr,
+            ),
+          ),
           content: Text(
-            'This will permanently delete "${design.name}". This cannot be undone.',
+            '${localizedFromContext(dialogContext, ProfileStrings.deleteDesignWillRemove, ProfileStrings.deleteDesignWillRemoveAr)} "${design.name}". ${localizedFromContext(dialogContext, ProfileStrings.deleteDesignCannotUndo, ProfileStrings.deleteDesignCannotUndoAr)}',
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Cancel'),
+              child: Text(
+                localizedFromContext(
+                  dialogContext,
+                  AppStrings.cancel,
+                  AppStrings.cancelAr,
+                ),
+              ),
             ),
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text('Delete'),
+              child: Text(
+                localizedFromContext(
+                  dialogContext,
+                  AppStrings.settingsDeleteDialogConfirm,
+                  AppStrings.settingsDeleteDialogConfirmAr,
+                ),
+              ),
             ),
           ],
         );
@@ -127,14 +169,29 @@ class _MyDesignsScreenState extends ConsumerState<MyDesignsScreen> {
       (error) => ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            designErrorMessage(error, fallback: 'Could not delete design.'),
+            designErrorMessage(
+              error,
+              fallback: localizedFromContext(
+                context,
+                ProfileStrings.deleteDesignFailed,
+                ProfileStrings.deleteDesignFailedAr,
+              ),
+            ),
           ),
         ),
       ),
       (_) {
         ref.read(myDesignsProvider.notifier).reload();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Design deleted')),
+          SnackBar(
+            content: Text(
+              localizedFromContext(
+                context,
+                ProfileStrings.designDeleted,
+                ProfileStrings.designDeletedAr,
+              ),
+            ),
+          ),
         );
       },
     );
@@ -158,7 +215,14 @@ class _MyDesignsScreenState extends ConsumerState<MyDesignsScreen> {
       (e) => ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            designErrorMessage(e, fallback: 'Could not publish design.'),
+            designErrorMessage(
+              e,
+              fallback: localizedFromContext(
+                context,
+                ProfileStrings.publishDesignFailed,
+                ProfileStrings.publishDesignFailedAr,
+              ),
+            ),
           ),
         ),
       ),
@@ -181,14 +245,29 @@ class _MyDesignsScreenState extends ConsumerState<MyDesignsScreen> {
       (e) => ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            designErrorMessage(e, fallback: 'Could not unpublish design.'),
+            designErrorMessage(
+              e,
+              fallback: localizedFromContext(
+                context,
+                ProfileStrings.unpublishDesignFailed,
+                ProfileStrings.unpublishDesignFailedAr,
+              ),
+            ),
           ),
         ),
       ),
       (_) {
         ref.read(myDesignsProvider.notifier).reload();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Removed from Showcase')),
+          SnackBar(
+            content: Text(
+              localizedFromContext(
+                context,
+                ProfileStrings.removedFromShowcase,
+                ProfileStrings.removedFromShowcaseAr,
+              ),
+            ),
+          ),
         );
       },
     );
@@ -215,25 +294,48 @@ class _MyDesignsScreenState extends ConsumerState<MyDesignsScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('New design draft', style: AppTextStyles.titleMedium),
+              Text(
+                localizedFromContext(
+                  sheetContext,
+                  ProfileStrings.newDesignDraft,
+                  ProfileStrings.newDesignDraftAr,
+                ),
+                style: AppTextStyles.titleMedium,
+              ),
               const SizedBox(height: AppSpacing.md),
               LolipantsTextField(
-                label: 'Design name',
+                label: localizedFromContext(
+                  sheetContext,
+                  ProfileStrings.designName,
+                  ProfileStrings.designNameAr,
+                ),
                 controller: nameController,
               ),
               const SizedBox(height: AppSpacing.sm),
               LolipantsTextField(
-                label: 'Garment type (e.g. thobe)',
+                label: localizedFromContext(
+                  sheetContext,
+                  ProfileStrings.garmentTypeLabel,
+                  ProfileStrings.garmentTypeLabelAr,
+                ),
                 controller: garmentController,
               ),
               const SizedBox(height: AppSpacing.sm),
               LolipantsTextField(
-                label: 'Primary colour hex',
+                label: localizedFromContext(
+                  sheetContext,
+                  ProfileStrings.primaryColourHexLabel,
+                  ProfileStrings.primaryColourHexLabelAr,
+                ),
                 controller: colourController,
               ),
               const SizedBox(height: AppSpacing.md),
               LolipantsButton(
-                label: 'Create',
+                label: localizedFromContext(
+                  sheetContext,
+                  ProfileStrings.create,
+                  ProfileStrings.createAr,
+                ),
                 loading: _isCreating,
                 onPressed: () async {
                   final name = nameController.text.trim();
@@ -241,7 +343,15 @@ class _MyDesignsScreenState extends ConsumerState<MyDesignsScreen> {
                   final colour = colourController.text.trim();
                   if (name.isEmpty || garment.isEmpty || colour.isEmpty) {
                     ScaffoldMessenger.of(sheetContext).showSnackBar(
-                      const SnackBar(content: Text('Please fill all fields')),
+                      SnackBar(
+                        content: Text(
+                          localizedFromContext(
+                            sheetContext,
+                            ProfileStrings.pleaseFillAllFields,
+                            ProfileStrings.pleaseFillAllFieldsAr,
+                          ),
+                        ),
+                      ),
                     );
                     return;
                   }
@@ -284,7 +394,11 @@ class _MyDesignsScreenState extends ConsumerState<MyDesignsScreen> {
           content: Text(
             designErrorMessage(
               error,
-              fallback: 'Could not save design draft',
+              fallback: localizedFromContext(
+                context,
+                ProfileStrings.designDraftSaveFailed,
+                ProfileStrings.designDraftSaveFailedAr,
+              ),
             ),
           ),
         ),
@@ -294,7 +408,15 @@ class _MyDesignsScreenState extends ConsumerState<MyDesignsScreen> {
         if (!context.mounted) return;
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Design draft saved')),
+          SnackBar(
+            content: Text(
+              localizedFromContext(
+                context,
+                ProfileStrings.designDraftSaved,
+                ProfileStrings.designDraftSavedAr,
+              ),
+            ),
+          ),
         );
       },
     );
@@ -381,18 +503,36 @@ class _DesignTile extends StatelessWidget {
                       },
                       itemBuilder: (context) => [
                         if (!design.isPublic)
-                          const PopupMenuItem<String>(
+                          PopupMenuItem<String>(
                             value: 'publish',
-                            child: Text('Publish to Showcase'),
+                            child: Text(
+                              localizedFromContext(
+                                context,
+                                CommunityStrings.publishToShowcase,
+                                CommunityStrings.publishToShowcaseAr,
+                              ),
+                            ),
                           ),
                         if (design.isPublic)
-                          const PopupMenuItem<String>(
+                          PopupMenuItem<String>(
                             value: 'unpublish',
-                            child: Text('Unpublish'),
+                            child: Text(
+                              localizedFromContext(
+                                context,
+                                ProfileStrings.unpublish,
+                                ProfileStrings.unpublishAr,
+                              ),
+                            ),
                           ),
-                        const PopupMenuItem<String>(
+                        PopupMenuItem<String>(
                           value: 'delete',
-                          child: Text('Delete'),
+                          child: Text(
+                            localizedFromContext(
+                              context,
+                              AppStrings.settingsDeleteDialogConfirm,
+                              AppStrings.settingsDeleteDialogConfirmAr,
+                            ),
+                          ),
                         ),
                       ],
                     ),

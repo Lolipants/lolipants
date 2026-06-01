@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:fpdart/fpdart.dart';
+import 'package:lolipants/core/constants/profile_strings.dart';
 import 'package:lolipants/core/errors/app_exception.dart';
 import 'package:lolipants/core/network/api_endpoints.dart';
 
@@ -41,7 +42,9 @@ class UserProfileRepository {
       );
       final saved = response.data?['gender']?.toString().trim().toLowerCase();
       if (saved == null || saved.isEmpty) {
-        return left(const ServerException(500, 'Gender not saved'));
+        return left(
+          const ServerException(500, ProfileStrings.genderNotSaved),
+        );
       }
       return right(saved);
     } on DioException catch (e) {

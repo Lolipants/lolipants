@@ -82,8 +82,10 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
 
   /// Updates the active locale and persists it.
   Future<void> setLocale(Locale locale) async {
-    await _persistLocale(locale);
+    if (state.locale == locale) return;
+    // Apply immediately so the UI updates without waiting on disk I/O.
     state = state.copyWith(locale: locale);
+    await _persistLocale(locale);
   }
 
   /// Updates the text scale preset and persists it.

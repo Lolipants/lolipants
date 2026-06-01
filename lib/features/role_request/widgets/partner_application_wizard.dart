@@ -6,6 +6,7 @@ import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/core/errors/app_exception_message_mapper.dart';
 import 'package:lolipants/features/role_request/providers/role_request_providers.dart';
+import 'package:lolipants/shared/widgets/locale_bilingual_text.dart';
 
 /// Multi-step tailor/delivery partner application (submits via existing API).
 class PartnerApplicationWizard extends ConsumerStatefulWidget {
@@ -249,20 +250,18 @@ class _WelcomePage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(AppStrings.partnerWelcomeTitle, style: AppTextStyles.titleLarge),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            AppStrings.partnerWelcomeTitleAr,
-            style: AppTextStyles.titleMedium.copyWith(color: AppColors.gold),
-            textDirection: TextDirection.rtl,
+          LocaleBilingualText(
+            en: AppStrings.partnerWelcomeTitle,
+            ar: AppStrings.partnerWelcomeTitleAr,
+            enStyle: AppTextStyles.titleLarge,
+            arStyle: AppTextStyles.titleMedium.copyWith(color: AppColors.gold),
           ),
           const SizedBox(height: AppSpacing.md),
-          Text(AppStrings.partnerWelcomeBody, style: AppTextStyles.bodyMedium),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            AppStrings.partnerWelcomeBodyAr,
-            style: AppTextStyles.bodyMedium.copyWith(color: AppColors.dust),
-            textDirection: TextDirection.rtl,
+          LocaleBilingualText(
+            en: AppStrings.partnerWelcomeBody,
+            ar: AppStrings.partnerWelcomeBodyAr,
+            enStyle: AppTextStyles.bodyMedium,
+            arStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.dust),
           ),
           const SizedBox(height: AppSpacing.xl),
           Align(
@@ -297,14 +296,11 @@ class _RolePage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            AppStrings.partnerChoosePathTitle,
-            style: AppTextStyles.titleLarge,
-          ),
-          Text(
-            AppStrings.partnerChoosePathTitleAr,
-            style: AppTextStyles.titleMedium.copyWith(color: AppColors.gold),
-            textDirection: TextDirection.rtl,
+          LocaleBilingualText(
+            en: AppStrings.partnerChoosePathTitle,
+            ar: AppStrings.partnerChoosePathTitleAr,
+            enStyle: AppTextStyles.titleLarge,
+            arStyle: AppTextStyles.titleMedium.copyWith(color: AppColors.gold),
           ),
           const SizedBox(height: AppSpacing.lg),
           _RoleCard(
@@ -440,14 +436,11 @@ class _DetailsPage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            AppStrings.partnerDetailsTitle,
-            style: AppTextStyles.titleLarge,
-          ),
-          Text(
-            AppStrings.partnerDetailsTitleAr,
-            style: AppTextStyles.titleMedium.copyWith(color: AppColors.gold),
-            textDirection: TextDirection.rtl,
+          LocaleBilingualText(
+            en: AppStrings.partnerDetailsTitle,
+            ar: AppStrings.partnerDetailsTitleAr,
+            enStyle: AppTextStyles.titleLarge,
+            arStyle: AppTextStyles.titleMedium.copyWith(color: AppColors.gold),
           ),
           const SizedBox(height: AppSpacing.lg),
           if (tailor) ...[
@@ -578,11 +571,11 @@ class _ReviewPage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(AppStrings.partnerReviewTitle, style: AppTextStyles.titleLarge),
-          Text(
-            AppStrings.partnerReviewTitleAr,
-            style: AppTextStyles.titleMedium.copyWith(color: AppColors.gold),
-            textDirection: TextDirection.rtl,
+          LocaleBilingualText(
+            en: AppStrings.partnerReviewTitle,
+            ar: AppStrings.partnerReviewTitleAr,
+            enStyle: AppTextStyles.titleLarge,
+            arStyle: AppTextStyles.titleMedium.copyWith(color: AppColors.gold),
           ),
           const SizedBox(height: AppSpacing.md),
           Text('Role: $role', style: AppTextStyles.bodyMedium),

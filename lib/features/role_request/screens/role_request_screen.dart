@@ -11,6 +11,7 @@ import 'package:lolipants/core/errors/app_exception_message_mapper.dart';
 import 'package:lolipants/features/role_request/providers/role_request_providers.dart';
 import 'package:lolipants/features/role_request/widgets/partner_application_wizard.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
+import 'package:lolipants/shared/widgets/locale_bilingual_text.dart';
 
 bool _hasPendingRoleRequest(List<Map<String, dynamic>> rows) {
   for (final r in rows) {
@@ -65,25 +66,24 @@ class RoleRequestScreen extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Text(
-                        AppStrings.partnerTitleAr,
-                        style: AppTextStyles.titleMedium.copyWith(
+                      LocaleBilingualText(
+                        en: AppStrings.partnerTitleEn,
+                        ar: AppStrings.partnerTitleAr,
+                        enStyle: AppTextStyles.titleMedium.copyWith(
                           color: AppColors.gold,
                         ),
-                        textDirection: TextDirection.rtl,
+                        arStyle: AppTextStyles.titleMedium.copyWith(
+                          color: AppColors.gold,
+                        ),
                       ),
                       const SizedBox(height: AppSpacing.sm),
-                      Text(
-                        AppStrings.partnerHeaderSubtitleEn,
-                        style: AppTextStyles.bodyMedium,
-                      ),
-                      const SizedBox(height: AppSpacing.xs),
-                      Text(
-                        AppStrings.partnerHeaderSubtitleAr,
-                        style: AppTextStyles.bodyMedium.copyWith(
+                      LocaleBilingualText(
+                        en: AppStrings.partnerHeaderSubtitleEn,
+                        ar: AppStrings.partnerHeaderSubtitleAr,
+                        enStyle: AppTextStyles.bodyMedium,
+                        arStyle: AppTextStyles.bodyMedium.copyWith(
                           color: AppColors.dust,
                         ),
-                        textDirection: TextDirection.rtl,
                       ),
                     ],
                   ),

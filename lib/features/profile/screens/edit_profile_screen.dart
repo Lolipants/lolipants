@@ -6,7 +6,9 @@ import 'package:lolipants/core/permissions/device_permission_prompt.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/constants/profile_strings.dart';
 import 'package:lolipants/core/errors/app_exception.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/features/auth/providers/auth_providers.dart';
 import 'package:lolipants/features/editor/providers/designs_providers.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
@@ -67,7 +69,14 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           icon: const Icon(Icons.chevron_left, color: AppColors.gold),
           onPressed: () => context.pop(),
         ),
-        title: Text('Edit profile', style: AppTextStyles.titleLarge),
+        title: Text(
+          localizedFromContext(
+            context,
+            ProfileStrings.editProfile,
+            ProfileStrings.editProfileAr,
+          ),
+          style: AppTextStyles.titleLarge,
+        ),
         backgroundColor: AppColors.ink,
         elevation: 0,
       ),
@@ -142,7 +151,11 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 ],
                 LolipantsTextField(
                   controller: _nameController,
-                  label: 'Name · الاسم',
+                  label: localizedFromContext(
+                    context,
+                    ProfileStrings.nameLabel,
+                    ProfileStrings.nameLabelAr,
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.md),
                 // Email is read-only; rendered as a styled row rather than an
@@ -180,7 +193,17 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   const SizedBox(height: AppSpacing.md),
                 ],
                 LolipantsButton(
-                  label: _saving ? 'Saving…' : 'Save',
+                  label: _saving
+                      ? localizedFromContext(
+                          context,
+                          ProfileStrings.saving,
+                          ProfileStrings.savingAr,
+                        )
+                      : localizedFromContext(
+                          context,
+                          ProfileStrings.save,
+                          ProfileStrings.saveAr,
+                        ),
                   onPressed: _saving ? null : _save,
                 ),
               ],
@@ -221,7 +244,11 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           _uploadingAvatar = false;
           _error = err is ServerException && err.message.isNotEmpty
               ? err.message
-              : 'Could not upload photo. Check connection and try again.';
+              : localizedFromContext(
+                  context,
+                  ProfileStrings.avatarUploadFailed,
+                  ProfileStrings.avatarUploadFailedAr,
+                );
         });
       },
       (url) {
@@ -253,7 +280,13 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   Future<void> _persistProfile({required bool closeOnSuccess}) async {
     final name = _nameController.text.trim();
     if (name.isEmpty) {
-      setState(() => _error = 'Name is required.');
+      setState(
+        () => _error = localizedFromContext(
+          context,
+          ProfileStrings.nameRequired,
+          ProfileStrings.nameRequiredAr,
+        ),
+      );
       return;
     }
     setState(() {
@@ -270,7 +303,11 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         _saving = false;
         _error = err is AuthException && err.message.isNotEmpty
             ? err.message
-            : 'Could not update profile.';
+            : localizedFromContext(
+                context,
+                ProfileStrings.profileUpdateFailed,
+                ProfileStrings.profileUpdateFailedAr,
+              );
       }),
       (_) {
         if (!mounted) return;

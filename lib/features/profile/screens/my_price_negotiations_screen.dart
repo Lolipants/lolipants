@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/constants/profile_strings.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/features/orders/models/quote_negotiation.dart';
 import 'package:lolipants/features/orders/providers/orders_providers.dart';
 import 'package:lolipants/features/orders/utils/negotiation_checkout.dart';
@@ -43,7 +45,11 @@ class _MyPriceNegotiationsScreenState
         _loading = false;
         _error = orderErrorMessage(
           e,
-          fallback: 'Could not load price negotiations.',
+          fallback: localized(
+            ref,
+            ProfileStrings.negotiationsLoadError,
+            ProfileStrings.negotiationsLoadErrorAr,
+          ),
         );
       }),
       (items) => setState(() {
@@ -68,7 +74,15 @@ class _MyPriceNegotiationsScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Price negotiations')),
+      appBar: AppBar(
+        title: Text(
+          localizedFromContext(
+            context,
+            ProfileStrings.priceNegotiations,
+            ProfileStrings.priceNegotiationsAr,
+          ),
+        ),
+      ),
       body: Stack(
         children: [
           const ArabesqueBackground(),
@@ -92,13 +106,17 @@ class _MyPriceNegotiationsScreenState
                       )
                     : _items.isEmpty
                         ? ListView(
-                            children: const [
-                              SizedBox(height: 120),
+                            children: [
+                              const SizedBox(height: 120),
                               Center(
                                 child: Padding(
-                                  padding: EdgeInsets.all(AppSpacing.xl),
+                                  padding: const EdgeInsets.all(AppSpacing.xl),
                                   child: Text(
-                                    'No price negotiations yet. Negotiate on the compare tailors step during checkout.',
+                                    localizedFromContext(
+                                      context,
+                                      ProfileStrings.negotiationsEmptyLong,
+                                      ProfileStrings.negotiationsEmptyLongAr,
+                                    ),
                                     textAlign: TextAlign.center,
                                   ),
                                 ),
@@ -180,7 +198,7 @@ class _NegotiationTile extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      'Offer ${negotiation.offeredTotal} ${negotiation.currency}',
+                      '${localizedFromContext(context, ProfileStrings.offer, ProfileStrings.offerAr)} ${negotiation.offeredTotal} ${negotiation.currency}',
                       style: AppTextStyles.titleSmall,
                     ),
                   ),
@@ -205,7 +223,7 @@ class _NegotiationTile extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                'List ${negotiation.listTotal} ${negotiation.currency}'
+                '${localizedFromContext(context, ProfileStrings.listPrice, ProfileStrings.listPriceAr)} ${negotiation.listTotal} ${negotiation.currency}'
                 '${negotiation.tailorName != null ? ' • ${negotiation.tailorName}' : ''}',
                 style: AppTextStyles.bodySmall,
               ),
@@ -213,8 +231,16 @@ class _NegotiationTile extends StatelessWidget {
                 const SizedBox(height: AppSpacing.sm),
                 Text(
                   negotiation.status == QuoteNegotiationStatus.countered
-                      ? 'The tailor sent a counter offer. Accept it to continue checkout.'
-                      : 'Payment is on hold until the tailor responds.',
+                      ? localizedFromContext(
+                          context,
+                          ProfileStrings.tailorCounterOfferActive,
+                          ProfileStrings.tailorCounterOfferActiveAr,
+                        )
+                      : localizedFromContext(
+                          context,
+                          ProfileStrings.paymentOnHold,
+                          ProfileStrings.paymentOnHoldAr,
+                        ),
                   style: AppTextStyles.bodySmall.copyWith(
                     color: AppColors.fog,
                   ),
@@ -223,14 +249,22 @@ class _NegotiationTile extends StatelessWidget {
               if (onReviewCounter != null) ...[
                 const SizedBox(height: AppSpacing.sm),
                 LolipantsButton(
-                  label: 'Review counter offer',
+                  label: localizedFromContext(
+                    context,
+                    ProfileStrings.reviewCounterOffer,
+                    ProfileStrings.reviewCounterOfferAr,
+                  ),
                   onPressed: onReviewCounter,
                 ),
               ],
               if (onContinue != null) ...[
                 const SizedBox(height: AppSpacing.sm),
                 LolipantsButton(
-                  label: 'Continue to payment',
+                  label: localizedFromContext(
+                    context,
+                    ProfileStrings.continueToPayment,
+                    ProfileStrings.continueToPaymentAr,
+                  ),
                   onPressed: onContinue,
                 ),
               ],

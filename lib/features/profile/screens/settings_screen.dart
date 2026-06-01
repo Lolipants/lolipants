@@ -9,12 +9,14 @@ import 'package:lolipants/core/config/app_features.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_strings.dart';
+import 'package:lolipants/core/constants/profile_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/core/permissions/device_permission_prompt.dart';
 import 'package:lolipants/core/push/onesignal_bootstrap.dart';
 import 'package:lolipants/features/auth/providers/auth_providers.dart';
 import 'package:lolipants/features/music/providers/music_provider.dart';
 import 'package:lolipants/features/settings/models/settings_state.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/features/settings/providers/settings_provider.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
 import 'package:lolipants/shared/widgets/gold_divider.dart';
@@ -96,8 +98,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           messenger.showSnackBar(
             SnackBar(
               content: Text(
-                '${AppStrings.settingsPushPermissionDenied} / '
-                '${AppStrings.settingsPushPermissionDeniedAr}',
+                localizedFromContext(context, AppStrings.settingsPushPermissionDenied, AppStrings.settingsPushPermissionDeniedAr),
               ),
             ),
           );
@@ -113,8 +114,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             messenger.showSnackBar(
               SnackBar(
                 content: Text(
-                  '${AppStrings.settingsPushUnavailable} / '
-                  '${AppStrings.settingsPushUnavailableAr}',
+                  localizedFromContext(context, AppStrings.settingsPushUnavailable, AppStrings.settingsPushUnavailableAr),
                 ),
               ),
             );
@@ -122,8 +122,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             messenger.showSnackBar(
               SnackBar(
                 content: Text(
-                  '${AppStrings.settingsPushPermissionDenied} / '
-                  '${AppStrings.settingsPushPermissionDeniedAr}',
+                  localizedFromContext(context, AppStrings.settingsPushPermissionDenied, AppStrings.settingsPushPermissionDeniedAr),
                 ),
               ),
             );
@@ -145,26 +144,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.stone,
         title: Text(
-          '${AppStrings.settingsClearMusicConfirmTitle} / '
-          '${AppStrings.settingsClearMusicConfirmTitleAr}',
+          localizedFromContext(context, AppStrings.settingsClearMusicConfirmTitle, AppStrings.settingsClearMusicConfirmTitleAr),
           style: AppTextStyles.titleMedium,
         ),
         content: Text(
-          '${AppStrings.settingsClearMusicConfirmBody} / '
-          '${AppStrings.settingsClearMusicConfirmBodyAr}',
+          localizedFromContext(context, AppStrings.settingsClearMusicConfirmBody, AppStrings.settingsClearMusicConfirmBodyAr),
           style: AppTextStyles.bodyMedium,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
             child: Text(
-              '${AppStrings.cancel} / ${AppStrings.cancelAr}',
+              localizedFromContext(context, AppStrings.cancel, AppStrings.cancelAr),
             ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(
-              '${AppStrings.confirm} / ${AppStrings.confirmAr}',
+              localizedFromContext(context, AppStrings.confirm, AppStrings.confirmAr),
               style: const TextStyle(color: AppColors.rubyLight),
             ),
           ),
@@ -177,8 +174,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            '${AppStrings.settingsMusicQueueCleared} / '
-            '${AppStrings.settingsMusicQueueClearedAr}',
+            localizedFromContext(context, AppStrings.settingsMusicQueueCleared, AppStrings.settingsMusicQueueClearedAr),
           ),
         ),
       );
@@ -191,25 +187,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.stone,
         title: Text(
-          '${AppStrings.settingsDeleteDialogTitle} / '
-          '${AppStrings.settingsDeleteDialogTitleAr}',
+          localizedFromContext(context, AppStrings.settingsDeleteDialogTitle, AppStrings.settingsDeleteDialogTitleAr),
           style: AppTextStyles.titleMedium,
         ),
         content: Text(
-          '${AppStrings.settingsDeleteDialogBody} / '
-          '${AppStrings.settingsDeleteDialogBodyAr}',
+          localizedFromContext(context, AppStrings.settingsDeleteDialogBody, AppStrings.settingsDeleteDialogBodyAr),
           style: AppTextStyles.bodyMedium,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('${AppStrings.cancel} / ${AppStrings.cancelAr}'),
+            child: Text(localizedFromContext(context, AppStrings.cancel, AppStrings.cancelAr)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(
-              '${AppStrings.settingsDeleteDialogConfirm} / '
-              '${AppStrings.settingsDeleteDialogConfirmAr}',
+              localizedFromContext(context, AppStrings.settingsDeleteDialogConfirm, AppStrings.settingsDeleteDialogConfirmAr),
               style: const TextStyle(color: AppColors.rubyLight),
             ),
           ),
@@ -227,8 +220,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         messenger.showSnackBar(
           SnackBar(
             content: Text(
-              '${AppStrings.settingsDeleteAccountFailed} / '
-              '${AppStrings.settingsDeleteAccountFailedAr}',
+              localizedFromContext(context, AppStrings.settingsDeleteAccountFailed, AppStrings.settingsDeleteAccountFailedAr),
             ),
           ),
         );
@@ -243,17 +235,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.stone,
         title: Text(
-          '${AppStrings.logOutConfirmTitle} / ${AppStrings.logOutConfirmTitleAr}',
+          localizedFromContext(context, AppStrings.logOutConfirmTitle, AppStrings.logOutConfirmTitleAr),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('${AppStrings.cancel} / ${AppStrings.cancelAr}'),
+            child: Text(localizedFromContext(context, AppStrings.cancel, AppStrings.cancelAr)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(
-              '${AppStrings.confirm} / ${AppStrings.confirmAr}',
+              localizedFromContext(context, AppStrings.confirm, AppStrings.confirmAr),
               style: const TextStyle(color: AppColors.rubyLight),
             ),
           ),
@@ -283,7 +275,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           onPressed: () => context.pop(),
         ),
         title: Text(
-          '${AppStrings.settingsScreenTitle} / ${AppStrings.settingsScreenTitleAr}',
+          localizedFromContext(context, AppStrings.settingsScreenTitle, AppStrings.settingsScreenTitleAr),
           style: AppTextStyles.titleLarge,
         ),
         backgroundColor: AppColors.ink,
@@ -334,13 +326,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       .read(settingsProvider.notifier)
                       .setReduceMotion(value: v),
                   title: Text(
-                    '${AppStrings.settingsReduceMotionTitle} / '
-                    '${AppStrings.settingsReduceMotionTitleAr}',
+                    localizedFromContext(context, AppStrings.settingsReduceMotionTitle, AppStrings.settingsReduceMotionTitleAr),
                     style: AppTextStyles.titleSmall,
                   ),
                   subtitle: Text(
-                    '${AppStrings.settingsReduceMotionSubtitle} / '
-                    '${AppStrings.settingsReduceMotionSubtitleAr}',
+                    localizedFromContext(context, AppStrings.settingsReduceMotionSubtitle, AppStrings.settingsReduceMotionSubtitleAr),
                     style: AppTextStyles.bodySmall,
                   ),
                   activeThumbColor: AppColors.gold,
@@ -358,16 +348,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ? null
                       : (v) => unawaited(_onPushChanged(v)),
                   title: Text(
-                    '${AppStrings.settingsPushTitle} / '
-                    '${AppStrings.settingsPushTitleAr}',
+                    localizedFromContext(context, AppStrings.settingsPushTitle, AppStrings.settingsPushTitleAr),
                     style: AppTextStyles.titleSmall,
                   ),
                   subtitle: Text(
                     pushConfigured
-                        ? '${AppStrings.settingsPushSubtitle} / '
-                            '${AppStrings.settingsPushSubtitleAr}'
-                        : '${AppStrings.settingsPushUnavailable} / '
-                            '${AppStrings.settingsPushUnavailableAr}',
+                        ? localizedFromContext(context, AppStrings.settingsPushSubtitle, AppStrings.settingsPushSubtitleAr)
+                        : localizedFromContext(context, AppStrings.settingsPushUnavailable, AppStrings.settingsPushUnavailableAr),
                     style: AppTextStyles.bodySmall,
                   ),
                   activeThumbColor: AppColors.gold,
@@ -386,13 +373,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       color: AppColors.gold,
                     ),
                     title: Text(
-                      '${AppStrings.settingsClearMusicQueue} / '
-                      '${AppStrings.settingsClearMusicQueueAr}',
+                      localizedFromContext(context, AppStrings.settingsClearMusicQueue, AppStrings.settingsClearMusicQueueAr),
                       style: AppTextStyles.titleSmall,
                     ),
                     subtitle: Text(
-                      '${AppStrings.settingsClearMusicQueueSubtitle} / '
-                      '${AppStrings.settingsClearMusicQueueSubtitleAr}',
+                      localizedFromContext(context, AppStrings.settingsClearMusicQueueSubtitle, AppStrings.settingsClearMusicQueueSubtitleAr),
                       style: AppTextStyles.bodySmall,
                     ),
                     trailing: const Icon(
@@ -432,8 +417,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     color: AppColors.gold,
                   ),
                   title: Text(
-                    '${AppStrings.settingsHelpCenter} / '
-                    '${AppStrings.settingsHelpCenterAr}',
+                    localizedFromContext(context, AppStrings.settingsHelpCenter, AppStrings.settingsHelpCenterAr),
                     style: AppTextStyles.titleSmall,
                   ),
                   trailing: const Icon(
@@ -449,7 +433,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     color: AppColors.gold,
                   ),
                   title: Text(
-                    '${AppStrings.settingsFaq} / ${AppStrings.settingsFaqAr}',
+                    localizedFromContext(context, AppStrings.settingsFaq, AppStrings.settingsFaqAr),
                     style: AppTextStyles.titleSmall,
                   ),
                   trailing: const Icon(
@@ -465,8 +449,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     color: AppColors.gold,
                   ),
                   title: Text(
-                    '${AppStrings.settingsContactSupport} / '
-                    '${AppStrings.settingsContactSupportAr}',
+                    localizedFromContext(context, AppStrings.settingsContactSupport, AppStrings.settingsContactSupportAr),
                     style: AppTextStyles.titleSmall,
                   ),
                   trailing: const Icon(
@@ -490,7 +473,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       color: AppColors.gold,
                     ),
                     title: Text(
-                      '${AppStrings.myDesigns} / ${AppStrings.myDesignsAr}',
+                      localizedFromContext(context, AppStrings.myDesigns, AppStrings.myDesignsAr),
                       style: AppTextStyles.titleSmall,
                     ),
                     trailing: const Icon(
@@ -505,8 +488,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       color: AppColors.gold,
                     ),
                     title: Text(
-                      '${AppStrings.myMeasurements} / '
-                      '${AppStrings.myMeasurementsAr}',
+                      localizedFromContext(context, AppStrings.myMeasurements, AppStrings.myMeasurementsAr),
                       style: AppTextStyles.titleSmall,
                     ),
                     trailing: const Icon(
@@ -521,8 +503,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       color: AppColors.gold,
                     ),
                     title: Text(
-                      '${AppStrings.settingsEditProfile} / '
-                      '${AppStrings.settingsEditProfileAr}',
+                      localizedFromContext(context, AppStrings.settingsEditProfile, AppStrings.settingsEditProfileAr),
                       style: AppTextStyles.titleSmall,
                     ),
                     trailing: const Icon(
@@ -537,8 +518,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       color: AppColors.rubyLight,
                     ),
                     title: Text(
-                      '${AppStrings.settingsSignOut} / '
-                      '${AppStrings.settingsSignOutAr}',
+                      localizedFromContext(context, AppStrings.settingsSignOut, AppStrings.settingsSignOutAr),
                       style: AppTextStyles.titleSmall.copyWith(
                         color: AppColors.rubyLight,
                       ),
@@ -548,7 +528,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   const SizedBox(height: AppSpacing.md),
                   LolipantsButton(
                     label:
-                        '${AppStrings.settingsDeleteAccount} / ${AppStrings.settingsDeleteAccountAr}',
+                        localizedFromContext(context, AppStrings.settingsDeleteAccount, AppStrings.settingsDeleteAccountAr),
                     variant: LolipantsButtonVariant.destructive,
                     loading: _deleting,
                     onPressed: _deleting
@@ -571,14 +551,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     color: AppColors.gold,
                   ),
                   title: Text(
-                    '${AppStrings.settingsAppVersion} / '
-                    '${AppStrings.settingsAppVersionAr}',
+                    localizedFromContext(context, AppStrings.settingsAppVersion, AppStrings.settingsAppVersionAr),
                     style: AppTextStyles.titleSmall,
                   ),
                   subtitle: Text(
                     _version ??
-                        '${AppStrings.settingsVersionLoading} / '
-                            '${AppStrings.settingsVersionLoadingAr}',
+                        localizedFromContext(context, AppStrings.settingsVersionLoading, AppStrings.settingsVersionLoadingAr),
                     style: AppTextStyles.bodySmall,
                   ),
                 ),
@@ -589,8 +567,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       color: AppColors.gold,
                     ),
                     title: Text(
-                      '${AppStrings.settingsApiBaseDebug} / '
-                      '${AppStrings.settingsApiBaseDebugAr}',
+                      localizedFromContext(context, AppStrings.settingsApiBaseDebug, AppStrings.settingsApiBaseDebugAr),
                       style: AppTextStyles.titleSmall,
                     ),
                     subtitle: SelectableText(
@@ -611,7 +588,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 }
 
-class _BilingualSectionTitle extends StatelessWidget {
+class _BilingualSectionTitle extends ConsumerWidget {
   const _BilingualSectionTitle({
     required this.titleEn,
     required this.titleAr,
@@ -621,18 +598,19 @@ class _BilingualSectionTitle extends StatelessWidget {
   final String titleAr;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final locale = ref.watch(settingsLocaleProvider);
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: Text(
-        '$titleEn / $titleAr',
+        localizedFromLocale(locale, titleEn, titleAr),
         style: AppTextStyles.labelGold,
       ),
     );
   }
 }
 
-class _BilingualLabel extends StatelessWidget {
+class _BilingualLabel extends ConsumerWidget {
   const _BilingualLabel({
     required this.labelEn,
     required this.labelAr,
@@ -642,9 +620,10 @@ class _BilingualLabel extends StatelessWidget {
   final String labelAr;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final locale = ref.watch(settingsLocaleProvider);
     return Text(
-      '$labelEn / $labelAr',
+      localizedFromLocale(locale, labelEn, labelAr),
       style: AppTextStyles.bodySmall.copyWith(color: AppColors.sand),
     );
   }
@@ -662,7 +641,7 @@ class _LanguageRow extends StatelessWidget {
       children: [
         Expanded(
           child: _PillChoice(
-            label: 'English',
+            label: ProfileStrings.settingsLanguageEnglish,
             selected: !isArabic,
             onTap: () => onChanged(false),
           ),
@@ -670,7 +649,7 @@ class _LanguageRow extends StatelessWidget {
         const SizedBox(width: AppSpacing.md),
         Expanded(
           child: _PillChoice(
-            label: 'العربية',
+            label: ProfileStrings.settingsLanguageArabic,
             selected: isArabic,
             onTap: () => onChanged(true),
           ),
@@ -680,7 +659,7 @@ class _LanguageRow extends StatelessWidget {
   }
 }
 
-class _TextScaleRow extends StatelessWidget {
+class _TextScaleRow extends ConsumerWidget {
   const _TextScaleRow({
     required this.current,
     required this.onChanged,
@@ -690,12 +669,13 @@ class _TextScaleRow extends StatelessWidget {
   final ValueChanged<AppTextScaleOption> onChanged;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final locale = ref.watch(settingsLocaleProvider);
     Widget chip(AppTextScaleOption o, String en, String ar) {
       final selected = current == o;
       return Expanded(
         child: _PillChoice(
-          label: '$en\n$ar',
+          label: localizedFromLocale(locale, en, ar),
           selected: selected,
           onTap: () => onChanged(o),
           maxLines: 2,
@@ -787,7 +767,7 @@ class _PillChoice extends StatelessWidget {
   }
 }
 
-class _LegalWebTile extends StatelessWidget {
+class _LegalWebTile extends ConsumerWidget {
   const _LegalWebTile({
     required this.labelEn,
     required this.labelAr,
@@ -799,11 +779,13 @@ class _LegalWebTile extends StatelessWidget {
   final String url;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final locale = ref.watch(settingsLocaleProvider);
+    final label = localizedFromLocale(locale, labelEn, labelAr);
     return ListTile(
       leading: const Icon(Icons.article_outlined, color: AppColors.gold),
       title: Text(
-        '$labelEn / $labelAr',
+        label,
         style: AppTextStyles.titleSmall,
       ),
       trailing: const Icon(Icons.chevron_right, color: AppColors.fog),
@@ -812,7 +794,7 @@ class _LegalWebTile extends StatelessWidget {
           MaterialPageRoute<void>(
             builder: (_) => _WebViewScreen(
               url: url,
-              title: '$labelEn / $labelAr',
+              title: label,
             ),
           ),
         );

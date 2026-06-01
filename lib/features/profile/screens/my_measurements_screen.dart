@@ -5,6 +5,8 @@ import 'package:intl/intl.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/constants/profile_strings.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/features/sizing/models/body_measurements.dart';
 import 'package:lolipants/features/sizing/providers/sizing_providers.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
@@ -28,10 +30,20 @@ class _MyMeasurementsScreenState extends ConsumerState<MyMeasurementsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(AppStrings.myMeasurements),
+        title: Text(
+          localizedFromContext(
+            context,
+            ProfileStrings.myMeasurements,
+            ProfileStrings.myMeasurementsAr,
+          ),
+        ),
         actions: [
           IconButton(
-            tooltip: AppStrings.sizingOptionsTooltip,
+            tooltip: localizedFromContext(
+              context,
+              AppStrings.sizingOptionsTooltip,
+              AppStrings.sizingOptionsTooltipAr,
+            ),
             onPressed: () => context.push('/sizing'),
             icon: const Icon(Icons.tune),
           ),
@@ -80,41 +92,90 @@ class _MeasurementSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final lastUpdated = measurements.savedAt == null
-        ? AppStrings.measurementUnknown
+        ? localizedFromContext(
+            context,
+            AppStrings.measurementUnknown,
+            AppStrings.measurementUnknownAr,
+          )
         : DateFormat('yyyy-MM-dd HH:mm').format(measurements.savedAt!);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(AppStrings.myMeasurementsSummaryTitle, style: AppTextStyles.titleLarge),
+        Text(
+          pickSlashFromContext(context, AppStrings.myMeasurementsSummaryTitle),
+          style: AppTextStyles.titleLarge,
+        ),
         const SizedBox(height: AppSpacing.xs),
         Text(
-          '${AppStrings.myMeasurementsLastUpdatedPrefix} $lastUpdated '
-          '/ ${AppStrings.myMeasurementsLastUpdatedAr}',
+          '${localizedFromContext(context, AppStrings.myMeasurementsLastUpdatedPrefix, AppStrings.myMeasurementsLastUpdatedPrefixAr)} $lastUpdated',
           style: AppTextStyles.bodySmall,
         ),
         const SizedBox(height: AppSpacing.lg),
-        _MeasurementRow(label: AppStrings.measurementChest, value: measurements.chest),
-        _MeasurementRow(label: AppStrings.measurementWaist, value: measurements.waist),
-        _MeasurementRow(label: AppStrings.measurementHips, value: measurements.hips),
         _MeasurementRow(
-          label: AppStrings.measurementShoulderWidth,
+          label: localizedFromContext(
+            context,
+            AppStrings.measurementChest,
+            AppStrings.measurementChestAr,
+          ),
+          value: measurements.chest,
+        ),
+        _MeasurementRow(
+          label: localizedFromContext(
+            context,
+            AppStrings.measurementWaist,
+            AppStrings.measurementWaistAr,
+          ),
+          value: measurements.waist,
+        ),
+        _MeasurementRow(
+          label: localizedFromContext(
+            context,
+            AppStrings.measurementHips,
+            AppStrings.measurementHipsAr,
+          ),
+          value: measurements.hips,
+        ),
+        _MeasurementRow(
+          label: localizedFromContext(
+            context,
+            AppStrings.measurementShoulderWidth,
+            AppStrings.measurementShoulderWidthAr,
+          ),
           value: measurements.shoulderWidth,
         ),
-        _MeasurementRow(label: AppStrings.measurementHeight, value: measurements.height),
         _MeasurementRow(
-          label: AppStrings.measurementArmLength,
+          label: localizedFromContext(
+            context,
+            AppStrings.measurementHeight,
+            AppStrings.measurementHeightAr,
+          ),
+          value: measurements.height,
+        ),
+        _MeasurementRow(
+          label: localizedFromContext(
+            context,
+            AppStrings.measurementArmLength,
+            AppStrings.measurementArmLengthAr,
+          ),
           value: measurements.armLength,
         ),
         _TextMeasurementRow(
-          label: AppStrings.measurementPreferredSize,
+          label: localizedFromContext(
+            context,
+            AppStrings.measurementPreferredSize,
+            AppStrings.measurementPreferredSizeAr,
+          ),
           value: measurements.preferredSize,
         ),
         const SizedBox(height: AppSpacing.lg),
-        LolipantsButton(label: AppStrings.myMeasurementsEdit, onPressed: onEdit),
+        LolipantsButton(
+          label: pickSlashFromContext(context, AppStrings.myMeasurementsEdit),
+          onPressed: onEdit,
+        ),
         const SizedBox(height: AppSpacing.sm),
         LolipantsButton(
-          label: AppStrings.myMeasurementsRescan,
+          label: pickSlashFromContext(context, AppStrings.myMeasurementsRescan),
           variant: LolipantsButtonVariant.secondary,
           onPressed: onRescan,
         ),
@@ -134,12 +195,12 @@ class _EmptyMeasurements extends StatelessWidget {
       children: [
         const SizedBox(height: 120),
         Text(
-          AppStrings.myMeasurementsEmpty,
+          pickSlashFromContext(context, AppStrings.myMeasurementsEmpty),
           style: AppTextStyles.titleMedium,
         ),
         const SizedBox(height: AppSpacing.sm),
         LolipantsButton(
-          label: AppStrings.myMeasurementsTakeNow,
+          label: pickSlashFromContext(context, AppStrings.myMeasurementsTakeNow),
           onPressed: onTakeMeasurements,
         ),
       ],
@@ -163,7 +224,7 @@ class _MeasurementRow extends StatelessWidget {
           Text(
             value == null
                 ? '-'
-                : '${value!.toStringAsFixed(1)} ${AppStrings.measurementUnitCm}',
+                : '${value!.toStringAsFixed(1)} ${localizedFromContext(context, AppStrings.measurementUnitCm, AppStrings.measurementUnitCmAr)}',
             style: AppTextStyles.titleSmall,
           ),
         ],

@@ -6,11 +6,14 @@ import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/constants/profile_strings.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/features/auth/models/user.dart';
 import 'package:lolipants/features/auth/providers/auth_providers.dart';
 import 'package:lolipants/features/community/utils/community_navigation.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
 import 'package:lolipants/shared/widgets/gold_divider.dart';
+import 'package:lolipants/shared/widgets/locale_label.dart';
 
 /// Profile tab with account summary and settings list.
 class ProfileScreen extends ConsumerWidget {
@@ -85,21 +88,21 @@ class ProfileScreen extends ConsumerWidget {
                   onTap: () => context.push('/profile/measurements'),
                 ),
                 _ProfileTile(
-                  labelEn: 'Price negotiations',
-                  labelAr: 'تفاوض الأسعار',
+                  labelEn: ProfileStrings.priceNegotiations,
+                  labelAr: ProfileStrings.priceNegotiationsAr,
                   icon: Icons.price_change_outlined,
                   onTap: () => context.push('/profile/price-negotiations'),
                 ),
                 if (kFeatureCommunity) ...[
                   _ProfileTile(
-                    labelEn: 'Designer earnings',
-                    labelAr: 'أرباح المصمم',
+                    labelEn: ProfileStrings.designerEarnings,
+                    labelAr: ProfileStrings.designerEarningsAr,
                     icon: Icons.account_balance_wallet_outlined,
                     onTap: () => context.push('/community/earnings'),
                   ),
                   _ProfileTile(
-                    labelEn: 'My consultations',
-                    labelAr: 'استشاراتي',
+                    labelEn: ProfileStrings.myConsultations,
+                    labelAr: ProfileStrings.myConsultationsAr,
                     icon: Icons.forum_outlined,
                     onTap: () => openCommunityHubTab(
                       ref,
@@ -109,15 +112,15 @@ class ProfileScreen extends ConsumerWidget {
                   ),
                 ],
                 _ProfileTile(
-                  labelEn: 'Edit profile',
-                  labelAr: 'تعديل الملف',
+                  labelEn: AppStrings.settingsEditProfile,
+                  labelAr: AppStrings.settingsEditProfileAr,
                   icon: Icons.person_outline,
                   onTap: () => context.push('/profile/edit'),
                 ),
                 if (user != null && user.normalizedRole == UserRoles.user)
                   _ProfileTile(
-                    labelEn: 'Partner with Lolipants',
-                    labelAr: 'كن شريكاً',
+                    labelEn: AppStrings.partnerTitleEn,
+                    labelAr: AppStrings.partnerTitleAr,
                     icon: Icons.handshake_outlined,
                     onTap: () => context.push('/profile/role-request'),
                   ),
@@ -157,19 +160,29 @@ class ProfileScreen extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.stone,
-        title: const Text(
-          '${AppStrings.logOutConfirmTitle} / ${AppStrings.logOutConfirmTitleAr}',
+        title: Text(
+          localizedFromContext(
+            ctx,
+            AppStrings.logOutConfirmTitle,
+            AppStrings.logOutConfirmTitleAr,
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('${AppStrings.cancel} / ${AppStrings.cancelAr}'),
+            child: Text(
+              localizedFromContext(ctx, AppStrings.cancel, AppStrings.cancelAr),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(
-              '${AppStrings.confirm} / ${AppStrings.confirmAr}',
-              style: TextStyle(color: AppColors.rubyLight),
+            child: Text(
+              localizedFromContext(
+                ctx,
+                AppStrings.confirm,
+                AppStrings.confirmAr,
+              ),
+              style: const TextStyle(color: AppColors.rubyLight),
             ),
           ),
         ],
@@ -184,7 +197,7 @@ class ProfileScreen extends ConsumerWidget {
   }
 }
 
-class _ProfileTile extends StatelessWidget {
+class _ProfileTile extends ConsumerWidget {
   const _ProfileTile({
     required this.labelEn,
     required this.labelAr,
@@ -200,20 +213,14 @@ class _ProfileTile extends StatelessWidget {
   final bool destructive;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final color = destructive ? AppColors.rubyLight : AppColors.sand;
     return ListTile(
       leading: Icon(icon, color: color),
-      title: Text(
-        labelEn,
-        style: AppTextStyles.titleSmall.copyWith(color: color),
-      ),
-      subtitle: Directionality(
-        textDirection: TextDirection.rtl,
-        child: Text(
-          labelAr,
-          style: AppTextStyles.arabicLabel.copyWith(color: color),
-        ),
+      title: LocaleLabel(
+        en: labelEn,
+        ar: labelAr,
+        destructive: destructive,
       ),
       onTap: onTap,
     );
