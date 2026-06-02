@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lolipants/core/constants/community_strings.dart';
 import 'package:lolipants/features/community/models/commission.dart';
 import 'package:lolipants/features/community/providers/community_providers.dart';
 import 'package:lolipants/features/community/screens/designer_earnings_screen.dart';
@@ -105,9 +106,6 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 200));
 
-    expect(
-      find.textContaining('Publish a design to the showcase'),
-      findsOneWidget,
-    );
+    expect(find.text(CommunityStrings.commissionsEmpty), findsOneWidget);
   });
 }

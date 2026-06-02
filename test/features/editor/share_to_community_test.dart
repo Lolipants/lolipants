@@ -3,12 +3,27 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lolipants/core/router/app_router.dart';
+import 'package:lolipants/features/auth/providers/auth_providers.dart';
+import 'package:lolipants/features/settings/providers/settings_provider.dart';
+
+/// Avoids real HTTP during router construction.
+class _TestUnauthNotifier extends AuthNotifier {
+  @override
+  Future<AuthState> build() async => const AuthUnauthenticated();
+}
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   test(
     '/community/new-post and /community/posts/:id render on the root navigator',
     () {
-      final container = ProviderContainer();
+      final container = ProviderContainer(
+        overrides: [
+          authProvider.overrideWith(_TestUnauthNotifier.new),
+          settingsLocaleProvider.overrideWith((ref) => const Locale('en')),
+        ],
+      );
       addTearDown(container.dispose);
       final router = container.read(appRouterProvider);
 
