@@ -847,6 +847,12 @@ class AppStrings {
   /// Start designing CTA (Arabic).
   static const String startDesigningAr = 'ابدأ التصميم';
 
+  /// Global design FAB caption (English).
+  static const String fabDesign = 'Design';
+
+  /// Global design FAB caption (Arabic).
+  static const String fabDesignAr = 'تصميم';
+
   /// My orders header (English).
   static const String myOrders = 'My orders';
 

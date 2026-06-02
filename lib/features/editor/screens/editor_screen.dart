@@ -333,8 +333,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                                         ),
                                       if (editor.heroMode ==
                                               EditorHeroMode.look &&
-                                          editor.refinedLookUrl != null &&
-                                          editor.refinedLookUrl!.isNotEmpty)
+                                          editor.displayRefinedLookUrl != null)
                                         Positioned(
                                           top: 8,
                                           right: 8,
@@ -349,8 +348,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                                         ),
                                       if (editor.heroMode ==
                                               EditorHeroMode.look &&
-                                          editor.refinedLookUrl != null &&
-                                          editor.refinedLookUrl!.isNotEmpty)
+                                          editor.displayRefinedLookUrl != null)
                                         Positioned(
                                           left: 0,
                                           right: 0,
@@ -614,7 +612,9 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
       notifier.setHeroMode(EditorHeroMode.compose);
       await WidgetsBinding.instance.endOfFrame;
     }
-    final composeBytes = await _captureHeroPng();
+    final isCatalog = editor.buildStyleMode == EditorBuildStyleMode.catalog;
+    final composeBytes =
+        isCatalog ? null : await _captureHeroPng();
     final result = await notifier.generateRefinedLook(
       composePreviewBytes: composeBytes,
     );

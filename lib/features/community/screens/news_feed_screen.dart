@@ -10,7 +10,9 @@ import 'package:lolipants/features/community/models/post.dart';
 import 'package:lolipants/features/community/providers/community_providers.dart';
 import 'package:lolipants/features/community/widgets/post_card.dart';
 import 'package:lolipants/features/community/widgets/showcase_feed_slivers.dart';
+import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
+import 'package:lolipants/shared/widgets/labeled_floating_action_button.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
 
 /// Available tag filter keys on the feed.
@@ -107,58 +109,29 @@ class _NewsFeedScreenState extends ConsumerState<NewsFeedScreen> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          Semantics(
-            label: localizedFromContext(
-              context,
-              CommunityStrings.designButton,
-              CommunityStrings.designButtonAr,
-            ),
-            button: true,
-            child: FloatingActionButton(
-              heroTag: 'design_community_feed',
-              elevation: 2,
-              focusElevation: 4,
-              hoverElevation: 4,
-              highlightElevation: 6,
-              onPressed: () => context.push('/mannequin-selector'),
-              backgroundColor: AppColors.gold,
-              foregroundColor: AppColors.ink,
-              child: const Icon(Icons.design_services_outlined),
-            ),
+          LabeledFloatingActionButton(
+            heroTag: 'design_community_feed',
+            crossAxisAlignment: CrossAxisAlignment.end,
+            icon: Icons.design_services_outlined,
+            labelEn: AppStrings.fabDesign,
+            labelAr: AppStrings.fabDesignAr,
+            onPressed: () => context.push('/mannequin-selector'),
           ),
           const SizedBox(height: 12),
-          Semantics(
-            label: localizedFromContext(
-              context,
-              CommunityStrings.createPost,
-              CommunityStrings.createPostAr,
-            ),
-            button: true,
-            child: FloatingActionButton.extended(
-              heroTag: 'create-post',
-              elevation: 2,
-              focusElevation: 4,
-              hoverElevation: 4,
-              highlightElevation: 6,
-              onPressed: () async {
-                final created = await context.push<bool>('/community/new-post');
-                if (created == true) {
-                  for (final tag in kNewsFeedTagFilterKeys) {
-                    ref.invalidate(feedPostsProvider(tag));
-                  }
+          LabeledFloatingActionButton(
+            heroTag: 'create-post',
+            crossAxisAlignment: CrossAxisAlignment.end,
+            icon: Icons.add,
+            labelEn: CommunityStrings.post,
+            labelAr: CommunityStrings.postAr,
+            onPressed: () async {
+              final created = await context.push<bool>('/community/new-post');
+              if (created == true) {
+                for (final tag in kNewsFeedTagFilterKeys) {
+                  ref.invalidate(feedPostsProvider(tag));
                 }
-              },
-              backgroundColor: AppColors.gold,
-              foregroundColor: AppColors.ink,
-              icon: const Icon(Icons.add),
-              label: Text(
-                localizedFromContext(
-                  context,
-                  CommunityStrings.post,
-                  CommunityStrings.postAr,
-                ),
-              ),
-            ),
+              }
+            },
           ),
         ],
       ),

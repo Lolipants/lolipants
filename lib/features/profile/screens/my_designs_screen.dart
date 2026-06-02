@@ -19,6 +19,7 @@ import 'package:lolipants/features/editor/utils/ai_colour_parse.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
 import 'package:lolipants/shared/widgets/catalog_image.dart';
 import 'package:lolipants/shared/widgets/loading_overlay.dart';
+import 'package:lolipants/shared/widgets/labeled_floating_action_button.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
 import 'package:lolipants/shared/widgets/lolipants_text_field.dart';
 
@@ -49,16 +50,12 @@ class _MyDesignsScreenState extends ConsumerState<MyDesignsScreen> {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: LabeledFloatingActionButton(
+        heroTag: 'my-designs-new',
+        icon: Icons.add_circle_outline,
+        labelEn: ProfileStrings.newDesign,
+        labelAr: ProfileStrings.newDesignAr,
         onPressed: _isCreating ? null : () => _openCreateDesignSheet(context),
-        icon: const Icon(Icons.add_circle_outline),
-        label: Text(
-          localizedFromContext(
-            context,
-            ProfileStrings.newDesign,
-            ProfileStrings.newDesignAr,
-          ),
-        ),
       ),
       body: Stack(
         children: [

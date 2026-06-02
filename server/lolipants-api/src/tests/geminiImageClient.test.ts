@@ -5,6 +5,23 @@ import {
 } from "../lib/geminiImageClient";
 
 describe("geminiImageClient", () => {
+  it("uses catalogue dress prompt without configurator slots", () => {
+    const prompt = buildGarmentLookPrompt({
+      garmentType: "dress",
+      primaryColour: "#162F28",
+      accentColour: "#C9A84C",
+      fabricQuality: "standard",
+      userExtra: "Softer drape",
+      configuratorSummary: "Should not appear",
+      isCatalogDesignMode: true,
+      hasDesignPreviewReference: true,
+    });
+    expect(prompt).toContain("catalogue dress");
+    expect(prompt).toContain("Softer drape");
+    expect(prompt).not.toContain("Modular design");
+    expect(prompt).not.toContain("Should not appear");
+  });
+
   it("includes configurator summary in garment look prompt", () => {
     const prompt = buildGarmentLookPrompt({
       garmentType: "dress",

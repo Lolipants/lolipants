@@ -13,6 +13,7 @@ import 'package:lolipants/features/settings/providers/settings_provider.dart';
 import 'package:lolipants/features/admin/providers/admin_providers.dart';
 import 'package:lolipants/features/admin/utils/admin_cms_helpers.dart';
 import 'package:lolipants/features/editor/providers/designs_providers.dart';
+import 'package:lolipants/shared/widgets/labeled_floating_action_button.dart';
 
 /// Selectable parent row for template/slot filter and create forms.
 class _ParentOption {
@@ -155,17 +156,22 @@ class _AdminConfiguratorCmsTabState extends ConsumerState<AdminConfiguratorCmsTa
         ),
         Padding(
           padding: const EdgeInsets.all(AppSpacing.md),
-          child: FloatingActionButton.extended(
-            heroTag: 'cfg-add-$resource',
-            onPressed: () => _openForm(
-              context,
-              resource,
-              null,
-              templates: templates,
-              slots: slots,
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: LabeledFloatingActionButton(
+              heroTag: 'cfg-add-$resource',
+              crossAxisAlignment: CrossAxisAlignment.end,
+              icon: Icons.add,
+              labelEn: AdminStrings.newItem,
+              labelAr: AdminStrings.newItemAr,
+              onPressed: () => _openForm(
+                context,
+                resource,
+                null,
+                templates: templates,
+                slots: slots,
+              ),
             ),
-            icon: const Icon(Icons.add),
-            label: Text(localized(ref, AdminStrings.newItem, AdminStrings.newItemAr)),
           ),
         ),
       ],

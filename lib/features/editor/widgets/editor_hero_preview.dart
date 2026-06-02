@@ -219,7 +219,7 @@ class _AiLookBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final url = state.refinedLookUrl?.trim();
+    final url = state.displayRefinedLookUrl;
     if (url != null && url.isNotEmpty) {
       return LayoutBuilder(
         builder: (context, constraints) {

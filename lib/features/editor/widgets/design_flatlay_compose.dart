@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/features/editor/data/bundled_design_assets.dart';
 import 'package:lolipants/features/editor/data/editor_text_fonts.dart';
+import 'package:lolipants/features/editor/logic/editor_print_reference.dart';
 import 'package:lolipants/features/editor/providers/design_catalog_providers.dart';
 import 'package:lolipants/features/editor/providers/editor_provider.dart';
 import 'package:lolipants/features/editor/widgets/catalog_design_preview.dart';
@@ -39,13 +40,20 @@ class DesignFlatlayCompose extends ConsumerWidget {
     final path = resolved.isNotEmpty ? resolved : rawPath;
 
     final customizable = isCasualBasicFlatlayPath(rawPath);
+    final rawPrint = state.printImagePath?.trim() ?? '';
+    final userPrintPath = rawPrint.isNotEmpty &&
+            !isEditorReferencePrintImage(
+              printPathOrUrl: rawPrint,
+              catalogDesignPath: rawPath,
+            )
+        ? rawPrint
+        : '';
     final showOverlays = customizable ||
         state.textLayers.isNotEmpty ||
-        (state.printImagePath?.trim().isNotEmpty ?? false);
+        userPrintPath.isNotEmpty;
 
     final hasManipulableOverlay =
-        (state.printImagePath?.trim().isNotEmpty ?? false) ||
-            state.textLayers.isNotEmpty;
+        userPrintPath.isNotEmpty || state.textLayers.isNotEmpty;
 
     final notifier = ref.read(editorProvider.notifier);
 
@@ -103,10 +111,9 @@ class DesignFlatlayCompose extends ConsumerWidget {
                         onTap: notifier.clearOverlaySelection,
                       ),
                     ),
-                    if (state.printImagePath != null &&
-                        state.printImagePath!.trim().isNotEmpty)
+                    if (userPrintPath.isNotEmpty)
                       EditorPrintOverlay(
-                        path: state.printImagePath!,
+                        path: userPrintPath,
                         placement: state.printPlacement,
                         scalePercent: state.printScale,
                         offsetX: state.printOffsetX,

@@ -21,14 +21,15 @@ class EditorRefineFab extends ConsumerWidget {
     final editor = ref.watch(editorProvider);
     final quotaAsync = ref.watch(aiRenderQuotaProvider);
     final quota = quotaAsync.valueOrNull;
-    final fabricSelected = editor.isFabricSelected;
+    final fabricOk =
+        !editor.requiresFabricSelection || editor.isFabricSelected;
     final generating = editor.lookGenerating;
     final hasQuota = quota == null || quota.canRender;
     final enabled =
-        fabricSelected && !generating && hasQuota && onPressed != null;
+        fabricOk && !generating && hasQuota && onPressed != null;
 
     final quotaLabel = _quotaCompactLabel(quota);
-    final tooltip = !fabricSelected
+    final tooltip = !fabricOk
         ? 'Pick a fabric first'
         : !hasQuota
             ? 'No AI renders left this week'

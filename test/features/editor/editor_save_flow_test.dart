@@ -10,7 +10,11 @@ import 'package:lolipants/features/auth/data/auth_local_storage.dart';
 import 'package:lolipants/features/editor/data/designs_repository.dart';
 import 'package:lolipants/features/editor/models/garment_design.dart';
 import 'package:lolipants/features/editor/models/fabric_option.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:lolipants/features/editor/data/bundled_design_assets.dart';
+import 'package:lolipants/features/editor/providers/design_catalog_providers.dart';
 import 'package:lolipants/features/editor/providers/designs_providers.dart';
+import 'package:lolipants/features/editor/logic/refined_look_source_key.dart';
 import 'package:lolipants/features/editor/providers/editor_provider.dart';
 
 class _FakeAuthStorage extends AuthLocalStorage {
@@ -60,6 +64,22 @@ class _FakeDesignsRepository extends DesignsRepository {
   }
 
   @override
+  Future<Either<AppException, GarmentDesign>> updateDesign({
+    required String id,
+    required Map<String, dynamic> payload,
+  }) async {
+    lastPayload = payload;
+    return right(
+      GarmentDesign.fromApi({
+        'id': id,
+        'name': payload['name'] ?? 'Untitled',
+        'garment_type': payload['garmentType'] ?? 'thobe',
+        'primary_colour': payload['primaryColour'] ?? '#162F28',
+      }),
+    );
+  }
+
+  @override
   Future<Either<AppException, List<GarmentDesign>>> getMyDesigns() async {
     return right(const <GarmentDesign>[]);
   }
@@ -85,16 +105,68 @@ class _FakeDesignsRepository extends DesignsRepository {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  List<Override> saveFlowOverrides(_FakeDesignsRepository fakeRepo) => [
+    designsRepositoryProvider.overrideWithValue(fakeRepo),
+    designCatalogLookupProvider.overrideWithValue(const {}),
+  ];
+
   void pickFabric(ProviderContainer container) {
     container.read(editorProvider.notifier).setFabric('cotton');
   }
 
+  test('saveDesign succeeds in catalogue mode without fabric', () async {
+    dotenv.testLoad(
+      fileInput: 'CLOUDFLARE_R2_BASE_URL=https://pub.example.r2.dev',
+    );
+    final fakeRepo = _FakeDesignsRepository();
+    final container = ProviderContainer(
+      overrides: saveFlowOverrides(fakeRepo),
+    );
+    addTearDown(container.dispose);
+
+    final notifier = container.read(editorProvider.notifier);
+    notifier.setCatalogDesignPath(kWomenCompleteLookPaths.first);
+    notifier.setDesignName('Catalog look');
+
+    final result = await notifier.saveDesign();
+
+    expect(result.success, isTrue);
+    final payload = fakeRepo.lastPayload!;
+    expect(payload['printImageUrl'], contains('design_womens_look_blue_azulejo'));
+    final meta = payload['renderMetadata'] as Map<String, dynamic>;
+    expect(meta['buildStyleMode'], 'catalog');
+    expect(meta['catalogFlatImageUrl'], payload['printImageUrl']);
+    expect(meta['selectedCatalogDesignPath'], kWomenCompleteLookPaths.first);
+  });
+
+  test('catalogue save uses distinct image URL per selected design', () async {
+    dotenv.testLoad(
+      fileInput: 'CLOUDFLARE_R2_BASE_URL=https://pub.example.r2.dev',
+    );
+    final fakeRepo = _FakeDesignsRepository();
+    final container = ProviderContainer(
+      overrides: saveFlowOverrides(fakeRepo),
+    );
+    addTearDown(container.dispose);
+
+    final notifier = container.read(editorProvider.notifier);
+    notifier.setCatalogDesignPath(kWomenCompleteLookPaths.first);
+    await notifier.saveDesign(forceName: 'A');
+    final urlA = fakeRepo.lastPayload!['printImageUrl'] as String;
+
+    notifier.setCatalogDesignPath(kWomenCompleteLookPaths[1]);
+    await notifier.saveDesign(forceName: 'B');
+    final urlB = fakeRepo.lastPayload!['printImageUrl'] as String;
+
+    expect(urlA, isNot(equals(urlB)));
+    expect(urlA, contains('blue_azulejo'));
+    expect(urlB, contains('royal_blue_coral'));
+  });
+
   test('saveDesign fails when no fabric is selected', () async {
     final fakeRepo = _FakeDesignsRepository();
     final container = ProviderContainer(
-      overrides: [
-        designsRepositoryProvider.overrideWithValue(fakeRepo),
-      ],
+      overrides: saveFlowOverrides(fakeRepo),
     );
     addTearDown(container.dispose);
 
@@ -111,9 +183,7 @@ void main() {
   test('editor save uploads local print and persists remote url', () async {
     final fakeRepo = _FakeDesignsRepository();
     final container = ProviderContainer(
-      overrides: [
-        designsRepositoryProvider.overrideWithValue(fakeRepo),
-      ],
+      overrides: saveFlowOverrides(fakeRepo),
     );
     addTearDown(container.dispose);
 
@@ -143,9 +213,7 @@ void main() {
   test('text placement persists in save payload after move', () async {
     final fakeRepo = _FakeDesignsRepository();
     final container = ProviderContainer(
-      overrides: [
-        designsRepositoryProvider.overrideWithValue(fakeRepo),
-      ],
+      overrides: saveFlowOverrides(fakeRepo),
     );
     addTearDown(container.dispose);
 
@@ -169,9 +237,7 @@ void main() {
   test('compose preview uploads as print and render metadata', () async {
     final fakeRepo = _FakeDesignsRepository();
     final container = ProviderContainer(
-      overrides: [
-        designsRepositoryProvider.overrideWithValue(fakeRepo),
-      ],
+      overrides: saveFlowOverrides(fakeRepo),
     );
     addTearDown(container.dispose);
 
@@ -193,5 +259,32 @@ void main() {
       meta?['configuratorComposeImageUrl'],
       'https://cdn.example.com/prints/configurator-compose.png',
     );
+  });
+
+  test('compose/AI hero toggle keeps catalog refined look for same design', () {
+    final container = ProviderContainer(
+      overrides: saveFlowOverrides(_FakeDesignsRepository()),
+    );
+    addTearDown(container.dispose);
+
+    final notifier = container.read(editorProvider.notifier);
+    final path = kWomenCompleteLookPaths.first;
+    notifier.setCatalogDesignPath(path);
+
+    final key = refinedLookSourceKeyForEditorState(container.read(editorProvider));
+    notifier.state = container.read(editorProvider).copyWith(
+          refinedLookUrl: 'https://cdn.example.com/ai/look.png',
+          refinedLookSourceKey: key,
+          heroMode: EditorHeroMode.look,
+        );
+
+    notifier.setHeroMode(EditorHeroMode.compose);
+    expect(container.read(editorProvider).refinedLookUrl, isNotNull);
+
+    notifier.setHeroMode(EditorHeroMode.look);
+    expect(container.read(editorProvider).displayRefinedLookUrl, isNotNull);
+
+    notifier.setCatalogDesignPath(kWomenCompleteLookPaths[1]);
+    expect(container.read(editorProvider).displayRefinedLookUrl, isNull);
   });
 }

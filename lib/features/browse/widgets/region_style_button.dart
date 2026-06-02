@@ -7,8 +7,8 @@ import 'package:lolipants/features/browse/widgets/featured_design_carousel.dart'
 import 'package:lolipants/features/browse/widgets/region_pattern_painter.dart';
 import 'package:lolipants/shared/widgets/catalog_image.dart';
 
-/// Rounded-rectangle long button used on Home and Browse to open the editor
-/// with a seeded `RegionStylePreset`.
+/// Rounded-rectangle long button used on Home and Browse to open the mannequin
+/// picker (same flow as the global design FAB).
 ///
 /// Replaces the earlier 2x2 grids of `StyleCard` / `CountryCard`.
 class RegionStyleButton extends StatelessWidget {
@@ -20,8 +20,7 @@ class RegionStyleButton extends StatelessWidget {
 
   final RegionStylePreset preset;
 
-  /// Optional override. When null, tapping pushes `/editor` with an
-  /// [EditorPresetArgs] extra so the editor seeds from the preset.
+  /// Optional override. When null, tapping opens the mannequin selector.
   final VoidCallback? onTap;
 
   @override
@@ -32,7 +31,7 @@ class RegionStyleButton extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: onTap ?? () => openRegionStylePreset(context, preset),
+          onTap: onTap ?? () => openDesignMannequinFlow(context),
           borderRadius: BorderRadius.circular(20),
           child: Ink(
             height: 88,

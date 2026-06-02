@@ -8,39 +8,11 @@ import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/features/browse/data/region_presets.dart';
 import 'package:lolipants/features/browse/widgets/region_pattern_painter.dart';
-import 'package:lolipants/features/editor/data/built_in_mannequin_assets.dart';
-import 'package:lolipants/features/editor/models/editor_preset_args.dart';
 import 'package:lolipants/shared/widgets/catalog_image.dart';
 
-/// Opens the editor seeded from a regional preset (shared with list tiles).
-void openRegionStylePreset(BuildContext context, RegionStylePreset preset) {
-  final preview = preset.resolvedPreviewAssetPath;
-  String? catalogPath;
-  if (preview != null && preview.isNotEmpty) {
-    if (preview.startsWith('assets/images/designs/') ||
-        preview.startsWith('http://') ||
-        preview.startsWith('https://')) {
-      catalogPath = preview;
-    }
-  }
-  final presetArgs = EditorPresetArgs(
-    presetId: preset.id,
-    designName: preset.title,
-    garmentType: preset.garmentType,
-    primaryColour: preset.primaryColour,
-    accentColour: preset.accentColour,
-    fabricId: preset.fabricId,
-    catalogDesignPath: catalogPath,
-    mannequinId: kPresetCatalogMannequinId,
-  );
-  context.push(
-    '/editor',
-    extra: EditorBootstrapArgs(
-      source: 'preset_catalog',
-      mannequinId: kPresetCatalogMannequinId,
-      preset: presetArgs,
-    ),
-  );
+/// Same entry as the global design FAB — choose a mannequin before the editor.
+void openDesignMannequinFlow(BuildContext context) {
+  context.push('/mannequin-selector');
 }
 
 /// Featured designs — frosted-glass tiles in a vertical two-column grid.
@@ -205,7 +177,7 @@ class _FeaturedDesignTileBody extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () => openRegionStylePreset(context, preset),
+          onTap: () => openDesignMannequinFlow(context),
           borderRadius: BorderRadius.circular(22),
           child: Container(
             width: width,

@@ -66,6 +66,53 @@ void main() {
     expect(image.height!.isFinite, isTrue);
     expect(image.path, contains('design_womens_look_gulf_abaya_cardigan'));
   });
+
+  testWidgets('does not duplicate catalogue image as print overlay', (
+    tester,
+  ) async {
+    const path =
+        'assets/images/designs/design_womens_look_gulf_abaya_cardigan_charcoal.png';
+    const duplicatePrint =
+        'https://cdn.example.com/catalog/designs/design_womens_look_gulf_abaya_cardigan_charcoal.png';
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          designCatalogLookupProvider.overrideWithValue(const {}),
+          editorProvider.overrideWith(
+            (ref) => _SeedEditorNotifier(
+              ref,
+              EditorState.initial().copyWith(
+                buildStyleMode: EditorBuildStyleMode.catalog,
+                selectedCatalogDesignPath: path,
+                printImagePath: duplicatePrint,
+                heroMode: EditorHeroMode.compose,
+              ),
+            ),
+          ),
+        ],
+        child: MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 400,
+              height: 500,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Positioned.fill(
+                    child: const EditorCatalogComposeHero(),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    expect(find.byType(CatalogImage), findsOneWidget);
+  });
 }
 
 class _SeedEditorNotifier extends EditorNotifier {

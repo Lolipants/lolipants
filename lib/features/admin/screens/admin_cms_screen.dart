@@ -15,6 +15,7 @@ import 'package:lolipants/features/admin/providers/admin_providers.dart';
 import 'package:lolipants/features/admin/screens/admin_configurator_cms_tab.dart';
 import 'package:lolipants/features/admin/utils/admin_cms_helpers.dart';
 import 'package:lolipants/features/editor/providers/designs_providers.dart';
+import 'package:lolipants/shared/widgets/labeled_floating_action_button.dart';
 
 /// CMS for catalogue assets (mannequins, fabrics, patterns, presets) and the
 /// modular configurator (templates → slots → options).
@@ -223,12 +224,13 @@ class _ResourceList extends ConsumerWidget {
       ),
       floatingActionButton: readOnly
           ? null
-          : FloatingActionButton.extended(
-        heroTag: 'cms-add-$resource',
-        onPressed: () => _openForm(context, ref, null),
-        icon: const Icon(Icons.add),
-        label: Text(localized(ref, AdminStrings.newItem, AdminStrings.newItemAr)),
-      ),
+          : LabeledFloatingActionButton(
+              heroTag: 'cms-add-$resource',
+              icon: Icons.add,
+              labelEn: AdminStrings.newItem,
+              labelAr: AdminStrings.newItemAr,
+              onPressed: () => _openForm(context, ref, null),
+            ),
     );
   }
 

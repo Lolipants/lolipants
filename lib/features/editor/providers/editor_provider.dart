@@ -5,6 +5,7 @@ import 'package:fpdart/fpdart.dart';
 import 'package:flutter/material.dart' show Color, Offset, Size;
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lolipants/core/assets/catalog_image_uri.dart';
 import 'package:lolipants/core/config/app_features.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/errors/app_exception.dart';
@@ -33,6 +34,8 @@ import 'package:lolipants/core/preferences/user_gender_provider.dart';
 import 'package:lolipants/features/editor/logic/configurator_compat.dart';
 import 'package:lolipants/features/editor/logic/configurator_gender.dart';
 import 'package:lolipants/features/editor/logic/mannequin_gender.dart';
+import 'package:lolipants/features/editor/logic/editor_print_reference.dart';
+import 'package:lolipants/features/editor/logic/refined_look_source_key.dart';
 import 'package:lolipants/features/editor/models/configurator_catalog.dart';
 import 'package:lolipants/features/wedding/models/wedding_dress.dart';
 
@@ -109,6 +112,7 @@ class EditorState {
     required this.remoteDesignId,
     required this.heroMode,
     required this.refinedLookUrl,
+    required this.refinedLookSourceKey,
     required this.lookGenerating,
     required this.lookGenerationError,
     required this.hasUnsavedChanges,
@@ -159,6 +163,7 @@ class EditorState {
       remoteDesignId: null,
       heroMode: EditorHeroMode.compose,
       refinedLookUrl: null,
+      refinedLookSourceKey: null,
       lookGenerating: false,
       lookGenerationError: null,
       hasUnsavedChanges: true,
@@ -224,6 +229,9 @@ class EditorState {
   /// Last Gemini-refined preview URL from `/ai/design-render`.
   final String? refinedLookUrl;
 
+  /// Fingerprint of catalog path / configurator picks when [refinedLookUrl] was set.
+  final String? refinedLookSourceKey;
+
   final bool lookGenerating;
   final String? lookGenerationError;
 
@@ -267,6 +275,25 @@ class EditorState {
   /// True when the user has explicitly picked a fabric from the catalogue.
   bool get isFabricSelected => selectedFabricId.trim().isNotEmpty;
 
+  /// Flat-lay design catalogue assets do not require a separate fabric pick.
+  bool get requiresFabricSelection =>
+      buildStyleMode != EditorBuildStyleMode.catalog;
+
+  /// True when a stored AI look belongs to the current catalogue / configurator pick.
+  bool get refinedLookMatchesCurrentDesign {
+    final url = refinedLookUrl?.trim();
+    if (url == null || url.isEmpty) return false;
+    final bound = refinedLookSourceKey?.trim();
+    if (bound == null || bound.isEmpty) return true;
+    return bound == refinedLookSourceKeyForEditorState(this);
+  }
+
+  /// AI hero URL only when it matches the active design inputs.
+  String? get displayRefinedLookUrl {
+    if (!refinedLookMatchesCurrentDesign) return null;
+    return refinedLookUrl?.trim();
+  }
+
   EditorState copyWith({
     String? designName,
     String? mannequinId,
@@ -298,6 +325,7 @@ class EditorState {
     String? remoteDesignId,
     EditorHeroMode? heroMode,
     String? refinedLookUrl,
+    String? refinedLookSourceKey,
     bool unsetRefinedLook = false,
     bool? lookGenerating,
     String? lookGenerationError,
@@ -353,6 +381,9 @@ class EditorState {
       heroMode: heroMode ?? this.heroMode,
       refinedLookUrl:
           unsetRefinedLook ? null : (refinedLookUrl ?? this.refinedLookUrl),
+      refinedLookSourceKey: unsetRefinedLook
+          ? null
+          : (refinedLookSourceKey ?? this.refinedLookSourceKey),
       lookGenerating: lookGenerating ?? this.lookGenerating,
       lookGenerationError: unsetLookError
           ? null
@@ -411,9 +442,12 @@ class EditorNotifier extends StateNotifier<EditorState> {
       if (paths.isNotEmpty && !paths.contains(path)) {
         path = paths.first;
       }
+      final pathChanged =
+          state.selectedCatalogDesignPath.trim() != path.trim();
       state = state.copyWith(
         mannequinId: id,
         selectedCatalogDesignPath: path,
+        unsetRefinedLook: pathChanged,
         hasUnsavedChanges: true,
       );
       return;
@@ -465,11 +499,14 @@ class EditorNotifier extends StateNotifier<EditorState> {
                     ? state.garmentType
                     : null;
     final customizable = isCasualBasicFlatlayPath(assetPath);
+    final pathChanged =
+        state.selectedCatalogDesignPath.trim() != assetPath.trim();
     state = state.copyWith(
       selectedCatalogDesignPath: assetPath,
       buildStyleMode: EditorBuildStyleMode.catalog,
       garmentType: resolvedGarment ?? state.garmentType,
       heroMode: EditorHeroMode.compose,
+      unsetRefinedLook: pathChanged,
       hasUnsavedChanges: true,
       textLayers: customizable ? state.textLayers : const [],
       printImagePath: customizable ? state.printImagePath : null,
@@ -496,11 +533,13 @@ class EditorNotifier extends StateNotifier<EditorState> {
     }
     final isCasual =
         filter == DesignCatalogFilter.casual || isCasualCatalogDesignPath(path);
+    final pathChanged = state.selectedCatalogDesignPath.trim() != path.trim();
     state = state.copyWith(
       catalogFilter: filter,
       selectedCatalogDesignPath: path,
       buildStyleMode: EditorBuildStyleMode.catalog,
       heroMode: EditorHeroMode.compose,
+      unsetRefinedLook: pathChanged,
       garmentType:
           isCasual ? garmentTypeFromCatalogDesignPath(path) : state.garmentType,
       hasUnsavedChanges: true,
@@ -515,15 +554,21 @@ class EditorNotifier extends StateNotifier<EditorState> {
   }
 
   void setPrimaryColour(Color colour) {
+    final clearLook = state.buildStyleMode == EditorBuildStyleMode.configurator;
     state = state.copyWith(
       primaryColour: colour,
       accentColour: colour,
+      unsetRefinedLook: clearLook,
       hasUnsavedChanges: true,
     );
   }
 
   void setAccentColour(Color colour) {
-    state = state.copyWith(accentColour: colour, hasUnsavedChanges: true);
+    state = state.copyWith(
+      accentColour: colour,
+      unsetRefinedLook: state.buildStyleMode == EditorBuildStyleMode.configurator,
+      hasUnsavedChanges: true,
+    );
   }
 
   void setTool(EditorTool tool) {
@@ -690,6 +735,7 @@ class EditorNotifier extends StateNotifier<EditorState> {
       configuratorAiLayerNotes: aiLayerNotes,
       garmentType: template.garmentType,
       buildStyleMode: EditorBuildStyleMode.configurator,
+      unsetRefinedLook: true,
       hasUnsavedChanges: true,
     );
   }
@@ -748,7 +794,7 @@ class EditorNotifier extends StateNotifier<EditorState> {
       accentColour: initial.primaryColour,
       activeTab: EditorTab.build,
       heroMode: EditorHeroMode.compose,
-      refinedLookUrl: null,
+      unsetRefinedLook: true,
       lookGenerationError: null,
       buildStyleMode: EditorBuildStyleMode.configurator,
       hasUnsavedChanges: true,
@@ -801,12 +847,17 @@ class EditorNotifier extends StateNotifier<EditorState> {
       template: template,
       selections: selections,
     );
-    state = state.copyWith(
+    final beforeKey = refinedLookSourceKeyForEditorState(state);
+    final nextState = state.copyWith(
       configuratorSelections: selections,
       configuratorSummary: summary,
       configuratorAiLayerNotes: aiLayerNotes,
       activeConfiguratorSlotIndex: clampedIndex,
       hasUnsavedChanges: true,
+    );
+    final afterKey = refinedLookSourceKeyForEditorState(nextState);
+    state = nextState.copyWith(
+      unsetRefinedLook: beforeKey != afterKey,
     );
   }
 
@@ -823,6 +874,15 @@ class EditorNotifier extends StateNotifier<EditorState> {
   }
 
   void setFabric(String fabricId) {
+    if (state.buildStyleMode == EditorBuildStyleMode.configurator &&
+        state.selectedFabricId.trim() != fabricId.trim()) {
+      state = state.copyWith(
+        selectedFabricId: fabricId,
+        unsetRefinedLook: true,
+        hasUnsavedChanges: true,
+      );
+      return;
+    }
     state = state.copyWith(selectedFabricId: fabricId, hasUnsavedChanges: true);
   }
 
@@ -871,6 +931,7 @@ class EditorNotifier extends StateNotifier<EditorState> {
       remoteDesignId: null,
       heroMode: EditorHeroMode.compose,
       refinedLookUrl: null,
+      refinedLookSourceKey: null,
       lookGenerating: false,
       lookGenerationError: null,
       hasUnsavedChanges: false,
@@ -947,10 +1008,12 @@ class EditorNotifier extends StateNotifier<EditorState> {
     final refinedLookUrl = aiRefinedLookUrlFromRenderMetadata(
       design.renderMetadata,
     );
+    final refinedLookSourceKey = aiRefinedLookSourceKeyFromRenderMetadata(
+      design.renderMetadata,
+    );
     final buildStyleMode = _buildStyleModeFromRenderMetadata(
       design.renderMetadata,
     );
-    final hasRefinedLook = refinedLookUrl != null && refinedLookUrl.isNotEmpty;
     final resolvedMannequin = editorMannequinIdFromDesign(design) ??
         EditorState.initial().mannequinId;
     final customMannequin = editorCustomMannequinFromRenderMetadata(meta);
@@ -976,7 +1039,13 @@ class EditorNotifier extends StateNotifier<EditorState> {
       selectedFabricId: design.fabricId ?? state.selectedFabricId,
       fabricQuality: design.fabricQuality ?? state.fabricQuality,
       selectedPatternId: design.patternId ?? state.selectedPatternId,
-      printImagePath: design.printImageUrl,
+      printImagePath: isEditorReferencePrintImage(
+            printPathOrUrl: design.printImageUrl,
+            catalogDesignPath: snapshot.catalogDesignPath,
+            renderMetadata: meta,
+          )
+          ? null
+          : design.printImageUrl,
       sketchImagePath: design.sketchImageUrl,
       printPlacement: snapshot.printPlacement,
       printOffsetX: snapshot.printOffsetX,
@@ -999,12 +1068,16 @@ class EditorNotifier extends StateNotifier<EditorState> {
       configuratorAiLayerNotes: configurator.aiLayerNotes ?? '',
       buildStyleMode: buildStyleMode,
       refinedLookUrl: refinedLookUrl,
-      heroMode: hasRefinedLook ? EditorHeroMode.look : EditorHeroMode.compose,
+      refinedLookSourceKey: refinedLookSourceKey,
       isPrintOverlaySelected: false,
       unsetSelectedTextLayerId: true,
       selectedAccessoryIds: accessoryIds,
       accessoriesSummary: accessoriesSummary,
       hasUnsavedChanges: false,
+    );
+    final showLook = state.displayRefinedLookUrl != null;
+    state = state.copyWith(
+      heroMode: showLook ? EditorHeroMode.look : EditorHeroMode.compose,
     );
     loadFabrics();
   }
@@ -1331,14 +1404,6 @@ class EditorNotifier extends StateNotifier<EditorState> {
   }
 
   void setHeroMode(EditorHeroMode mode) {
-    if (mode == EditorHeroMode.compose &&
-        state.buildStyleMode == EditorBuildStyleMode.catalog) {
-      state = state.copyWith(
-        heroMode: mode,
-        unsetRefinedLook: true,
-      );
-      return;
-    }
     state = state.copyWith(heroMode: mode);
   }
 
@@ -1346,10 +1411,7 @@ class EditorNotifier extends StateNotifier<EditorState> {
   void ensureCatalogComposeHero() {
     if (state.buildStyleMode != EditorBuildStyleMode.catalog) return;
     if (state.heroMode == EditorHeroMode.compose) return;
-    state = state.copyWith(
-      heroMode: EditorHeroMode.compose,
-      unsetRefinedLook: true,
-    );
+    state = state.copyWith(heroMode: EditorHeroMode.compose);
   }
 
   void setPrintPlacement(PrintPlacement placement) {
@@ -1403,6 +1465,38 @@ class EditorNotifier extends StateNotifier<EditorState> {
     updateTextLayer(layerId, placement: next);
   }
 
+  /// True when AI render should use the flat-lay catalogue dress, not configurator compose.
+  bool _isCatalogBuildForAi() =>
+      state.buildStyleMode == EditorBuildStyleMode.catalog;
+
+  /// Public CDN URL or uploaded bytes URL for [catalogPath] (per-design asset).
+  Future<String?> _resolveCatalogFlatUrlForAi(
+    String catalogPath,
+    Future<String?> Function(List<int> bytes, String filename) uploadBytes,
+  ) async {
+    final trimmed = catalogPath.trim();
+    if (trimmed.isEmpty) return null;
+
+    if (isCmsDesignCatalogRef(trimmed)) {
+      final lookup = ref.read(designCatalogLookupProvider);
+      final cmsId = cmsDesignCatalogId(trimmed);
+      final url = cmsId != null ? lookup[cmsId]?.imageUrl.trim() : null;
+      if (url != null && url.isNotEmpty) return url;
+    }
+
+    final cdn = catalogImageNetworkUrl(trimmed);
+    if (cdn != null && cdn.isNotEmpty) return cdn;
+
+    final asset = bundledCatalogAssetPath(trimmed) ?? trimmed;
+    if (!asset.startsWith('assets/')) return null;
+    final raw = await rootBundle.load(asset);
+    final bytes = raw.buffer.asUint8List();
+    if (bytes.isEmpty) return null;
+    final base = asset.split('/').last;
+    final safeName = base.isNotEmpty ? base : 'catalog-flat.png';
+    return uploadBytes(bytes, safeName);
+  }
+
   String _garmentTypeForSave() {
     final path = state.selectedCatalogDesignPath.trim();
     final lookup = ref.read(designCatalogLookupProvider);
@@ -1422,7 +1516,7 @@ class EditorNotifier extends StateNotifier<EditorState> {
     String? forceName,
     Uint8List? composePreviewBytes,
   }) async {
-    if (!state.isFabricSelected) {
+    if (state.requiresFabricSelection && !state.isFabricSelected) {
       return const SaveDesignResult(
         success: false,
         message: 'Pick a fabric before saving.',
@@ -1449,28 +1543,17 @@ class EditorNotifier extends StateNotifier<EditorState> {
       }
     }
 
+    final isCatalogBuild = _isCatalogBuildForAi();
     String? catalogFlatUrl;
     final catalogPath = state.selectedCatalogDesignPath.trim();
-    if (catalogPath.isNotEmpty) {
-      if (isCmsDesignCatalogRef(catalogPath)) {
-        final lookup = ref.read(designCatalogLookupProvider);
-        final cmsId = cmsDesignCatalogId(catalogPath);
-        final url = cmsId != null ? lookup[cmsId]?.imageUrl.trim() : null;
-        if (url != null && url.isNotEmpty) {
-          catalogFlatUrl = url;
-        }
-      } else {
-        final raw = await loadBundle(catalogPath);
-        if (raw != null && raw.isNotEmpty) {
-          catalogFlatUrl = await uploadBytes(raw, 'catalog-flat.png');
-          if (catalogFlatUrl == null) {
-            state = state.copyWith(isSaving: false);
-            return const SaveDesignResult(
-              success: false,
-              message: 'Could not upload catalogue design image.',
-            );
-          }
-        }
+    if (isCatalogBuild && catalogPath.isNotEmpty) {
+      catalogFlatUrl = await _resolveCatalogFlatUrlForAi(catalogPath, uploadBytes);
+      if (catalogFlatUrl == null || catalogFlatUrl.isEmpty) {
+        state = state.copyWith(isSaving: false);
+        return const SaveDesignResult(
+          success: false,
+          message: 'Could not resolve catalogue design image for AI.',
+        );
       }
     }
 
@@ -1508,7 +1591,9 @@ class EditorNotifier extends StateNotifier<EditorState> {
     }
 
     String? configuratorComposeUrl;
-    if (composePreviewBytes != null && composePreviewBytes.isNotEmpty) {
+    if (!isCatalogBuild &&
+        composePreviewBytes != null &&
+        composePreviewBytes.isNotEmpty) {
       configuratorComposeUrl = await uploadBytes(
         composePreviewBytes,
         'configurator-compose.png',
@@ -1546,6 +1631,11 @@ class EditorNotifier extends StateNotifier<EditorState> {
     }
 
     if ((printArtworkUrl == null || printArtworkUrl.isEmpty) &&
+        isCatalogBuild &&
+        catalogFlatUrl != null &&
+        catalogFlatUrl.isNotEmpty) {
+      printArtworkUrl = catalogFlatUrl;
+    } else if ((printArtworkUrl == null || printArtworkUrl.isEmpty) &&
         configuratorComposeUrl != null &&
         configuratorComposeUrl.isNotEmpty) {
       printArtworkUrl = configuratorComposeUrl;
@@ -1624,14 +1714,16 @@ class EditorNotifier extends StateNotifier<EditorState> {
             .toList(growable: false),
         'exportTier': 'editor',
         'selectedCatalogDesignPath': state.selectedCatalogDesignPath,
-        'buildStyleMode': state.buildStyleMode.name,
+        'buildStyleMode': isCatalogBuild
+            ? EditorBuildStyleMode.catalog.name
+            : state.buildStyleMode.name,
         'aiLookUserPrompt': state.aiLookUserPrompt.trim(),
         'aiLookPromptSuffix': kAiLookPromptSuffix,
         if (editorMannequinUrl != null && editorMannequinUrl.isNotEmpty)
           'editorMannequinImageUrl': editorMannequinUrl,
         if (configuratorComposeUrl != null && configuratorComposeUrl.isNotEmpty)
           'configuratorComposeImageUrl': configuratorComposeUrl,
-        if (state.configuratorTemplateId.isNotEmpty)
+        if (!isCatalogBuild && state.configuratorTemplateId.isNotEmpty)
           kConfiguratorMetadataKey: buildConfiguratorMetadataBlock(
             templateId: state.configuratorTemplateId,
             selections: state.configuratorSelections,
@@ -1639,6 +1731,8 @@ class EditorNotifier extends StateNotifier<EditorState> {
             aiLayerNotes: state.configuratorAiLayerNotes,
           ),
         'aiRefinedLookUrl': state.refinedLookUrl?.trim(),
+        if (state.refinedLookSourceKey?.trim().isNotEmpty ?? false)
+          'aiRefinedLookSourceKey': state.refinedLookSourceKey!.trim(),
         if (state.selectedAccessoryIds.isNotEmpty)
           'accessories': {
             'ids': state.selectedAccessoryIds,
@@ -1698,6 +1792,7 @@ class EditorNotifier extends StateNotifier<EditorState> {
     final trimmed = url.trim();
     if (trimmed.isEmpty) return;
 
+    final sourceKey = refinedLookSourceKeyForEditorState(state);
     final repo = ref.read(designsRepositoryProvider);
     final name =
         state.designName.trim().isEmpty ? 'My look' : state.designName.trim();
@@ -1706,7 +1801,10 @@ class EditorNotifier extends StateNotifier<EditorState> {
       payload: {
         'name': name,
         'garmentType': _garmentTypeForSave(),
-        'renderMetadata': {'aiRefinedLookUrl': trimmed},
+        'renderMetadata': {
+          'aiRefinedLookUrl': trimmed,
+          'aiRefinedLookSourceKey': sourceKey,
+        },
       },
     );
     result.fold(
@@ -1724,7 +1822,7 @@ class EditorNotifier extends StateNotifier<EditorState> {
   Future<GenerateLookResult> generateRefinedLook({
     Uint8List? composePreviewBytes,
   }) async {
-    if (!state.isFabricSelected) {
+    if (state.requiresFabricSelection && !state.isFabricSelected) {
       return const GenerateLookResult(
         success: false,
         message: 'Pick a fabric before refining.',
@@ -1785,12 +1883,14 @@ class EditorNotifier extends StateNotifier<EditorState> {
             final url = j.artifacts['heroFrontUrl'];
             final renderMode = j.artifacts['renderMode'] ?? '';
             if (url != null && url.isNotEmpty) {
+              final sourceKey = refinedLookSourceKeyForEditorState(state);
               if (renderMode == 'template_static_v1') {
                 const msg =
                     'AI preview was unavailable. Showing your saved compose preview instead.';
                 state = state.copyWith(
                   lookGenerating: false,
                   refinedLookUrl: url,
+                  refinedLookSourceKey: sourceKey,
                   heroMode: EditorHeroMode.look,
                   lookGenerationError: msg,
                   hasUnsavedChanges: true,
@@ -1800,6 +1900,7 @@ class EditorNotifier extends StateNotifier<EditorState> {
               state = state.copyWith(
                 lookGenerating: false,
                 refinedLookUrl: url,
+                refinedLookSourceKey: sourceKey,
                 heroMode: EditorHeroMode.look,
                 unsetLookError: true,
                 hasUnsavedChanges: true,

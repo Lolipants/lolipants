@@ -28,7 +28,13 @@ export type GarmentLookPromptInput = {
   brandSuffix?: string | null;
   /** When true, prompt targets refining the attached preview (not a new photoshoot). */
   hasDesignPreviewReference?: boolean;
+  /** Flat-lay design catalogue asset (not modular configurator). */
+  isCatalogDesignMode?: boolean;
 };
+
+export const CATALOG_DRESS_REF_CAPTION =
+  "PRIMARY catalogue dress design — preserve this exact flat-lay look (colours, pattern, cut, embroidery). " +
+  "Place this garment on the mannequin with natural drape. Output on pure white background (#FFFFFF).";
 
 /** Server default when client omits `aiLookPromptSuffix` in render metadata. */
 export const DEFAULT_LOLIPANTS_LOOK_SUFFIX =
@@ -75,7 +81,7 @@ export function buildGarmentLookPrompt(input: GarmentLookPromptInput): string {
 
   const userBlock =
     input.userExtra != null && input.userExtra.trim().length > 0
-      ? `\n\nSubtle refinement only (do not redesign):\n${input.userExtra.trim()}`
+      ? `\n\nCreative direction from the customer (apply subtly — do not replace the base design):\n${input.userExtra.trim()}`
       : "";
   const configuratorBlock =
     input.configuratorSummary != null && input.configuratorSummary.trim().length > 0
@@ -90,6 +96,23 @@ export function buildGarmentLookPrompt(input: GarmentLookPromptInput): string {
     input.brandSuffix != null && input.brandSuffix.trim().length > 0
       ? `\n\n${input.brandSuffix.trim()}`
       : "";
+
+  if (input.isCatalogDesignMode) {
+    return (
+      [
+        "Generate exactly ONE on-model fashion preview from the attached catalogue dress design.",
+        "Background: pure solid white (#FFFFFF). No gradients, scenery, or studio props.",
+        "The catalogue dress image is the authoritative garment — keep its exact colours, pattern, embroidery, silhouette, and design details.",
+        "If a mannequin reference is attached, match its pose and proportions; do not swap the model body type.",
+        "Refinement goal: realistic fabric drape and subtle polish only — not a new design.",
+        "",
+        `Garment type (reference): ${input.garmentType}`,
+        textExtra,
+      ].join("\n") +
+      userBlock +
+      suffixBlock
+    );
+  }
 
   if (input.hasDesignPreviewReference) {
     if (useSwatchMaterial || hasFabric) {

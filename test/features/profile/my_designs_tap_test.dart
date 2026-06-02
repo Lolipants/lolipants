@@ -54,7 +54,7 @@ void main() {
     expect((capturedExtra! as GarmentDesign).id, 'd1');
   });
 
-  testWidgets('FAB label reads "New design"', (tester) async {
+  testWidgets('FAB caption follows app locale', (tester) async {
     final router = GoRouter(
       initialLocation: '/profile/designs',
       routes: [
@@ -74,6 +74,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('New design'), findsOneWidget);
+    expect(find.text('تصميم جديد'), findsNothing);
   });
 }
 

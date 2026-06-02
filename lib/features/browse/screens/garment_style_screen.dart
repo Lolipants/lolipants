@@ -14,8 +14,8 @@ import 'package:lolipants/shared/widgets/catalog_image.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
 
 /// Phase 3 `/browse/style/:id` detail screen. Shows the ornament patch for the
-/// selected regional preset plus a primary "Design this" CTA that hands the
-/// editor an [EditorPresetArgs] so it seeds palette, garment, and fabric.
+/// selected regional preset plus a primary "Design this" CTA that opens the
+/// mannequin picker (same flow as the global design FAB).
 class GarmentStyleScreen extends ConsumerWidget {
   /// Creates the screen.
   const GarmentStyleScreen({required this.styleId, super.key});
@@ -109,7 +109,7 @@ class _StyleDetail extends StatelessWidget {
           const SizedBox(height: AppSpacing.lg),
           LolipantsButton(
             label: 'Design this',
-            onPressed: () => openRegionStylePreset(context, preset),
+            onPressed: () => openDesignMannequinFlow(context),
           ),
           const SizedBox(height: AppSpacing.xl),
           if (variants.isNotEmpty) ...[

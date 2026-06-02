@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { apiError } from "../lib/http";
 import {
   buildGarmentLookPrompt,
+  CATALOG_DRESS_REF_CAPTION,
   COMPOSE_PREVIEW_LAYOUT_REF_CAPTION,
   COMPOSE_PREVIEW_REF_CAPTION,
   DEFAULT_LOLIPANTS_LOOK_SUFFIX,
@@ -499,6 +500,8 @@ function _readEditorRenderHints(renderMetadata: string | null): {
   configuratorSummary: string | null;
   configuratorAiLayerNotes: string | null;
   configuratorComposeImageUrl: string | null;
+  catalogFlatImageUrl: string | null;
+  buildStyleMode: string | null;
 } {
   const empty = {
     editorMannequinImageUrl: null as string | null,
@@ -507,6 +510,8 @@ function _readEditorRenderHints(renderMetadata: string | null): {
     configuratorSummary: null as string | null,
     configuratorAiLayerNotes: null as string | null,
     configuratorComposeImageUrl: null as string | null,
+    catalogFlatImageUrl: null as string | null,
+    buildStyleMode: null as string | null,
   };
   if (!renderMetadata?.trim()) return empty;
   try {
@@ -516,6 +521,8 @@ function _readEditorRenderHints(renderMetadata: string | null): {
     const user = pick("aiLookUserPrompt");
     const suf = pick("aiLookPromptSuffix");
     const compose = pick("configuratorComposeImageUrl");
+    const catalogFlat = pick("catalogFlatImageUrl");
+    const buildStyleMode = pick("buildStyleMode");
     let summary = "";
     let aiLayerNotes = "";
     const cfg = o["configurator"];
@@ -537,6 +544,8 @@ function _readEditorRenderHints(renderMetadata: string | null): {
       configuratorAiLayerNotes:
         resolvedAiLayerNotes.length > 0 ? resolvedAiLayerNotes : null,
       configuratorComposeImageUrl: compose.length > 0 ? compose : null,
+      catalogFlatImageUrl: catalogFlat.length > 0 ? catalogFlat : null,
+      buildStyleMode: buildStyleMode.length > 0 ? buildStyleMode : null,
     };
   } catch {
     return empty;
@@ -593,16 +602,21 @@ function _buildGarmentLookPromptForDesign(
   const placement = _readPrintPlacement(design?.render_metadata ?? null);
   const textSummary = _summarizeTextLayers(design?.render_metadata ?? null);
   const hints = _readEditorRenderHints(design?.render_metadata ?? null);
-  const hasPreview = Boolean(
-    hints.configuratorComposeImageUrl?.trim() || design?.print_image_url?.trim(),
-  );
-  const fabricName = design?.fabric_name?.trim() || null;
-  const hasFabricSwatch = Boolean(
-    _resolveFabricSwatchUrl(env, design?.fabric_swatch_url),
-  );
-  const brandSuffix = fabricName
-    ? FABRIC_MATERIAL_LOOK_SUFFIX
-    : (hints.aiLookPromptSuffix ?? DEFAULT_LOLIPANTS_LOOK_SUFFIX);
+  const isCatalogDesign = hints.buildStyleMode === "catalog";
+  const catalogDressUrl =
+    hints.catalogFlatImageUrl?.trim() || design?.print_image_url?.trim() || null;
+  const hasPreview = isCatalogDesign
+    ? Boolean(catalogDressUrl)
+    : Boolean(hints.configuratorComposeImageUrl?.trim() || design?.print_image_url?.trim());
+  const fabricName = isCatalogDesign ? null : design?.fabric_name?.trim() || null;
+  const hasFabricSwatch = isCatalogDesign
+    ? false
+    : Boolean(_resolveFabricSwatchUrl(env, design?.fabric_swatch_url));
+  const brandSuffix = isCatalogDesign
+    ? (hints.aiLookPromptSuffix ?? DEFAULT_LOLIPANTS_LOOK_SUFFIX)
+    : fabricName
+      ? FABRIC_MATERIAL_LOOK_SUFFIX
+      : (hints.aiLookPromptSuffix ?? DEFAULT_LOLIPANTS_LOOK_SUFFIX);
 
   return buildGarmentLookPrompt({
     garmentType: design?.garment_type ?? "garment",
@@ -614,10 +628,11 @@ function _buildGarmentLookPromptForDesign(
     printPlacement: placement,
     textLayersSummary: textSummary,
     userExtra: hints.aiLookUserPrompt,
-    configuratorSummary: hints.configuratorSummary,
-    configuratorAiLayerNotes: hints.configuratorAiLayerNotes,
+    configuratorSummary: isCatalogDesign ? null : hints.configuratorSummary,
+    configuratorAiLayerNotes: isCatalogDesign ? null : hints.configuratorAiLayerNotes,
     brandSuffix,
     hasDesignPreviewReference: hasPreview,
+    isCatalogDesignMode: isCatalogDesign,
   });
 }
 
@@ -626,8 +641,10 @@ async function _loadGarmentLookReferenceParts(
   env: Env,
 ): Promise<GeminiInlinePart[]> {
   const hints = _readEditorRenderHints(design?.render_metadata ?? null);
-  const composeUrl = hints.configuratorComposeImageUrl?.trim() || null;
-  const swatchUrl = _resolveFabricSwatchUrl(env, design?.fabric_swatch_url);
+  const isCatalogDesign = hints.buildStyleMode === "catalog";
+  const swatchUrl = isCatalogDesign
+    ? null
+    : _resolveFabricSwatchUrl(env, design?.fabric_swatch_url);
   const refs: GeminiInlinePart[] = [];
   const useFabricSwatch = Boolean(swatchUrl);
 
@@ -638,6 +655,35 @@ async function _loadGarmentLookReferenceParts(
       refs.push({ ...part, caption: FABRIC_SWATCH_REF_CAPTION });
     }
   }
+
+  if (isCatalogDesign) {
+    const dressUrl =
+      hints.catalogFlatImageUrl?.trim() || design?.print_image_url?.trim() || null;
+    if (dressUrl) {
+      const part = await fetchUrlAsInlinePart(dressUrl, fetch, MAX_REFERENCE_IMAGE_BYTES);
+      if (part) {
+        refs.push({ ...part, caption: CATALOG_DRESS_REF_CAPTION });
+      }
+    }
+    const mannequinUrl =
+      hints.editorMannequinImageUrl ?? design?.mannequin_preview_url ?? null;
+    if (mannequinUrl?.trim()) {
+      const part = await fetchUrlAsInlinePart(
+        mannequinUrl,
+        fetch,
+        MAX_REFERENCE_IMAGE_BYTES,
+      );
+      if (part) {
+        refs.push({
+          ...part,
+          caption: "Mannequin pose reference — match this body pose and framing:",
+        });
+      }
+    }
+    return refs;
+  }
+
+  const composeUrl = hints.configuratorComposeImageUrl?.trim() || null;
 
   // Compose preview already includes mannequin + garment — use it alone when present.
   if (composeUrl) {

@@ -138,6 +138,12 @@ String? aiRefinedLookUrlFromRenderMetadata(Map<String, dynamic>? meta) {
   return _nonEmpty(meta['aiRefinedLookUrl']);
 }
 
+/// Design-input fingerprint stored with [aiRefinedLookUrlFromRenderMetadata].
+String? aiRefinedLookSourceKeyFromRenderMetadata(Map<String, dynamic>? meta) {
+  if (meta == null) return null;
+  return _nonEmpty(meta['aiRefinedLookSourceKey']);
+}
+
 /// Bundled or CMS mannequin id stored in render metadata (survives v1 bundled saves).
 String? editorMannequinIdFromRenderMetadata(Map<String, dynamic>? meta) {
   if (meta == null) return null;

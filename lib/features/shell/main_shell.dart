@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lolipants/core/config/app_features.dart';
-import 'package:lolipants/core/constants/app_colors.dart';
+import 'package:lolipants/core/constants/app_strings.dart';
+import 'package:lolipants/features/browse/widgets/featured_design_carousel.dart';
 import 'package:lolipants/features/community/providers/community_providers.dart';
-import 'package:lolipants/features/settings/providers/settings_provider.dart';
 import 'package:lolipants/features/music/widgets/music_mini_player.dart';
+import 'package:lolipants/features/settings/providers/settings_provider.dart';
 import 'package:lolipants/shared/widgets/bottom_nav_bar.dart';
+import 'package:lolipants/shared/widgets/labeled_floating_action_button.dart';
 
 /// Tab shell with the persistent music mini-player above the bottom nav.
 class MainShell extends ConsumerWidget {
@@ -32,20 +34,12 @@ class MainShell extends ConsumerWidget {
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       floatingActionButton: hideGlobalDesignFab
           ? null
-          : Semantics(
-              label: 'Design button',
-              button: true,
-              child: FloatingActionButton(
-                heroTag: 'design_cta_global',
-                elevation: 2,
-                focusElevation: 4,
-                hoverElevation: 4,
-                highlightElevation: 6,
-                onPressed: () => context.push('/mannequin-selector'),
-                backgroundColor: AppColors.gold,
-                foregroundColor: AppColors.ink,
-                child: const Icon(Icons.design_services_outlined),
-              ),
+          : LabeledFloatingActionButton(
+              heroTag: 'design_cta_global',
+              icon: Icons.design_services_outlined,
+              labelEn: AppStrings.fabDesign,
+              labelAr: AppStrings.fabDesignAr,
+              onPressed: () => openDesignMannequinFlow(context),
             ),
       body: KeyedSubtree(
         key: ValueKey<String>(
