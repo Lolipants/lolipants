@@ -18,7 +18,14 @@ if [[ -z "${BUILD_NAME}" ]]; then
   fi
 fi
 
-BUILD_NUMBER="${INPUT_BUILD_NUMBER:-${GITHUB_RUN_NUMBER:-${PUBSPEC_NUMBER}}}"
+BUILD_NUMBER="${INPUT_BUILD_NUMBER:-}"
+if [[ -z "${BUILD_NUMBER}" ]]; then
+  if [[ "${GITHUB_REF_NAME:-}" =~ ^v[0-9] ]] && [[ -n "${PUBSPEC_NUMBER}" ]]; then
+    BUILD_NUMBER="${PUBSPEC_NUMBER}"
+  else
+    BUILD_NUMBER="${GITHUB_RUN_NUMBER:-${PUBSPEC_NUMBER:-1}}"
+  fi
+fi
 if [[ -z "${BUILD_NUMBER}" ]]; then
   BUILD_NUMBER="1"
 fi

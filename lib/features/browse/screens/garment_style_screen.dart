@@ -109,7 +109,7 @@ class _StyleDetail extends StatelessWidget {
           const SizedBox(height: AppSpacing.lg),
           LolipantsButton(
             label: 'Design this',
-            onPressed: () => openDesignMannequinFlow(context),
+            onPressed: () => openDesignMannequinFlow(context, preset: preset),
           ),
           const SizedBox(height: AppSpacing.xl),
           if (variants.isNotEmpty) ...[

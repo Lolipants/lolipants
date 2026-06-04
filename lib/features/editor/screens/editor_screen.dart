@@ -16,6 +16,7 @@ import 'package:lolipants/features/community/screens/create_post_screen.dart';
 import 'package:lolipants/features/community/utils/publish_showcase_feedback.dart';
 import 'package:lolipants/features/community/widgets/publish_showcase_dialog.dart';
 import 'package:lolipants/features/editor/providers/designs_providers.dart';
+import 'package:lolipants/features/editor/models/catalog_design_pick.dart';
 import 'package:lolipants/features/editor/models/editor_preset_args.dart';
 import 'package:lolipants/features/editor/models/garment_design.dart';
 import 'package:lolipants/features/community/providers/community_providers.dart';
@@ -110,13 +111,26 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
     } else {
       final initialMannequin =
           widget.bootstrap?.mannequinId ?? widget.initialMannequinId;
-      notifier.beginNewDesign(
-        mannequinId: initialMannequin,
-        customMannequinImagePath: widget.bootstrap?.customMannequinImagePath,
-      );
       final preset = widget.bootstrap?.preset ?? widget.preset;
-      if (preset != null) {
-        notifier.loadPreset(preset);
+      final catalogPath = preset?.catalogDesignPath;
+      final fromBrowse = widget.bootstrap?.source == 'browse_design' &&
+          preset != null &&
+          catalogPath != null &&
+          isEditorCatalogDesignRef(catalogPath);
+      if (fromBrowse) {
+        notifier.bootstrapBrowseDesign(
+          preset: preset,
+          mannequinId: initialMannequin,
+          customMannequinImagePath: widget.bootstrap?.customMannequinImagePath,
+        );
+      } else {
+        notifier.beginNewDesign(
+          mannequinId: initialMannequin,
+          customMannequinImagePath: widget.bootstrap?.customMannequinImagePath,
+        );
+        if (preset != null) {
+          notifier.loadPreset(preset);
+        }
       }
     }
     _seededSession = true;
@@ -130,6 +144,11 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
       if (kFeatureConfiguratorBuild) {
         notifier.setInitialTab(EditorTab.build);
       }
+    }
+    if (mounted) {
+      notifier.syncBuildLaneForMannequin(
+        ref.read(mannequinConfiguratorTemplatesProvider),
+      );
     }
   }
 
@@ -195,6 +214,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
     ref.listen<List<ConfiguratorTemplate>>(
       mannequinConfiguratorTemplatesProvider,
       (previous, next) {
+        if (!_seededSession) return;
         notifier.syncBuildLaneForMannequin(next);
       },
     );
@@ -205,7 +225,13 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
     final isWedding = editor.isWeddingTab;
     final showCatalogComposeHero = showsCatalogComposeHero(editor);
 
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _confirmExit(context);
+      },
+      child: Scaffold(
       body: Stack(
         children: [
           const ArabesqueBackground(),
@@ -413,6 +439,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
             ),
           ),
         ],
+      ),
       ),
     );
   }

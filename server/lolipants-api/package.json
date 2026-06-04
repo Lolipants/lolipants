@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "seed:dev-accounts": "tsx scripts/seed-dev-accounts.ts",
+    "seed:app-review-demo": "tsx scripts/seed-app-review-demo.ts",
     "reset:production-d1": "bash scripts/reset-production-d1.sh",
     "upload:catalog-assets": "tsx scripts/upload-catalog-assets.ts",
     "secrets:push-internal-sync": "tsx scripts/push-internal-sync-secret.ts"

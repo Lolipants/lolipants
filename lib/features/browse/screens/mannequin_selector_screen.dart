@@ -12,6 +12,7 @@ import 'package:lolipants/core/preferences/design_gender_defaults.dart';
 import 'package:lolipants/core/preferences/user_gender_provider.dart';
 import 'package:lolipants/features/browse/models/mannequin_option.dart';
 import 'package:lolipants/features/editor/data/built_in_mannequin_assets.dart';
+import 'package:lolipants/features/browse/logic/region_preset_editor.dart';
 import 'package:lolipants/features/editor/models/editor_preset_args.dart';
 import 'package:lolipants/features/editor/providers/editor_provider.dart';
 import 'package:lolipants/features/editor/widgets/bundled_mannequin_image.dart';
@@ -23,7 +24,10 @@ import 'package:lolipants/core/l10n/app_localization.dart';
 /// Selects mannequin shape before opening the editor.
 class MannequinSelectorScreen extends ConsumerStatefulWidget {
   /// Creates the mannequin picker screen.
-  const MannequinSelectorScreen({super.key});
+  const MannequinSelectorScreen({this.pendingPreset, super.key});
+
+  /// Catalogue design to open after mannequin selection (from home/browse).
+  final EditorPresetArgs? pendingPreset;
 
   @override
   ConsumerState<MannequinSelectorScreen> createState() =>
@@ -202,13 +206,19 @@ class _MannequinSelectorScreenState
                 child: LolipantsButton(
                   label: AppStrings.startDesigningCta,
                   onPressed: () {
-                    ref.read(editorProvider.notifier).setMannequin(_selectedId);
+                    final pending = widget.pendingPreset;
+                    final preset = pending != null
+                        ? editorPresetWithMannequin(pending, _selectedId)
+                        : null;
                     context.push(
                       '/editor',
                       extra: EditorBootstrapArgs(
                         mannequinId: _selectedId,
                         customMannequinImagePath: _customPhotoPath,
-                        source: 'mannequin_selector',
+                        preset: preset,
+                        source: preset != null
+                            ? 'browse_design'
+                            : 'mannequin_selector',
                       ),
                     );
                   },

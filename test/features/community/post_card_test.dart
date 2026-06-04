@@ -97,6 +97,31 @@ void main() {
     expect(capturedType, ReactionType.love);
   });
 
+  testWidgets('single image uses portrait aspect ratio without cropping',
+      (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(
+            body: ListView(
+              children: [
+                PostCard(
+                  post: _makePost(imageUrls: ['https://example.com/look.png']),
+                  onToggleReaction: (_) {},
+                  onOpenDetail: () {},
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final aspect = tester.widget<AspectRatio>(find.byType(AspectRatio));
+    expect(aspect.aspectRatio, closeTo(3 / 4, 0.001));
+  });
+
   testWidgets('tapping the body fires onOpenDetail', (tester) async {
     var opens = 0;
     await tester.pumpWidget(

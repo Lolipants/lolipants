@@ -26,6 +26,16 @@ String designCatalogRef(String id) => '$kDesignCatalogRefPrefix$id';
 /// Whether [ref] points at a CMS design catalog row.
 bool isCmsDesignCatalogRef(String ref) => ref.startsWith(kDesignCatalogRefPrefix);
 
+/// True for bundled paths, CDN URLs, or CMS catalogue refs used in the editor.
+bool isEditorCatalogDesignRef(String pathOrUrl) {
+  final p = pathOrUrl.trim();
+  if (p.isEmpty) return false;
+  return p.startsWith('assets/images/designs/') ||
+      p.startsWith('http://') ||
+      p.startsWith('https://') ||
+      isCmsDesignCatalogRef(p);
+}
+
 /// Parses CMS id from [ref], or null when bundled.
 String? cmsDesignCatalogId(String ref) {
   if (!isCmsDesignCatalogRef(ref)) return null;

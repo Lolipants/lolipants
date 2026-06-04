@@ -31,7 +31,7 @@ class RegionStyleButton extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: onTap ?? () => openDesignMannequinFlow(context),
+          onTap: onTap ?? () => openDesignMannequinFlow(context, preset: preset),
           borderRadius: BorderRadius.circular(20),
           child: Ink(
             height: 88,

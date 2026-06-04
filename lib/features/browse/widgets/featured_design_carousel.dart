@@ -7,12 +7,21 @@ import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/features/browse/data/region_presets.dart';
+import 'package:lolipants/features/browse/logic/region_preset_editor.dart';
 import 'package:lolipants/features/browse/widgets/region_pattern_painter.dart';
+import 'package:lolipants/features/editor/models/editor_preset_args.dart';
 import 'package:lolipants/shared/widgets/catalog_image.dart';
 
-/// Same entry as the global design FAB — choose a mannequin before the editor.
-void openDesignMannequinFlow(BuildContext context) {
-  context.push('/mannequin-selector');
+/// Choose a mannequin, then open the editor. Pass [preset] to land on that
+/// catalogue design in the design-catalogue build lane.
+void openDesignMannequinFlow(
+  BuildContext context, {
+  RegionStylePreset? preset,
+}) {
+  final EditorPresetArgs? pending = preset != null
+      ? editorPresetArgsFromRegionPreset(preset)
+      : null;
+  context.push('/mannequin-selector', extra: pending);
 }
 
 /// Featured designs — frosted-glass tiles in a vertical two-column grid.
@@ -177,7 +186,7 @@ class _FeaturedDesignTileBody extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () => openDesignMannequinFlow(context),
+          onTap: () => openDesignMannequinFlow(context, preset: preset),
           borderRadius: BorderRadius.circular(22),
           child: Container(
             width: width,

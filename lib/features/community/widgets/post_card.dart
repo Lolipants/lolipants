@@ -149,6 +149,12 @@ class _AuthorRow extends StatelessWidget {
   }
 }
 
+/// Portrait-friendly frame for garment / look photos in the feed.
+const double _postImageAspectRatio = 3 / 4;
+
+/// Neutral backdrop when the image does not fill the frame.
+const Color _postImageBackdrop = Color(0xFFF5F5F5);
+
 class _ImagesStrip extends StatelessWidget {
   const _ImagesStrip({required this.urls, required this.onTap});
 
@@ -157,60 +163,94 @@ class _ImagesStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (urls.length == 1) {
+      return AspectRatio(
+        aspectRatio: _postImageAspectRatio,
+        child: _PostImageTile(url: urls.first, onTap: onTap),
+      );
+    }
+
     final max = urls.length > 3 ? 3 : urls.length;
-    return SizedBox(
-      height: 140,
-      child: Row(
-        children: [
-          for (var i = 0; i < max; i++) ...[
-            Expanded(
-              child: InkWell(
-                onTap: onTap,
-                borderRadius: BorderRadius.circular(AppRadius.md),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(AppRadius.md),
-                  child: CachedNetworkImage(
-                    imageUrl: urls[i],
-                    fit: BoxFit.cover,
-                    errorWidget: (_, __, ___) => Container(
-                      color: AppColors.smoke,
-                      alignment: Alignment.center,
-                      child: const Icon(
-                        Icons.broken_image_outlined,
-                        color: AppColors.fog,
-                      ),
-                    ),
-                    placeholder: (_, __) => Container(
-                      color: AppColors.smoke,
-                      alignment: Alignment.center,
-                      child: const CircularProgressIndicator(
-                        color: AppColors.gold,
-                        strokeWidth: 2,
-                      ),
-                    ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const gap = 6.0;
+        final overflowWidth = urls.length > 3 ? 64.0 + gap : 0.0;
+        final gaps = gap * (max - 1);
+        final cellWidth = (constraints.maxWidth - gaps - overflowWidth) / max;
+        final cellHeight = cellWidth / _postImageAspectRatio;
+
+        return SizedBox(
+          height: cellHeight,
+          child: Row(
+            children: [
+              for (var i = 0; i < max; i++) ...[
+                SizedBox(
+                  width: cellWidth,
+                  height: cellHeight,
+                  child: _PostImageTile(url: urls[i], onTap: onTap),
+                ),
+                if (i < max - 1) const SizedBox(width: gap),
+              ],
+              if (urls.length > 3) ...[
+                const SizedBox(width: gap),
+                Container(
+                  width: 64,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: AppColors.smoke,
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    border: Border.all(color: AppColors.borderSubtle),
+                  ),
+                  child: Text(
+                    '+${urls.length - 3}',
+                    style: AppTextStyles.titleSmall,
                   ),
                 ),
-              ),
-            ),
-            if (i < max - 1) const SizedBox(width: 6),
-          ],
-          if (urls.length > 3) ...[
-            const SizedBox(width: 6),
-            Container(
-              width: 64,
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _PostImageTile extends StatelessWidget {
+  const _PostImageTile({required this.url, required this.onTap});
+
+  final String url;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppRadius.md),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        child: ColoredBox(
+          color: _postImageBackdrop,
+          child: CachedNetworkImage(
+            imageUrl: url,
+            fit: BoxFit.contain,
+            errorWidget: (_, __, ___) => Container(
+              color: AppColors.smoke,
               alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: AppColors.smoke,
-                borderRadius: BorderRadius.circular(AppRadius.md),
-                border: Border.all(color: AppColors.borderSubtle),
-              ),
-              child: Text(
-                '+${urls.length - 3}',
-                style: AppTextStyles.titleSmall,
+              child: const Icon(
+                Icons.broken_image_outlined,
+                color: AppColors.fog,
               ),
             ),
-          ],
-        ],
+            placeholder: (_, __) => Container(
+              color: AppColors.smoke,
+              alignment: Alignment.center,
+              child: const CircularProgressIndicator(
+                color: AppColors.gold,
+                strokeWidth: 2,
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

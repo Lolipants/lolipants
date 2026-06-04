@@ -128,6 +128,8 @@ class EditorState {
     required this.rentalDays,
     required this.selectedAccessoryIds,
     required this.accessoriesSummary,
+    required this.preferCatalogBuild,
+    required this.pinnedBrowseCatalogPath,
   });
 
   factory EditorState.initial() {
@@ -179,6 +181,8 @@ class EditorState {
       rentalDays: 3,
       selectedAccessoryIds: const [],
       accessoriesSummary: '',
+      preferCatalogBuild: false,
+      pinnedBrowseCatalogPath: null,
     );
   }
 
@@ -270,6 +274,12 @@ class EditorState {
   /// Human-readable accessory labels for checkout summary.
   final String accessoriesSummary;
 
+  /// When true, home/browse design picks stay in the catalogue build lane.
+  final bool preferCatalogBuild;
+
+  /// Catalogue ref to restore when [preferCatalogBuild] is set.
+  final String? pinnedBrowseCatalogPath;
+
   bool get isWeddingTab => activeTab == EditorTab.wedding;
 
   /// True when the user has explicitly picked a fabric from the catalogue.
@@ -344,6 +354,9 @@ class EditorState {
     int? rentalDays,
     List<String>? selectedAccessoryIds,
     String? accessoriesSummary,
+    bool? preferCatalogBuild,
+    String? pinnedBrowseCatalogPath,
+    bool clearPinnedBrowseCatalogPath = false,
   }) {
     return EditorState(
       designName: designName ?? this.designName,
@@ -409,6 +422,10 @@ class EditorState {
       selectedAccessoryIds:
           selectedAccessoryIds ?? this.selectedAccessoryIds,
       accessoriesSummary: accessoriesSummary ?? this.accessoriesSummary,
+      preferCatalogBuild: preferCatalogBuild ?? this.preferCatalogBuild,
+      pinnedBrowseCatalogPath: clearPinnedBrowseCatalogPath
+          ? null
+          : (pinnedBrowseCatalogPath ?? this.pinnedBrowseCatalogPath),
     );
   }
 }
@@ -457,6 +474,10 @@ class EditorNotifier extends StateNotifier<EditorState> {
 
   /// When [mannequinTemplates] is empty, switches to design-catalogue build.
   void syncBuildLaneForMannequin(List<ConfiguratorTemplate> mannequinTemplates) {
+    if (state.preferCatalogBuild) {
+      _ensureBrowseCatalogBuild();
+      return;
+    }
     if (mannequinTemplates.isNotEmpty) {
       if (state.buildStyleMode == EditorBuildStyleMode.catalog) return;
       ensureDefaultConfiguratorTemplate(mannequinTemplates);
@@ -634,8 +655,27 @@ class EditorNotifier extends StateNotifier<EditorState> {
     state = state.copyWith(rentalDays: days < 1 ? 1 : days);
   }
 
+  void _ensureBrowseCatalogBuild() {
+    final pinned = state.pinnedBrowseCatalogPath?.trim();
+    if (pinned == null || pinned.isEmpty) return;
+    if (state.buildStyleMode == EditorBuildStyleMode.catalog &&
+        state.selectedCatalogDesignPath.trim() == pinned) {
+      return;
+    }
+    setCatalogDesignPath(pinned);
+    state = state.copyWith(
+      preferCatalogBuild: true,
+      pinnedBrowseCatalogPath: pinned,
+      buildStyleMode: EditorBuildStyleMode.catalog,
+    );
+  }
+
   /// Applies [kDefaultConfiguratorTemplateId] when build has no valid template.
   void ensureDefaultConfiguratorTemplate(List<ConfiguratorTemplate> templates) {
+    if (state.preferCatalogBuild) {
+      _ensureBrowseCatalogBuild();
+      return;
+    }
     if (templates.isEmpty) {
       syncBuildLaneForMannequin(const []);
       return;
@@ -735,6 +775,8 @@ class EditorNotifier extends StateNotifier<EditorState> {
       configuratorAiLayerNotes: aiLayerNotes,
       garmentType: template.garmentType,
       buildStyleMode: EditorBuildStyleMode.configurator,
+      preferCatalogBuild: false,
+      clearPinnedBrowseCatalogPath: true,
       unsetRefinedLook: true,
       hasUnsavedChanges: true,
     );
@@ -947,17 +989,37 @@ class EditorNotifier extends StateNotifier<EditorState> {
       rentalDays: initial.rentalDays,
       selectedAccessoryIds: initial.selectedAccessoryIds,
       accessoriesSummary: initial.accessoriesSummary,
+      preferCatalogBuild: false,
+      pinnedBrowseCatalogPath: null,
     );
+  }
+
+  /// Opens the editor from home/browse with mannequin + catalogue design pinned.
+  void bootstrapBrowseDesign({
+    required EditorPresetArgs preset,
+    String? mannequinId,
+    String? customMannequinImagePath,
+  }) {
+    beginNewDesign(
+      mannequinId: mannequinId,
+      customMannequinImagePath: customMannequinImagePath,
+    );
+    loadPreset(preset);
+    final path = preset.catalogDesignPath?.trim() ?? '';
+    if (!isEditorCatalogDesignRef(path)) return;
+    state = state.copyWith(
+      preferCatalogBuild: true,
+      pinnedBrowseCatalogPath: path,
+      buildStyleMode: EditorBuildStyleMode.catalog,
+    );
+    _ensureBrowseCatalogBuild();
   }
 
   /// Applies a regional preset (garment + palette + optional fabric/pattern)
   /// to live editor state, then refreshes fabrics for the new garment type.
   void loadPreset(EditorPresetArgs args) {
     final trimmedCatalog = args.catalogDesignPath?.trim() ?? '';
-    final catalogOk = trimmedCatalog.isNotEmpty &&
-        (trimmedCatalog.startsWith('assets/images/designs/') ||
-            trimmedCatalog.startsWith('http://') ||
-            trimmedCatalog.startsWith('https://'));
+    final catalogOk = isEditorCatalogDesignRef(trimmedCatalog);
     final presetId = args.presetId ?? '';
     final garment = args.garmentType ?? '';
     final isCasual =

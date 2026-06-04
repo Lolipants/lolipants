@@ -305,7 +305,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/mannequin-selector',
         name: 'mannequinSelector',
-        builder: (context, state) => const MannequinSelectorScreen(),
+        builder: (context, state) {
+          final extra = state.extra;
+          final pendingPreset =
+              extra is EditorPresetArgs ? extra : null;
+          return MannequinSelectorScreen(pendingPreset: pendingPreset);
+        },
       ),
       GoRoute(
         path: '/browse/style/:styleId',
