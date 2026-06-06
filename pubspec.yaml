@@ -2,7 +2,7 @@ name: lolipants
 description: Lolipants — premium Middle Eastern fashion design app.
 publish_to: 'none'
 
-version: 1.0.7+2
+version: 1.0.6+3
 
 environment:
   sdk: ^3.5.0
