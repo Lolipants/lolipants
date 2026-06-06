@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lolipants/core/ai/ai_data_sharing_consent.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_strings.dart';
@@ -22,6 +23,9 @@ class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   Future<void> _openAiPrompt(BuildContext context, WidgetRef ref) async {
+    final allowed = await AiDataSharingConsent.ensure(context, ref);
+    if (!allowed || !context.mounted) return;
+
     final gender = await ensureDesignGender(context, ref);
     if (gender == null || !context.mounted) return;
 

@@ -6,6 +6,7 @@ import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/features/auth/providers/auth_providers.dart';
+import 'package:lolipants/core/ai/ai_data_sharing_consent.dart';
 import 'package:lolipants/features/editor/data/ai_design_service.dart';
 import 'package:lolipants/features/editor/data/built_in_mannequin_assets.dart';
 import 'package:lolipants/core/preferences/design_gender_defaults.dart';
@@ -216,6 +217,10 @@ class _AiPromptBarState extends ConsumerState<AiPromptBar> {
   Future<void> _submit() async {
     final prompt = _promptController.text.trim();
     if (prompt.isEmpty) return;
+
+    final allowed = await AiDataSharingConsent.ensure(context, ref);
+    if (!allowed || !mounted) return;
+
     if (widget.embedInEditor) {
       setState(() {
         _isLoading = true;

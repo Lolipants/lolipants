@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:lolipants/core/ai/ai_data_sharing_consent.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -170,6 +171,12 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
     await WidgetsBinding.instance.endOfFrame;
     await Future<void>.delayed(const Duration(milliseconds: 400));
     if (!mounted) return;
+
+    final allowed = await AiDataSharingConsent.ensure(context, ref);
+    if (!allowed || !mounted) {
+      _aiHomeDraftRunning = false;
+      return;
+    }
 
     final composeBytes = await _captureHeroPng();
     final result = await notifier.generateRefinedLook(
@@ -633,6 +640,9 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
   }
 
   Future<void> _generateLook(BuildContext context) async {
+    final allowed = await AiDataSharingConsent.ensure(context, ref);
+    if (!allowed || !context.mounted) return;
+
     final notifier = ref.read(editorProvider.notifier);
     final editor = ref.read(editorProvider);
     if (editor.heroMode != EditorHeroMode.compose) {

@@ -1293,6 +1293,43 @@ class AppStrings {
   static const String permissionAudioDeniedMessage =
       'Enable storage or audio access in Settings to import tracks.';
 
+  /// Third-party AI disclosure title (English).
+  static const String aiConsentTitle = 'Share data with AI partners?';
+
+  /// Third-party AI disclosure body (English).
+  static const String aiConsentMessage =
+      'Some Lolipants features send data to third-party AI providers '
+      '(Google Gemini and OpenAI) to generate design suggestions, on-model '
+      'previews, and body measurement estimates.\n\n'
+      'Data that may be sent includes: text prompts you enter, design preview '
+      'images, garment type and colour choices, configurator selections, '
+      'optional gender preference, and camera photos you choose for AI '
+      'measurements.\n\n'
+      'We send this data only when you use an AI feature. You can withdraw '
+      'consent anytime in Settings → Privacy & legal. See our Privacy Policy '
+      'for how these providers handle your data.';
+
+  /// Decline third-party AI sharing (English).
+  static const String aiConsentDecline = 'Not now';
+
+  /// Agree to third-party AI sharing (English).
+  static const String aiConsentAgree = 'Agree and continue';
+
+  /// Settings: revoke AI consent title (English).
+  static const String settingsAiConsentTitle = 'Third-party AI sharing';
+
+  /// Settings: revoke AI consent subtitle when enabled (English).
+  static const String settingsAiConsentEnabledSubtitle =
+      'Allowed — tap to withdraw consent';
+
+  /// Settings: revoke AI consent subtitle when disabled (English).
+  static const String settingsAiConsentDisabledSubtitle =
+      'Not allowed — you will be asked again before AI features run';
+
+  /// Snackbar after revoking AI consent (English).
+  static const String settingsAiConsentRevoked =
+      'AI sharing consent withdrawn';
+
   /// Privacy policy link (English).
   static const String settingsPrivacyPolicy = 'Privacy policy';
 
@@ -1573,6 +1610,41 @@ class AppStrings {
 
   /// Arabic: [permissionAudioDeniedMessage].
   static const String permissionAudioDeniedMessageAr = 'فعّل الميكروفون من إعدادات الجهاز للمتابعة.';
+
+  /// Arabic: [aiConsentTitle].
+  static const String aiConsentTitleAr = 'مشاركة البيانات مع شركاء الذكاء الاصطناعي؟';
+
+  /// Arabic: [aiConsentMessage].
+  static const String aiConsentMessageAr =
+      'بعض ميزات لوليبانتس ترسل بيانات إلى مزودي ذكاء اصطناعي تابعين لجهات خارجية '
+      '(Google Gemini وOpenAI) لإنشاء اقتراحات تصميم ومعاينات على المانيكان '
+      'وتقديرات قياس الجسم.\n\n'
+      'قد تشمل البيانات المرسلة: النصوص التي تدخلها، صور معاينة التصميم، نوع '
+      'الثوب والألوان، اختيارات المُكوِّن، تفضيل الجنس الاختياري، وصور الكاميرا '
+      'التي تختارها للقياس بالذكاء الاصطناعي.\n\n'
+      'نرسل هذه البيانات فقط عند استخدام ميزة ذكاء اصطناعي. يمكنك سحب الموافقة '
+      'في أي وقت من الإعدادات → الخصوصية والقانون. راجع سياسة الخصوصية لمعرفة '
+      'كيف يتعامل هؤلاء المزودون مع بياناتك.';
+
+  /// Arabic: [aiConsentDecline].
+  static const String aiConsentDeclineAr = 'ليس الآن';
+
+  /// Arabic: [aiConsentAgree].
+  static const String aiConsentAgreeAr = 'أوافق وأتابع';
+
+  /// Arabic: [settingsAiConsentTitle].
+  static const String settingsAiConsentTitleAr = 'مشاركة البيانات مع ذكاء اصطناعي خارجي';
+
+  /// Arabic: [settingsAiConsentEnabledSubtitle].
+  static const String settingsAiConsentEnabledSubtitleAr =
+      'مسموح — اضغط لسحب الموافقة';
+
+  /// Arabic: [settingsAiConsentDisabledSubtitle].
+  static const String settingsAiConsentDisabledSubtitleAr =
+      'غير مسموح — سيُطلب منك التأكيد قبل تشغيل ميزات الذكاء الاصطناعي';
+
+  /// Arabic: [settingsAiConsentRevoked].
+  static const String settingsAiConsentRevokedAr = 'تم سحب موافقة مشاركة الذكاء الاصطناعي';
 
 
   // ---------------------------------------------------------------------------

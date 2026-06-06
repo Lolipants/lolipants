@@ -11,6 +11,7 @@ import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/features/sizing/models/body_measurements.dart';
 import 'package:lolipants/features/sizing/providers/sizing_providers.dart';
 import 'package:lolipants/features/sizing/services/pose_quality_service.dart';
+import 'package:lolipants/core/ai/ai_data_sharing_consent.dart';
 import 'package:lolipants/core/permissions/device_permission_prompt.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
@@ -194,6 +195,9 @@ class _AiMeasurementScreenState extends ConsumerState<AiMeasurementScreen> {
   }
 
   Future<void> _analyseCapturedFrame() async {
+    final allowed = await AiDataSharingConsent.ensure(context, ref);
+    if (!allowed || !mounted) return;
+
     final controller = _cameraController;
     if (!_cameraReady || controller == null) {
       setState(() {

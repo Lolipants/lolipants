@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lolipants/core/ai/ai_data_sharing_consent.dart';
 import 'package:lolipants/core/config/app_features.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
@@ -179,6 +180,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ),
       );
     }
+  }
+
+  Future<void> _revokeAiConsent() async {
+    await AiDataSharingConsent.revoke(ref);
+    if (!mounted) return;
+    setState(() {});
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          localizedFromContext(
+            context,
+            AppStrings.settingsAiConsentRevoked,
+            AppStrings.settingsAiConsentRevokedAr,
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _confirmDelete() async {
@@ -393,6 +411,35 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 _BilingualSectionTitle(
                   titleEn: AppStrings.settingsSectionPrivacy,
                   titleAr: AppStrings.settingsSectionPrivacyAr,
+                ),
+                ListTile(
+                  leading: const Icon(
+                    Icons.psychology_outlined,
+                    color: AppColors.gold,
+                  ),
+                  title: Text(
+                    localizedFromContext(
+                      context,
+                      AppStrings.settingsAiConsentTitle,
+                      AppStrings.settingsAiConsentTitleAr,
+                    ),
+                    style: AppTextStyles.titleSmall,
+                  ),
+                  subtitle: Text(
+                    localizedFromContext(
+                      context,
+                      AiDataSharingConsent.isGranted(ref)
+                          ? AppStrings.settingsAiConsentEnabledSubtitle
+                          : AppStrings.settingsAiConsentDisabledSubtitle,
+                      AiDataSharingConsent.isGranted(ref)
+                          ? AppStrings.settingsAiConsentEnabledSubtitleAr
+                          : AppStrings.settingsAiConsentDisabledSubtitleAr,
+                    ),
+                    style: AppTextStyles.bodySmall,
+                  ),
+                  onTap: AiDataSharingConsent.isGranted(ref)
+                      ? _revokeAiConsent
+                      : null,
                 ),
                 _LegalWebTile(
                   labelEn: AppStrings.settingsPrivacyPolicy,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:lolipants/core/ai/ai_data_sharing_consent.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
@@ -67,7 +68,12 @@ class _MyMeasurementsScreenState extends ConsumerState<MyMeasurementsScreen> {
                   _MeasurementSummary(
                     measurements: measurements,
                     onEdit: () => context.push('/sizing/manual'),
-                    onRescan: () => context.push('/sizing/ai'),
+                    onRescan: () async {
+                      final allowed =
+                          await AiDataSharingConsent.ensure(context, ref);
+                      if (!allowed || !context.mounted) return;
+                      await context.push('/sizing/ai');
+                    },
                   ),
               ],
             ),
