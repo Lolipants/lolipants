@@ -160,7 +160,9 @@ String? editorCustomMannequinFromRenderMetadata(Map<String, dynamic>? meta) {
 bool isAiHomeDraftFromRenderMetadata(Map<String, dynamic>? meta) {
   if (meta == null) return false;
   final raw = meta['aiHomeDraft'];
-  return raw == true || raw == 1;
+  if (raw != true && raw != 1) return false;
+  // Reopening a saved design must not re-trigger auto-render.
+  return aiRefinedLookUrlFromRenderMetadata(meta) == null;
 }
 
 /// Resolves mannequin id for editor restore (metadata first, then API column).

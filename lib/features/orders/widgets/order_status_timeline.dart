@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/features/orders/models/order.dart';
 import 'package:lolipants/features/orders/models/order_status.dart';
+import 'package:lolipants/features/settings/providers/settings_provider.dart';
 
 /// Vertical timeline of major status milestones.
-class OrderStatusTimeline extends StatelessWidget {
+class OrderStatusTimeline extends ConsumerWidget {
   /// Creates a timeline for [order].
   const OrderStatusTimeline({
     required this.order,
@@ -18,7 +21,8 @@ class OrderStatusTimeline extends StatelessWidget {
   final Order order;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final locale = ref.watch(settingsLocaleProvider);
     final values = OrderStatus.values
         .where((s) => s != OrderStatus.cancelled || order.status.isCancelled)
         .toList();
@@ -30,6 +34,7 @@ class OrderStatusTimeline extends StatelessWidget {
             status: values[i],
             isLast: i == values.length - 1,
             order: order,
+            locale: locale,
           ),
       ],
     );
@@ -41,11 +46,13 @@ class _TimelineRow extends StatelessWidget {
     required this.status,
     required this.isLast,
     required this.order,
+    required this.locale,
   });
 
   final OrderStatus status;
   final bool isLast;
   final Order order;
+  final Locale locale;
 
   @override
   Widget build(BuildContext context) {
@@ -58,8 +65,8 @@ class _TimelineRow extends StatelessWidget {
     final future = !done && !current;
 
     final dotSize = current ? 10.0 : 8.0;
-    final lineColor =
-        done ? AppColors.gold : AppColors.borderSubtle;
+    final lineColor = done ? AppColors.gold : AppColors.borderSubtle;
+    final dateFmt = dateFormatYMMMd(locale);
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -99,7 +106,7 @@ class _TimelineRow extends StatelessWidget {
                 Row(
                   children: [
                     Text(
-                      status.labelEn,
+                      status.labelFor(locale),
                       style: AppTextStyles.titleSmall.copyWith(
                         color: future ? AppColors.fog : AppColors.gold,
                         fontSize: 13,
@@ -108,7 +115,11 @@ class _TimelineRow extends StatelessWidget {
                     if (current) ...[
                       const SizedBox(width: AppSpacing.sm),
                       Text(
-                        AppStrings.inProgress,
+                        localizedFromLocale(
+                          locale,
+                          AppStrings.inProgress,
+                          AppStrings.inProgressAr,
+                        ),
                         style: AppTextStyles.labelGold.copyWith(fontSize: 8),
                       ),
                     ],
@@ -116,7 +127,7 @@ class _TimelineRow extends StatelessWidget {
                 ),
                 if (history.isNotEmpty)
                   Text(
-                    history.last.timestamp.toString().substring(0, 16),
+                    dateFmt.format(history.last.timestamp),
                     style: AppTextStyles.bodySmall,
                   ),
                 if (history.isNotEmpty && history.last.note != null)

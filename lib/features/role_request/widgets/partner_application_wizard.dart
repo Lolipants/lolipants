@@ -1,3 +1,5 @@
+import 'dart:ui' show Locale;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
@@ -5,8 +7,9 @@ import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/core/errors/app_exception_message_mapper.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/features/role_request/providers/role_request_providers.dart';
-import 'package:lolipants/shared/widgets/locale_bilingual_text.dart';
+import 'package:lolipants/features/settings/providers/settings_provider.dart';
 
 /// Multi-step tailor/delivery partner application (submits via existing API).
 class PartnerApplicationWizard extends ConsumerStatefulWidget {
@@ -110,6 +113,7 @@ class _PartnerApplicationWizardState
   }
 
   Future<void> _submit() async {
+    final locale = ref.read(settingsLocaleProvider);
     setState(() => _submitting = true);
     final repo = ref.read(roleRequestRepositoryProvider);
     final result = await repo.createRequest(
@@ -122,11 +126,27 @@ class _PartnerApplicationWizardState
       (err) {
         final msg = mapAppExceptionMessage(
           err,
-          fallback: 'Request failed.',
-          networkMessage: 'Network issue.',
-          authMessage: 'Session issue.',
+          fallback: localizedFromLocale(
+            locale,
+            AppStrings.partnerRequestFailed,
+            AppStrings.partnerRequestFailedAr,
+          ),
+          networkMessage: localizedFromLocale(
+            locale,
+            AppStrings.partnerNetworkErrorShort,
+            AppStrings.partnerNetworkErrorShortAr,
+          ),
+          authMessage: localizedFromLocale(
+            locale,
+            AppStrings.partnerSessionIssueShort,
+            AppStrings.partnerSessionIssueShortAr,
+          ),
           statusMessages: {
-            409: AppStrings.partnerErrorPendingExists,
+            409: localizedFromLocale(
+              locale,
+              AppStrings.partnerErrorPendingExists,
+              AppStrings.partnerErrorPendingExistsAr,
+            ),
           },
         );
         ScaffoldMessenger.of(context)
@@ -137,7 +157,8 @@ class _PartnerApplicationWizardState
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              '${AppStrings.partnerDoneTitle}\n${AppStrings.partnerDoneBody}',
+              '${localizedFromLocale(locale, AppStrings.partnerDoneTitle, AppStrings.partnerDoneTitleAr)}\n'
+              '${localizedFromLocale(locale, AppStrings.partnerDoneBody, AppStrings.partnerDoneBodyAr)}',
             ),
             duration: const Duration(seconds: 5),
           ),
@@ -148,6 +169,7 @@ class _PartnerApplicationWizardState
 
   @override
   Widget build(BuildContext context) {
+    final locale = ref.watch(settingsLocaleProvider);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -184,14 +206,16 @@ class _PartnerApplicationWizardState
                 physics: const NeverScrollableScrollPhysics(),
                 onPageChanged: (i) => setState(() => _step = i),
                 children: [
-                  _WelcomePage(onNext: () => _goToStep(1)),
+                  _WelcomePage(locale: locale, onNext: () => _goToStep(1)),
                   _RolePage(
+                    locale: locale,
                     selected: _role,
                     onChanged: (v) => setState(() => _role = v),
                     onNext: () => _goToStep(2),
                     onBack: () => _goToStep(0),
                   ),
                   _DetailsPage(
+                    locale: locale,
                     role: _role,
                     cityCtrl: _cityCtrl,
                     yearsCtrl: _yearsCtrl,
@@ -204,8 +228,14 @@ class _PartnerApplicationWizardState
                     onNext: () {
                       if (!_detailsValid()) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(AppStrings.partnerDetailsValidation),
+                          SnackBar(
+                            content: Text(
+                              localizedFromLocale(
+                                locale,
+                                AppStrings.partnerDetailsValidation,
+                                AppStrings.partnerDetailsValidationAr,
+                              ),
+                            ),
                           ),
                         );
                         return;
@@ -215,6 +245,7 @@ class _PartnerApplicationWizardState
                     onBack: () => _goToStep(1),
                   ),
                   _ReviewPage(
+                    locale: locale,
                     role: _role,
                     city: _cityCtrl.text,
                     years: _yearsCtrl.text,
@@ -240,8 +271,9 @@ class _PartnerApplicationWizardState
 }
 
 class _WelcomePage extends StatelessWidget {
-  const _WelcomePage({required this.onNext});
+  const _WelcomePage({required this.locale, required this.onNext});
 
+  final Locale locale;
   final VoidCallback onNext;
 
   @override
@@ -250,25 +282,35 @@ class _WelcomePage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          LocaleBilingualText(
-            en: AppStrings.partnerWelcomeTitle,
-            ar: AppStrings.partnerWelcomeTitleAr,
-            enStyle: AppTextStyles.titleLarge,
-            arStyle: AppTextStyles.titleMedium.copyWith(color: AppColors.gold),
+          Text(
+            localizedFromLocale(
+              locale,
+              AppStrings.partnerWelcomeTitle,
+              AppStrings.partnerWelcomeTitleAr,
+            ),
+            style: AppTextStyles.titleLarge.copyWith(color: AppColors.gold),
           ),
           const SizedBox(height: AppSpacing.md),
-          LocaleBilingualText(
-            en: AppStrings.partnerWelcomeBody,
-            ar: AppStrings.partnerWelcomeBodyAr,
-            enStyle: AppTextStyles.bodyMedium,
-            arStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.dust),
+          Text(
+            localizedFromLocale(
+              locale,
+              AppStrings.partnerWelcomeBody,
+              AppStrings.partnerWelcomeBodyAr,
+            ),
+            style: AppTextStyles.bodyMedium.copyWith(color: AppColors.dust),
           ),
           const SizedBox(height: AppSpacing.xl),
           Align(
             alignment: Alignment.centerRight,
             child: FilledButton(
               onPressed: onNext,
-              child: const Text(AppStrings.partnerWizardNext),
+              child: Text(
+                localizedFromLocale(
+                  locale,
+                  AppStrings.partnerWizardNext,
+                  AppStrings.partnerWizardNextAr,
+                ),
+              ),
             ),
           ),
         ],
@@ -279,12 +321,14 @@ class _WelcomePage extends StatelessWidget {
 
 class _RolePage extends StatelessWidget {
   const _RolePage({
+    required this.locale,
     required this.selected,
     required this.onChanged,
     required this.onNext,
     required this.onBack,
   });
 
+  final Locale locale;
   final String selected;
   final ValueChanged<String> onChanged;
   final VoidCallback onNext;
@@ -296,24 +340,42 @@ class _RolePage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          LocaleBilingualText(
-            en: AppStrings.partnerChoosePathTitle,
-            ar: AppStrings.partnerChoosePathTitleAr,
-            enStyle: AppTextStyles.titleLarge,
-            arStyle: AppTextStyles.titleMedium.copyWith(color: AppColors.gold),
+          Text(
+            localizedFromLocale(
+              locale,
+              AppStrings.partnerChoosePathTitle,
+              AppStrings.partnerChoosePathTitleAr,
+            ),
+            style: AppTextStyles.titleLarge.copyWith(color: AppColors.gold),
           ),
           const SizedBox(height: AppSpacing.lg),
           _RoleCard(
-            title: AppStrings.partnerRoleTailorTitle,
-            bullets: AppStrings.partnerRoleTailorBullets,
+            title: localizedFromLocale(
+              locale,
+              AppStrings.partnerRoleTailorTitle,
+              AppStrings.partnerRoleTailorTitleAr,
+            ),
+            bullets: localizedFromLocale(
+              locale,
+              AppStrings.partnerRoleTailorBullets,
+              AppStrings.partnerRoleTailorBulletsAr,
+            ),
             icon: Icons.cut,
             selected: selected == 'tailor',
             onTap: () => onChanged('tailor'),
           ),
           const SizedBox(height: AppSpacing.md),
           _RoleCard(
-            title: AppStrings.partnerRoleDeliveryTitle,
-            bullets: AppStrings.partnerRoleDeliveryBullets,
+            title: localizedFromLocale(
+              locale,
+              AppStrings.partnerRoleDeliveryTitle,
+              AppStrings.partnerRoleDeliveryTitleAr,
+            ),
+            bullets: localizedFromLocale(
+              locale,
+              AppStrings.partnerRoleDeliveryBullets,
+              AppStrings.partnerRoleDeliveryBulletsAr,
+            ),
             icon: Icons.delivery_dining,
             selected: selected == 'delivery',
             onTap: () => onChanged('delivery'),
@@ -323,12 +385,24 @@ class _RolePage extends StatelessWidget {
             children: [
               OutlinedButton(
                 onPressed: onBack,
-                child: const Text(AppStrings.partnerWizardBack),
+                child: Text(
+                  localizedFromLocale(
+                    locale,
+                    AppStrings.partnerWizardBack,
+                    AppStrings.partnerWizardBackAr,
+                  ),
+                ),
               ),
               const Spacer(),
               FilledButton(
                 onPressed: onNext,
-                child: const Text(AppStrings.partnerWizardNext),
+                child: Text(
+                  localizedFromLocale(
+                    locale,
+                    AppStrings.partnerWizardNext,
+                    AppStrings.partnerWizardNextAr,
+                  ),
+                ),
               ),
             ],
           ),
@@ -404,6 +478,7 @@ class _RoleCard extends StatelessWidget {
 
 class _DetailsPage extends StatelessWidget {
   const _DetailsPage({
+    required this.locale,
     required this.role,
     required this.cityCtrl,
     required this.yearsCtrl,
@@ -417,6 +492,7 @@ class _DetailsPage extends StatelessWidget {
     required this.onBack,
   });
 
+  final Locale locale;
   final String role;
   final TextEditingController cityCtrl;
   final TextEditingController yearsCtrl;
@@ -436,80 +512,114 @@ class _DetailsPage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          LocaleBilingualText(
-            en: AppStrings.partnerDetailsTitle,
-            ar: AppStrings.partnerDetailsTitleAr,
-            enStyle: AppTextStyles.titleLarge,
-            arStyle: AppTextStyles.titleMedium.copyWith(color: AppColors.gold),
+          Text(
+            localizedFromLocale(
+              locale,
+              AppStrings.partnerDetailsTitle,
+              AppStrings.partnerDetailsTitleAr,
+            ),
+            style: AppTextStyles.titleLarge.copyWith(color: AppColors.gold),
           ),
           const SizedBox(height: AppSpacing.lg),
           if (tailor) ...[
             TextField(
               controller: cityCtrl,
-              decoration: const InputDecoration(
-                labelText: AppStrings.partnerFieldCityRegion,
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: localizedFromLocale(
+                  locale,
+                  AppStrings.partnerFieldCityRegion,
+                  AppStrings.partnerFieldCityRegionAr,
+                ),
+                border: const OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: AppSpacing.md),
             TextField(
               controller: yearsCtrl,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: AppStrings.partnerFieldYearsExperience,
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: localizedFromLocale(
+                  locale,
+                  AppStrings.partnerFieldYearsExperience,
+                  AppStrings.partnerFieldYearsExperienceAr,
+                ),
+                border: const OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: AppSpacing.md),
             TextField(
               controller: workshopCtrl,
-              decoration: const InputDecoration(
-                labelText: AppStrings.partnerFieldWorkshopName,
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: localizedFromLocale(
+                  locale,
+                  AppStrings.partnerFieldWorkshopName,
+                  AppStrings.partnerFieldWorkshopNameAr,
+                ),
+                border: const OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: AppSpacing.md),
             TextField(
               controller: portfolioCtrl,
               keyboardType: TextInputType.url,
-              decoration: const InputDecoration(
-                labelText: AppStrings.partnerFieldPortfolioUrl,
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: localizedFromLocale(
+                  locale,
+                  AppStrings.partnerFieldPortfolioUrl,
+                  AppStrings.partnerFieldPortfolioUrlAr,
+                ),
+                border: const OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: AppSpacing.md),
             TextField(
               controller: specialtiesCtrl,
               maxLines: 2,
-              decoration: const InputDecoration(
-                labelText: AppStrings.partnerFieldSpecialties,
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: localizedFromLocale(
+                  locale,
+                  AppStrings.partnerFieldSpecialties,
+                  AppStrings.partnerFieldSpecialtiesAr,
+                ),
+                border: const OutlineInputBorder(),
               ),
             ),
           ] else ...[
             TextField(
               controller: vehicleCtrl,
-              decoration: const InputDecoration(
-                labelText: AppStrings.partnerFieldVehicle,
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: localizedFromLocale(
+                  locale,
+                  AppStrings.partnerFieldVehicle,
+                  AppStrings.partnerFieldVehicleAr,
+                ),
+                border: const OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: AppSpacing.md),
             TextField(
               controller: coverageCtrl,
               maxLines: 2,
-              decoration: const InputDecoration(
-                labelText: AppStrings.partnerFieldCoverage,
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: localizedFromLocale(
+                  locale,
+                  AppStrings.partnerFieldCoverage,
+                  AppStrings.partnerFieldCoverageAr,
+                ),
+                border: const OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: AppSpacing.md),
             TextField(
               controller: availabilityCtrl,
               maxLines: 2,
-              decoration: const InputDecoration(
-                labelText: AppStrings.partnerFieldAvailability,
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: localizedFromLocale(
+                  locale,
+                  AppStrings.partnerFieldAvailability,
+                  AppStrings.partnerFieldAvailabilityAr,
+                ),
+                border: const OutlineInputBorder(),
               ),
             ),
           ],
@@ -518,12 +628,24 @@ class _DetailsPage extends StatelessWidget {
             children: [
               OutlinedButton(
                 onPressed: onBack,
-                child: const Text(AppStrings.partnerWizardBack),
+                child: Text(
+                  localizedFromLocale(
+                    locale,
+                    AppStrings.partnerWizardBack,
+                    AppStrings.partnerWizardBackAr,
+                  ),
+                ),
               ),
               const Spacer(),
               FilledButton(
                 onPressed: onNext,
-                child: const Text(AppStrings.partnerWizardNext),
+                child: Text(
+                  localizedFromLocale(
+                    locale,
+                    AppStrings.partnerWizardNext,
+                    AppStrings.partnerWizardNextAr,
+                  ),
+                ),
               ),
             ],
           ),
@@ -533,8 +655,24 @@ class _DetailsPage extends StatelessWidget {
   }
 }
 
+String _partnerRoleLabel(Locale locale, String role) {
+  if (role == 'tailor') {
+    return localizedFromLocale(
+      locale,
+      AppStrings.partnerRoleTailorTitle,
+      AppStrings.partnerRoleTailorTitleAr,
+    );
+  }
+  return localizedFromLocale(
+    locale,
+    AppStrings.partnerRoleDeliveryTitle,
+    AppStrings.partnerRoleDeliveryTitleAr,
+  );
+}
+
 class _ReviewPage extends StatelessWidget {
   const _ReviewPage({
+    required this.locale,
     required this.role,
     required this.city,
     required this.years,
@@ -550,6 +688,7 @@ class _ReviewPage extends StatelessWidget {
     required this.onBack,
   });
 
+  final Locale locale;
   final String role;
   final String city;
   final String years;
@@ -571,36 +710,102 @@ class _ReviewPage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          LocaleBilingualText(
-            en: AppStrings.partnerReviewTitle,
-            ar: AppStrings.partnerReviewTitleAr,
-            enStyle: AppTextStyles.titleLarge,
-            arStyle: AppTextStyles.titleMedium.copyWith(color: AppColors.gold),
+          Text(
+            localizedFromLocale(
+              locale,
+              AppStrings.partnerReviewTitle,
+              AppStrings.partnerReviewTitleAr,
+            ),
+            style: AppTextStyles.titleLarge.copyWith(color: AppColors.gold),
           ),
           const SizedBox(height: AppSpacing.md),
-          Text('Role: $role', style: AppTextStyles.bodyMedium),
+          Text(
+            '${localizedFromLocale(locale, AppStrings.partnerReviewRolePrefix, AppStrings.partnerReviewRolePrefixAr)}: '
+            '${_partnerRoleLabel(locale, role)}',
+            style: AppTextStyles.bodyMedium,
+          ),
           if (tailor) ...[
-            _ReviewLine(AppStrings.partnerFieldCityRegion, city),
-            _ReviewLine(AppStrings.partnerFieldYearsExperience, years),
+            _ReviewLine(
+              localizedFromLocale(
+                locale,
+                AppStrings.partnerFieldCityRegion,
+                AppStrings.partnerFieldCityRegionAr,
+              ),
+              city,
+            ),
+            _ReviewLine(
+              localizedFromLocale(
+                locale,
+                AppStrings.partnerFieldYearsExperience,
+                AppStrings.partnerFieldYearsExperienceAr,
+              ),
+              years,
+            ),
             if (workshop.trim().isNotEmpty)
-              _ReviewLine(AppStrings.partnerFieldWorkshopName, workshop),
+              _ReviewLine(
+                localizedFromLocale(
+                  locale,
+                  AppStrings.partnerFieldWorkshopName,
+                  AppStrings.partnerFieldWorkshopNameAr,
+                ),
+                workshop,
+              ),
             if (portfolio.trim().isNotEmpty)
-              _ReviewLine(AppStrings.partnerFieldPortfolioUrl, portfolio),
+              _ReviewLine(
+                localizedFromLocale(
+                  locale,
+                  AppStrings.partnerFieldPortfolioUrl,
+                  AppStrings.partnerFieldPortfolioUrlAr,
+                ),
+                portfolio,
+              ),
             if (specialties.trim().isNotEmpty)
-              _ReviewLine(AppStrings.partnerFieldSpecialties, specialties),
+              _ReviewLine(
+                localizedFromLocale(
+                  locale,
+                  AppStrings.partnerFieldSpecialties,
+                  AppStrings.partnerFieldSpecialtiesAr,
+                ),
+                specialties,
+              ),
           ] else ...[
-            _ReviewLine(AppStrings.partnerFieldVehicle, vehicle),
-            _ReviewLine(AppStrings.partnerFieldCoverage, coverage),
+            _ReviewLine(
+              localizedFromLocale(
+                locale,
+                AppStrings.partnerFieldVehicle,
+                AppStrings.partnerFieldVehicleAr,
+              ),
+              vehicle,
+            ),
+            _ReviewLine(
+              localizedFromLocale(
+                locale,
+                AppStrings.partnerFieldCoverage,
+                AppStrings.partnerFieldCoverageAr,
+              ),
+              coverage,
+            ),
             if (availability.trim().isNotEmpty)
-              _ReviewLine(AppStrings.partnerFieldAvailability, availability),
+              _ReviewLine(
+                localizedFromLocale(
+                  locale,
+                  AppStrings.partnerFieldAvailability,
+                  AppStrings.partnerFieldAvailabilityAr,
+                ),
+                availability,
+              ),
           ],
           const SizedBox(height: AppSpacing.lg),
           TextField(
             controller: noteCtrl,
             maxLines: 3,
-            decoration: const InputDecoration(
-              labelText: AppStrings.partnerReviewNoteLabel,
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: localizedFromLocale(
+                locale,
+                AppStrings.partnerReviewNoteLabel,
+                AppStrings.partnerReviewNoteLabelAr,
+              ),
+              border: const OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -608,7 +813,13 @@ class _ReviewPage extends StatelessWidget {
             children: [
               OutlinedButton(
                 onPressed: submitting ? null : onBack,
-                child: const Text(AppStrings.partnerWizardBack),
+                child: Text(
+                  localizedFromLocale(
+                    locale,
+                    AppStrings.partnerWizardBack,
+                    AppStrings.partnerWizardBackAr,
+                  ),
+                ),
               ),
               const Spacer(),
               FilledButton(
@@ -622,7 +833,13 @@ class _ReviewPage extends StatelessWidget {
                           color: AppColors.ink,
                         ),
                       )
-                    : const Text(AppStrings.partnerWizardSubmit),
+                    : Text(
+                        localizedFromLocale(
+                          locale,
+                          AppStrings.partnerWizardSubmit,
+                          AppStrings.partnerWizardSubmitAr,
+                        ),
+                      ),
               ),
             ],
           ),

@@ -1422,7 +1422,7 @@ orderRoutes.post("/", async (c) => {
         delivery_address, delivery_city, delivery_phone, delivery_notes,
         delivery_lat, delivery_lng, price_plan_id, assignment_method,
         base_price, fabric_fee, delivery_fee, accessory_fee, total_price, payment_token)
-        VALUES (?, ?, ?, ?, ?, 'placed', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        VALUES (?, ?, ?, ?, ?, 'placed', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
       .bind(
         id,

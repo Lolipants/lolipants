@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lolipants/core/config/app_features.dart';
+import 'package:lolipants/core/constants/app_strings.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/core/router/role_routing.dart';
 
 export 'package:lolipants/core/router/role_routing.dart'
@@ -37,6 +39,7 @@ import 'package:lolipants/features/community/screens/designer_profile_screen.dar
 import 'package:lolipants/features/community/screens/designer_earnings_screen.dart';
 import 'package:lolipants/features/community/models/post.dart';
 import 'package:lolipants/features/editor/models/editor_preset_args.dart';
+import 'package:lolipants/features/home/models/home_flow_selection.dart';
 import 'package:lolipants/features/editor/models/garment_design.dart';
 import 'package:lolipants/features/editor/screens/editor_screen.dart';
 import 'package:lolipants/features/home/screens/home_screen.dart';
@@ -307,6 +310,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: 'mannequinSelector',
         builder: (context, state) {
           final extra = state.extra;
+          if (extra is MannequinSelectorArgs) {
+            return MannequinSelectorScreen(
+              pendingPreset: extra.preset,
+              homeFlow: extra.homeFlow,
+            );
+          }
           final pendingPreset =
               extra is EditorPresetArgs ? extra : null;
           return MannequinSelectorScreen(pendingPreset: pendingPreset);
@@ -361,8 +370,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           if (extra is Accessory) {
             return AccessoryDetailScreen(accessory: extra);
           }
-          return const Scaffold(
-            body: Center(child: Text('Accessory not found')),
+          final locale = ref.read(settingsLocaleProvider);
+          return Scaffold(
+            body: Center(
+              child: Text(
+                localizedFromLocale(
+                  locale,
+                  AppStrings.accessoryNotFound,
+                  AppStrings.accessoryNotFoundAr,
+                ),
+              ),
+            ),
           );
         },
       ),

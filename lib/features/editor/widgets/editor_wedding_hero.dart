@@ -1,13 +1,17 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
+import 'package:lolipants/core/l10n/localized_label.dart';
+import 'package:lolipants/features/settings/providers/settings_provider.dart';
 import 'package:lolipants/features/wedding/models/wedding_dress.dart';
 
 /// Read-only full-bleed preview of the selected wedding catalogue dress.
-class EditorWeddingHero extends StatelessWidget {
+class EditorWeddingHero extends ConsumerWidget {
   const EditorWeddingHero({
     required this.dress,
     super.key,
@@ -16,13 +20,19 @@ class EditorWeddingHero extends StatelessWidget {
   final WeddingDress? dress;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final locale = ref.watch(settingsLocaleProvider);
+
     if (dress == null) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.lg),
           child: Text(
-            AppStrings.weddingSelectDressHint,
+            localizedFromLocale(
+              locale,
+              AppStrings.weddingSelectDressHint,
+              AppStrings.weddingSelectDressHintAr,
+            ),
             style: AppTextStyles.bodyMedium.copyWith(color: AppColors.fog),
             textAlign: TextAlign.center,
           ),
@@ -71,7 +81,13 @@ class EditorWeddingHero extends StatelessWidget {
                     vertical: AppSpacing.xs,
                   ),
                   child: Text(
-                    dress!.labelEn,
+                    localizedLabel(
+                      locale,
+                      en: dress!.labelEn,
+                      ar: dress!.labelAr.trim().isNotEmpty
+                          ? dress!.labelAr
+                          : dress!.labelEn,
+                    ),
                     style: AppTextStyles.labelGold.copyWith(fontSize: 13),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,

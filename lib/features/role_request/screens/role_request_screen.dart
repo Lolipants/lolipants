@@ -1,3 +1,5 @@
+import 'dart:ui' show Locale;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,16 +10,61 @@ import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/core/errors/app_exception.dart';
 import 'package:lolipants/core/errors/app_exception_message_mapper.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/features/role_request/providers/role_request_providers.dart';
 import 'package:lolipants/features/role_request/widgets/partner_application_wizard.dart';
+import 'package:lolipants/features/settings/providers/settings_provider.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
-import 'package:lolipants/shared/widgets/locale_bilingual_text.dart';
 
 bool _hasPendingRoleRequest(List<Map<String, dynamic>> rows) {
   for (final r in rows) {
     if ((r['status']?.toString() ?? '') == 'pending') return true;
   }
   return false;
+}
+
+String _localizedPartnerRole(Locale locale, String role) {
+  switch (role) {
+    case 'tailor':
+      return localizedFromLocale(
+        locale,
+        AppStrings.partnerRoleTailorTitle,
+        AppStrings.partnerRoleTailorTitleAr,
+      );
+    case 'delivery':
+      return localizedFromLocale(
+        locale,
+        AppStrings.partnerRoleDeliveryTitle,
+        AppStrings.partnerRoleDeliveryTitleAr,
+      );
+    default:
+      return role;
+  }
+}
+
+String _localizedPartnerStatus(Locale locale, String status) {
+  switch (status) {
+    case 'pending':
+      return localizedFromLocale(
+        locale,
+        AppStrings.partnerStatusPending,
+        AppStrings.partnerStatusPendingAr,
+      );
+    case 'approved':
+      return localizedFromLocale(
+        locale,
+        AppStrings.partnerStatusApproved,
+        AppStrings.partnerStatusApprovedAr,
+      );
+    case 'rejected':
+      return localizedFromLocale(
+        locale,
+        AppStrings.partnerStatusRejected,
+        AppStrings.partnerStatusRejectedAr,
+      );
+    default:
+      return status;
+  }
 }
 
 /// Strips trailing slashes so we can compare configured origins.
@@ -34,6 +81,7 @@ class RoleRequestScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final locale = ref.watch(settingsLocaleProvider);
     final apiBase = dotenv.env['API_BASE_URL']?.trim() ?? '';
     final authBase = dotenv.env['BETTER_AUTH_BASE_URL']?.trim() ?? '';
     final apiPointsAtAuth = apiBase.isNotEmpty &&
@@ -45,7 +93,13 @@ class RoleRequestScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.ink,
       appBar: AppBar(
-        title: Text(AppStrings.partnerTitleEn),
+        title: Text(
+          localizedFromLocale(
+            locale,
+            AppStrings.partnerTitleEn,
+            AppStrings.partnerTitleAr,
+          ),
+        ),
         backgroundColor: AppColors.ink,
         foregroundColor: AppColors.sand,
       ),
@@ -66,22 +120,24 @@ class RoleRequestScreen extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      LocaleBilingualText(
-                        en: AppStrings.partnerTitleEn,
-                        ar: AppStrings.partnerTitleAr,
-                        enStyle: AppTextStyles.titleMedium.copyWith(
-                          color: AppColors.gold,
+                      Text(
+                        localizedFromLocale(
+                          locale,
+                          AppStrings.partnerTitleEn,
+                          AppStrings.partnerTitleAr,
                         ),
-                        arStyle: AppTextStyles.titleMedium.copyWith(
+                        style: AppTextStyles.titleMedium.copyWith(
                           color: AppColors.gold,
                         ),
                       ),
                       const SizedBox(height: AppSpacing.sm),
-                      LocaleBilingualText(
-                        en: AppStrings.partnerHeaderSubtitleEn,
-                        ar: AppStrings.partnerHeaderSubtitleAr,
-                        enStyle: AppTextStyles.bodyMedium,
-                        arStyle: AppTextStyles.bodyMedium.copyWith(
+                      Text(
+                        localizedFromLocale(
+                          locale,
+                          AppStrings.partnerHeaderSubtitleEn,
+                          AppStrings.partnerHeaderSubtitleAr,
+                        ),
+                        style: AppTextStyles.bodyMedium.copyWith(
                           color: AppColors.dust,
                         ),
                       ),
@@ -91,19 +147,22 @@ class RoleRequestScreen extends ConsumerWidget {
                 Expanded(
                   child: apiBase.isEmpty
                       ? _EnvMissingPanel(
+                          locale: locale,
                           onOpenSettings: () {
                             context.push('/profile/settings');
                           },
                         )
                       : apiPointsAtAuth
                           ? _WrongApiBasePanel(
+                              locale: locale,
                               onOpenSettings: () {
                                 context.push('/profile/settings');
                               },
                             )
                           : history!.when(
-                              loading: () => const _PartnerLoadingPanel(),
+                              loading: () => _PartnerLoadingPanel(locale: locale),
                               error: (e, _) => _PartnerErrorPanel(
+                                locale: locale,
                                 error: e,
                                 onRetry: () =>
                                     ref.invalidate(myRoleRequestsProvider),
@@ -138,7 +197,11 @@ class RoleRequestScreen extends ConsumerWidget {
                                             ),
                                             Expanded(
                                               child: Text(
-                                                AppStrings.partnerPendingBanner,
+                                                localizedFromLocale(
+                                                  locale,
+                                                  AppStrings.partnerPendingBanner,
+                                                  AppStrings.partnerPendingBannerAr,
+                                                ),
                                                 style: AppTextStyles.bodyMedium,
                                               ),
                                             ),
@@ -149,13 +212,21 @@ class RoleRequestScreen extends ConsumerWidget {
                                     const SizedBox(height: AppSpacing.lg),
                                   ],
                                   Text(
-                                    AppStrings.partnerPreviousRequests,
+                                    localizedFromLocale(
+                                      locale,
+                                      AppStrings.partnerPreviousRequests,
+                                      AppStrings.partnerPreviousRequestsAr,
+                                    ),
                                     style: AppTextStyles.titleSmall,
                                   ),
                                   const SizedBox(height: AppSpacing.sm),
                                   if (rows.isEmpty)
                                     Text(
-                                      AppStrings.partnerNoRequestsYet,
+                                      localizedFromLocale(
+                                        locale,
+                                        AppStrings.partnerNoRequestsYet,
+                                        AppStrings.partnerNoRequestsYetAr,
+                                      ),
                                       style: AppTextStyles.bodySmall,
                                     )
                                   else
@@ -170,7 +241,10 @@ class RoleRequestScreen extends ConsumerWidget {
                                       return ListTile(
                                         dense: true,
                                         contentPadding: EdgeInsets.zero,
-                                        title: Text('$role · $st'),
+                                        title: Text(
+                                          '${_localizedPartnerRole(locale, role)} · '
+                                          '${_localizedPartnerStatus(locale, st)}',
+                                        ),
                                         subtitle: Text(
                                           created,
                                           style: AppTextStyles.bodySmall,
@@ -183,7 +257,11 @@ class RoleRequestScreen extends ConsumerWidget {
                                   ],
                                   const SizedBox(height: AppSpacing.lg),
                                   Text(
-                                    AppStrings.partnerPostApprovalHint,
+                                    localizedFromLocale(
+                                      locale,
+                                      AppStrings.partnerPostApprovalHint,
+                                      AppStrings.partnerPostApprovalHintAr,
+                                    ),
                                     style: AppTextStyles.bodySmall,
                                   ),
                                 ],
@@ -202,7 +280,9 @@ class RoleRequestScreen extends ConsumerWidget {
 }
 
 class _PartnerLoadingPanel extends StatelessWidget {
-  const _PartnerLoadingPanel();
+  const _PartnerLoadingPanel({required this.locale});
+
+  final Locale locale;
 
   @override
   Widget build(BuildContext context) {
@@ -215,7 +295,11 @@ class _PartnerLoadingPanel extends StatelessWidget {
             const CircularProgressIndicator(color: AppColors.gold),
             const SizedBox(height: AppSpacing.lg),
             Text(
-              AppStrings.partnerLoadingRequests,
+              localizedFromLocale(
+                locale,
+                AppStrings.partnerLoadingRequests,
+                AppStrings.partnerLoadingRequestsAr,
+              ),
               style: AppTextStyles.bodyMedium,
               textAlign: TextAlign.center,
             ),
@@ -228,10 +312,12 @@ class _PartnerLoadingPanel extends StatelessWidget {
 
 class _PartnerErrorPanel extends StatelessWidget {
   const _PartnerErrorPanel({
+    required this.locale,
     required this.error,
     required this.onRetry,
   });
 
+  final Locale locale;
   final Object error;
   final VoidCallback onRetry;
 
@@ -240,10 +326,21 @@ class _PartnerErrorPanel extends StatelessWidget {
     final message = error is AppException
         ? mapAppExceptionMessage(
             error as AppException,
-            fallback: 'Could not load requests.',
-            networkMessage:
-                'Network issue. Check your connection and try again.',
-            authMessage: 'Session expired. Sign in again to continue.',
+            fallback: localizedFromLocale(
+              locale,
+              AppStrings.partnerCouldNotLoadRequests,
+              AppStrings.partnerCouldNotLoadRequestsAr,
+            ),
+            networkMessage: localizedFromLocale(
+              locale,
+              AppStrings.partnerNetworkError,
+              AppStrings.partnerNetworkErrorAr,
+            ),
+            authMessage: localizedFromLocale(
+              locale,
+              AppStrings.partnerSessionExpiredError,
+              AppStrings.partnerSessionExpiredErrorAr,
+            ),
           )
         : error.toString();
 
@@ -263,7 +360,13 @@ class _PartnerErrorPanel extends StatelessWidget {
             const SizedBox(height: AppSpacing.lg),
             FilledButton(
               onPressed: onRetry,
-              child: const Text(AppStrings.partnerRetry),
+              child: Text(
+                localizedFromLocale(
+                  locale,
+                  AppStrings.partnerRetry,
+                  AppStrings.partnerRetryAr,
+                ),
+              ),
             ),
           ],
         ),
@@ -273,8 +376,12 @@ class _PartnerErrorPanel extends StatelessWidget {
 }
 
 class _WrongApiBasePanel extends StatelessWidget {
-  const _WrongApiBasePanel({required this.onOpenSettings});
+  const _WrongApiBasePanel({
+    required this.locale,
+    required this.onOpenSettings,
+  });
 
+  final Locale locale;
   final VoidCallback onOpenSettings;
 
   @override
@@ -293,13 +400,23 @@ class _WrongApiBasePanel extends StatelessWidget {
                 const Icon(Icons.link_off_outlined, color: AppColors.rubyLight),
                 const SizedBox(height: AppSpacing.md),
                 Text(
-                  AppStrings.errorApiBaseUrlSameAsAuth,
+                  localizedFromLocale(
+                    locale,
+                    AppStrings.errorApiBaseUrlSameAsAuth,
+                    AppStrings.errorApiBaseUrlSameAsAuthAr,
+                  ),
                   style: AppTextStyles.bodyMedium,
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 OutlinedButton(
                   onPressed: onOpenSettings,
-                  child: Text(AppStrings.settings),
+                  child: Text(
+                    localizedFromLocale(
+                      locale,
+                      AppStrings.settings,
+                      AppStrings.settingsAr,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -311,8 +428,12 @@ class _WrongApiBasePanel extends StatelessWidget {
 }
 
 class _EnvMissingPanel extends StatelessWidget {
-  const _EnvMissingPanel({required this.onOpenSettings});
+  const _EnvMissingPanel({
+    required this.locale,
+    required this.onOpenSettings,
+  });
 
+  final Locale locale;
   final VoidCallback onOpenSettings;
 
   @override
@@ -332,13 +453,23 @@ class _EnvMissingPanel extends StatelessWidget {
                     color: AppColors.gold),
                 const SizedBox(height: AppSpacing.md),
                 Text(
-                  AppStrings.errorApiBaseUrlMissing,
+                  localizedFromLocale(
+                    locale,
+                    AppStrings.errorApiBaseUrlMissing,
+                    AppStrings.errorApiBaseUrlMissingAr,
+                  ),
                   style: AppTextStyles.bodyMedium,
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 OutlinedButton(
                   onPressed: onOpenSettings,
-                  child: Text(AppStrings.settings),
+                  child: Text(
+                    localizedFromLocale(
+                      locale,
+                      AppStrings.settings,
+                      AppStrings.settingsAr,
+                    ),
+                  ),
                 ),
               ],
             ),

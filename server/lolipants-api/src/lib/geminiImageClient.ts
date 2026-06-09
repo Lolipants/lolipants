@@ -30,7 +30,23 @@ export type GarmentLookPromptInput = {
   hasDesignPreviewReference?: boolean;
   /** Flat-lay design catalogue asset (not modular configurator). */
   isCatalogDesignMode?: boolean;
+  /** Home "dream outfit" flow — generate from text brief + mannequin pose only. */
+  isPromptOnlyHomeDraft?: boolean;
 };
+
+/** Caption for the mannequin reference in home AI draft renders. */
+export const PROMPT_ONLY_HOME_MANNEQUIN_REF_CAPTION =
+  "Mannequin reference — dress THIS exact mannequin body: keep the same pose, proportions, and framing. " +
+  "The garment from the creative brief must be worn ON the mannequin (fitted to the body with natural fabric drape), not floating beside it or as a flat lay. " +
+  "Background behind the clothed mannequin must be pure solid white (#FFFFFF).";
+
+/** Suffix for home AI draft (prompt-driven, not compose refine). */
+export const PROMPT_ONLY_HOME_DRAFT_SUFFIX =
+  "Lolipants rules: output ONE clothed mannequin on a pure solid white background (#FFFFFF) — no grey, gradient, floor, or scenery. " +
+  "The garment must look physically worn on the mannequin body (natural drape, seams, and fit), not pasted on or shown as a separate flat garment. " +
+  "Match the attached mannequin reference for pose and body shape. " +
+  "Invent the garment design from the creative brief only — not from configurator graphics or fabric swatches. " +
+  "No studio set, props, watermarks, or readable text/logos.";
 
 export const CATALOG_DRESS_REF_CAPTION =
   "PRIMARY catalogue dress design — preserve this exact flat-lay look (colours, pattern, cut, embroidery). " +
@@ -69,6 +85,35 @@ export const FABRIC_MATERIAL_LOOK_SUFFIX =
   "No studio set, scenery, props, watermarks, or readable text/logos.";
 
 export function buildGarmentLookPrompt(input: GarmentLookPromptInput): string {
+  const suffixBlock =
+    input.brandSuffix != null && input.brandSuffix.trim().length > 0
+      ? `\n\n${input.brandSuffix.trim()}`
+      : "";
+
+  if (input.isPromptOnlyHomeDraft) {
+    const brief =
+      input.userExtra != null && input.userExtra.trim().length > 0
+        ? input.userExtra.trim()
+        : "Elegant modest formalwear";
+    return (
+      [
+        "Generate exactly ONE on-mannequin fashion product photo.",
+        "Background: pure solid white (#FFFFFF) only — no gradients, shadows on the backdrop, floor line, or studio scenery.",
+        "Show a modest full-length mannequin wearing the garment described below.",
+        "The clothing must be ON the mannequin body — fitted with realistic fabric drape, as if sewn and worn — not a floating flat-lay, ghost mannequin cutout, or garment beside the body.",
+        "If a mannequin reference image is attached, use that exact body pose and proportions; dress that same mannequin.",
+        "The garment design comes entirely from the creative brief — do not copy placeholder graphics, fabric swatches, or configurator slot art.",
+        "",
+        `Garment category: ${input.garmentType}`,
+        "",
+        "Creative brief:",
+        brief,
+        "",
+        "Output modest formalwear appropriate for Gulf / Middle Eastern contexts.",
+      ].join("\n") + suffixBlock
+    );
+  }
+
   const textExtra =
     input.textLayersSummary != null && input.textLayersSummary.trim().length > 0
       ? `\nEmbroidery / text on garment (preserve placement): ${input.textLayersSummary.trim()}`
@@ -92,11 +137,6 @@ export function buildGarmentLookPrompt(input: GarmentLookPromptInput): string {
     input.configuratorAiLayerNotes.trim().length > 0
       ? `\n\nLayer semantics (follow strictly — do not confuse overlays with sleeves):\n${input.configuratorAiLayerNotes.trim()}`
       : "";
-  const suffixBlock =
-    input.brandSuffix != null && input.brandSuffix.trim().length > 0
-      ? `\n\n${input.brandSuffix.trim()}`
-      : "";
-
   if (input.isCatalogDesignMode) {
     return (
       [

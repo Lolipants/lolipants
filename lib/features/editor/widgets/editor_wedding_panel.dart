@@ -5,8 +5,11 @@ import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
+import 'package:lolipants/core/l10n/localized_label.dart';
 import 'package:lolipants/features/editor/providers/editor_provider.dart';
 import 'package:lolipants/features/editor/widgets/editor_asset_thumb_card.dart';
+import 'package:lolipants/features/settings/providers/settings_provider.dart';
 import 'package:lolipants/features/wedding/models/wedding_dress.dart';
 import 'package:lolipants/features/wedding/providers/wedding_providers.dart';
 
@@ -33,6 +36,7 @@ class EditorWeddingPanel extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final locale = ref.watch(settingsLocaleProvider);
     final asyncDresses =
         ref.watch(weddingDressesProvider(state.weddingCategoryFilter));
     final panelHeight = height ??
@@ -54,14 +58,22 @@ class EditorWeddingPanel extends ConsumerWidget {
               scrollDirection: Axis.horizontal,
               children: [
                 _FilterChip(
-                  label: AppStrings.weddingFilterAll,
+                  label: localizedFromLocale(
+                    locale,
+                    AppStrings.weddingFilterAll,
+                    AppStrings.weddingFilterAllAr,
+                  ),
                   selected:
                       state.weddingCategoryFilter == WeddingCategoryFilter.all,
                   onTap: () => onCategoryChanged(WeddingCategoryFilter.all),
                 ),
                 const SizedBox(width: 6),
                 _FilterChip(
-                  label: AppStrings.weddingFilterBridal,
+                  label: localizedFromLocale(
+                    locale,
+                    AppStrings.weddingFilterBridal,
+                    AppStrings.weddingFilterBridalAr,
+                  ),
                   selected: state.weddingCategoryFilter ==
                       WeddingCategoryFilter.weddingDress,
                   onTap: () =>
@@ -69,7 +81,11 @@ class EditorWeddingPanel extends ConsumerWidget {
                 ),
                 const SizedBox(width: 6),
                 _FilterChip(
-                  label: AppStrings.weddingFilterBridesmaids,
+                  label: localizedFromLocale(
+                    locale,
+                    AppStrings.weddingFilterBridesmaids,
+                    AppStrings.weddingFilterBridesmaidsAr,
+                  ),
                   selected: state.weddingCategoryFilter ==
                       WeddingCategoryFilter.bridesmaid,
                   onTap: () =>
@@ -85,7 +101,11 @@ class EditorWeddingPanel extends ConsumerWidget {
             children: [
               Expanded(
                 child: _FulfillmentToggle(
-                  label: AppStrings.weddingRent,
+                  label: localizedFromLocale(
+                    locale,
+                    AppStrings.weddingRent,
+                    AppStrings.weddingRentAr,
+                  ),
                   selected:
                       state.weddingFulfillment == WeddingFulfillment.rent,
                   onTap: () => onFulfillmentChanged(WeddingFulfillment.rent),
@@ -94,7 +114,11 @@ class EditorWeddingPanel extends ConsumerWidget {
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: _FulfillmentToggle(
-                  label: AppStrings.weddingBuy,
+                  label: localizedFromLocale(
+                    locale,
+                    AppStrings.weddingBuy,
+                    AppStrings.weddingBuyAr,
+                  ),
                   selected:
                       state.weddingFulfillment == WeddingFulfillment.buy,
                   onTap: () => onFulfillmentChanged(WeddingFulfillment.buy),
@@ -114,7 +138,11 @@ class EditorWeddingPanel extends ConsumerWidget {
             child: Row(
               children: [
                 Text(
-                  AppStrings.weddingRentalDays,
+                  localizedFromLocale(
+                    locale,
+                    AppStrings.weddingRentalDays,
+                    AppStrings.weddingRentalDaysAr,
+                  ),
                   style: AppTextStyles.bodySmall.copyWith(color: AppColors.fog),
                 ),
                 const Spacer(),
@@ -145,7 +173,11 @@ class EditorWeddingPanel extends ConsumerWidget {
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (_, __) => Center(
               child: Text(
-                AppStrings.weddingCatalogError,
+                localizedFromLocale(
+                  locale,
+                  AppStrings.weddingCatalogError,
+                  AppStrings.weddingCatalogErrorAr,
+                ),
                 style: AppTextStyles.bodySmall,
               ),
             ),
@@ -153,7 +185,11 @@ class EditorWeddingPanel extends ConsumerWidget {
               if (dresses.isEmpty) {
                 return Center(
                   child: Text(
-                    AppStrings.weddingCatalogEmpty,
+                    localizedFromLocale(
+                      locale,
+                      AppStrings.weddingCatalogEmpty,
+                      AppStrings.weddingCatalogEmptyAr,
+                    ),
                     style: AppTextStyles.bodySmall,
                   ),
                 );
@@ -176,7 +212,13 @@ class EditorWeddingPanel extends ConsumerWidget {
                   final dress = dresses[index];
                   final selected = dress.id == selectedId;
                   return EditorAssetThumbCard(
-                    label: dress.labelEn,
+                    label: localizedLabel(
+                      locale,
+                      en: dress.labelEn,
+                      ar: dress.labelAr.trim().isNotEmpty
+                          ? dress.labelAr
+                          : dress.labelEn,
+                    ),
                     image: CachedNetworkImage(
                       imageUrl: dress.imageUrl,
                       fit: BoxFit.cover,

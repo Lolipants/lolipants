@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lolipants/core/push/onesignal_bootstrap.dart';
@@ -46,7 +48,9 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
 
   Future<void> _hydrate() async {
     final prefs = await _ref.read(_prefsProvider.future);
-    final localeCode = prefs.getString(kSettingsLocaleKey) ?? 'en';
+    final savedLocale = prefs.getString(kSettingsLocaleKey);
+    final localeCode = savedLocale ??
+        (PlatformDispatcher.instance.locale.languageCode == 'ar' ? 'ar' : 'en');
     final pushEnabled = prefs.getBool(kSettingsPushEnabledKey) ?? false;
     final textScale = appTextScaleOptionFromStorage(
       prefs.getString(kSettingsTextScaleKey),

@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/constants/orders_strings.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/features/orders/models/order.dart';
 import 'package:lolipants/features/orders/models/order_status.dart';
 import 'package:lolipants/features/orders/widgets/order_status_badge.dart';
+import 'package:lolipants/features/settings/providers/settings_provider.dart';
 
 /// Summary row for a single order in the list.
-class OrderCard extends StatelessWidget {
+class OrderCard extends ConsumerWidget {
   /// Creates an order card.
   const OrderCard({
     required this.order,
@@ -20,7 +24,8 @@ class OrderCard extends StatelessWidget {
   final Order order;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final locale = ref.watch(settingsLocaleProvider);
     final progress = (order.status.step / OrderStatusX.totalActiveSteps)
         .clamp(0.0, 1.0);
     return Material(
@@ -61,7 +66,14 @@ class OrderCard extends StatelessWidget {
               Text(order.tailorName, style: AppTextStyles.bodyMedium),
               if (order.totalPrice != null) ...[
                 const SizedBox(height: AppSpacing.xs),
-                Text('Total', style: AppTextStyles.bodySmall),
+                Text(
+                  localizedFromLocale(
+                    locale,
+                    OrdersStrings.total,
+                    OrdersStrings.totalAr,
+                  ),
+                  style: AppTextStyles.bodySmall,
+                ),
                 Text(
                   '${order.totalPrice} ${order.currency}',
                   style: AppTextStyles.bodyMedium,
@@ -69,7 +81,7 @@ class OrderCard extends StatelessWidget {
               ],
               const SizedBox(height: AppSpacing.sm),
               Text(
-                order.status.labelEn,
+                order.status.labelFor(locale),
                 style: AppTextStyles.bodySmall.copyWith(
                   fontSize: 7.5,
                   color: AppColors.tealLight,

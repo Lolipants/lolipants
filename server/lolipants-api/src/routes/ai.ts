@@ -7,6 +7,8 @@ import {
   COMPOSE_PREVIEW_REF_CAPTION,
   DEFAULT_LOLIPANTS_LOOK_SUFFIX,
   FABRIC_MATERIAL_LOOK_SUFFIX,
+  PROMPT_ONLY_HOME_DRAFT_SUFFIX,
+  PROMPT_ONLY_HOME_MANNEQUIN_REF_CAPTION,
   FABRIC_SWATCH_REF_CAPTION,
   fetchUrlAsInlinePart,
   generateGarmentLookImage,
@@ -24,6 +26,7 @@ import {
   getAiRenderQuota,
 } from "../lib/aiRenderQuota";
 import { normalizeRenderMetadata } from "../lib/renderNormalization";
+import { parseAiJsonContent } from "../lib/parseAiJsonContent";
 import { requireAuth } from "../middleware/auth";
 import type { AppVariables, Env } from "../types";
 
@@ -111,9 +114,9 @@ aiRoutes.post("/design", async (c) => {
     return apiError(c, 503, "AI_SERVICE_UNAVAILABLE", "AI service unavailable");
   }
   const data = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
-  const raw = data.choices?.[0]?.message?.content ?? "{}";
+  const raw = data.choices?.[0]?.message?.content ?? "";
   try {
-    return c.json(JSON.parse(raw));
+    return c.json(parseAiJsonContent(raw));
   } catch {
     return apiError(c, 500, "AI_PARSE_FAILED", "Could not parse AI response");
   }
@@ -502,6 +505,7 @@ function _readEditorRenderHints(renderMetadata: string | null): {
   configuratorComposeImageUrl: string | null;
   catalogFlatImageUrl: string | null;
   buildStyleMode: string | null;
+  aiHomeDraft: boolean;
 } {
   const empty = {
     editorMannequinImageUrl: null as string | null,
@@ -512,6 +516,7 @@ function _readEditorRenderHints(renderMetadata: string | null): {
     configuratorComposeImageUrl: null as string | null,
     catalogFlatImageUrl: null as string | null,
     buildStyleMode: null as string | null,
+    aiHomeDraft: false,
   };
   if (!renderMetadata?.trim()) return empty;
   try {
@@ -536,6 +541,7 @@ function _readEditorRenderHints(renderMetadata: string | null): {
       aiLayerNotes.length > 0
         ? aiLayerNotes
         : _inferConfiguratorAiLayerNotesFromSummary(summary);
+    const aiHomeDraft = o["aiHomeDraft"] === true || o["aiHomeDraft"] === 1;
     return {
       editorMannequinImageUrl: man.length > 0 ? man : null,
       aiLookUserPrompt: user.length > 0 ? user : null,
@@ -546,6 +552,7 @@ function _readEditorRenderHints(renderMetadata: string | null): {
       configuratorComposeImageUrl: compose.length > 0 ? compose : null,
       catalogFlatImageUrl: catalogFlat.length > 0 ? catalogFlat : null,
       buildStyleMode: buildStyleMode.length > 0 ? buildStyleMode : null,
+      aiHomeDraft,
     };
   } catch {
     return empty;
@@ -602,6 +609,19 @@ function _buildGarmentLookPromptForDesign(
   const placement = _readPrintPlacement(design?.render_metadata ?? null);
   const textSummary = _summarizeTextLayers(design?.render_metadata ?? null);
   const hints = _readEditorRenderHints(design?.render_metadata ?? null);
+
+  if (hints.aiHomeDraft) {
+    return buildGarmentLookPrompt({
+      garmentType: design?.garment_type ?? "garment",
+      primaryColour: design?.primary_colour ?? "#162F28",
+      accentColour: design?.accent_colour ?? "#C9A84C",
+      fabricQuality: design?.fabric_quality ?? "standard",
+      userExtra: hints.aiLookUserPrompt,
+      brandSuffix: hints.aiLookPromptSuffix ?? PROMPT_ONLY_HOME_DRAFT_SUFFIX,
+      isPromptOnlyHomeDraft: true,
+    });
+  }
+
   const isCatalogDesign = hints.buildStyleMode === "catalog";
   const catalogDressUrl =
     hints.catalogFlatImageUrl?.trim() || design?.print_image_url?.trim() || null;
@@ -641,6 +661,27 @@ async function _loadGarmentLookReferenceParts(
   env: Env,
 ): Promise<GeminiInlinePart[]> {
   const hints = _readEditorRenderHints(design?.render_metadata ?? null);
+
+  if (hints.aiHomeDraft) {
+    const refs: GeminiInlinePart[] = [];
+    const mannequinUrl =
+      hints.editorMannequinImageUrl ?? design?.mannequin_preview_url ?? null;
+    if (mannequinUrl?.trim()) {
+      const part = await fetchUrlAsInlinePart(
+        mannequinUrl,
+        fetch,
+        MAX_REFERENCE_IMAGE_BYTES,
+      );
+      if (part) {
+        refs.push({
+          ...part,
+          caption: PROMPT_ONLY_HOME_MANNEQUIN_REF_CAPTION,
+        });
+      }
+    }
+    return refs;
+  }
+
   const isCatalogDesign = hints.buildStyleMode === "catalog";
   const swatchUrl = isCatalogDesign
     ? null

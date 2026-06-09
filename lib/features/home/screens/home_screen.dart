@@ -1,23 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:lolipants/core/ai/ai_data_sharing_consent.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
-import 'package:lolipants/core/constants/app_strings.dart';
-import 'package:lolipants/core/constants/app_text_styles.dart';
-import 'package:lolipants/core/preferences/user_gender_provider.dart';
 import 'package:lolipants/features/editor/widgets/ai_prompt_bar.dart';
 import 'package:lolipants/features/home/logic/ensure_design_gender.dart';
-import 'package:lolipants/features/home/providers/home_featured_presets_provider.dart';
 import 'package:lolipants/features/home/widgets/hero_banner.dart';
-import 'package:lolipants/features/home/widgets/home_browse_shortcuts.dart';
-import 'package:lolipants/features/home/widgets/home_featured_sliver_grid.dart';
+import 'package:lolipants/features/home/widgets/home_design_flow.dart';
 import 'package:lolipants/features/home/widgets/home_header.dart';
 import 'package:lolipants/features/settings/providers/settings_provider.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
 
-/// Authenticated home: greeting, AI hero, browse shortcuts, featured grid.
+/// Authenticated home: greeting, guided design flow, AI hero.
 class HomeScreen extends ConsumerWidget {
   /// Creates the home tab screen.
   const HomeScreen({super.key});
@@ -54,8 +48,6 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(settingsLocaleProvider);
-    final presets = ref.watch(homeFeaturedPresetsProvider);
-    final userGender = ref.watch(userGenderProvider);
 
     return Scaffold(
       backgroundColor: AppColors.ink,
@@ -64,107 +56,35 @@ class HomeScreen extends ConsumerWidget {
         children: [
           const ArabesqueBackground(opacity: 0.14),
           SafeArea(
-            child: CustomScrollView(
-              physics: const BouncingScrollPhysics(
-                parent: AlwaysScrollableScrollPhysics(),
-              ),
-              slivers: [
-                SliverPadding(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    AppSpacing.md,
+                    AppSpacing.lg,
+                    0,
+                  ),
+                  child: HomeHeader(),
+                ),
+                const Expanded(child: HomeDesignFlow()),
+                Padding(
                   padding: const EdgeInsets.fromLTRB(
                     AppSpacing.lg,
                     AppSpacing.md,
                     AppSpacing.lg,
-                    AppSpacing.sm,
+                    AppSpacing.lg,
                   ),
-                  sliver: SliverList(
-                    delegate: SliverChildListDelegate([
-                      const HomeHeader(),
-                      HeroBanner(onTryNow: () => _openAiPrompt(context, ref)),
-                      const SizedBox(height: AppSpacing.xl),
-                      const HomeBrowseShortcuts(),
-                      const SizedBox(height: AppSpacing.xl),
-                      _FeaturedSectionHeader(
-                        locale: ref.watch(settingsLocaleProvider),
-                        userGender: userGender,
-                        onSeeAll: () => context.go('/browse'),
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                    ]),
+                  child: HeroBanner(
+                    onTryNow: () => _openAiPrompt(context, ref),
                   ),
-                ),
-                SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                  sliver: HomeFeaturedSliverGrid(presets: presets),
                 ),
               ],
             ),
           ),
         ],
       ),
-    );
-  }
-}
-
-class _FeaturedSectionHeader extends StatelessWidget {
-  const _FeaturedSectionHeader({
-    required this.locale,
-    required this.userGender,
-    required this.onSeeAll,
-  });
-
-  final Locale locale;
-  final String? userGender;
-  final VoidCallback onSeeAll;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                AppStrings.localized(
-                  locale,
-                  AppStrings.sectionFeaturedDesigns,
-                  AppStrings.sectionFeaturedDesignsAr,
-                ),
-                style: AppTextStyles.titleMedium.copyWith(
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: -0.2,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                AppStrings.homeFeaturedSubtitle(locale, userGender),
-                style: AppTextStyles.bodySmall.copyWith(
-                  color: AppColors.fog,
-                  fontSize: 12,
-                ),
-              ),
-            ],
-          ),
-        ),
-        TextButton(
-          onPressed: onSeeAll,
-          style: TextButton.styleFrom(
-            foregroundColor: AppColors.gold,
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-            minimumSize: Size.zero,
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          ),
-          child: Text(
-            AppStrings.localized(
-              locale,
-              AppStrings.seeAll,
-              AppStrings.seeAllAr,
-            ),
-            style: AppTextStyles.labelGold.copyWith(fontSize: 12),
-          ),
-        ),
-      ],
     );
   }
 }

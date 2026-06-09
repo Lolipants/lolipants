@@ -86,6 +86,9 @@ const bool kFeatureMockPayment = bool.fromEnvironment(
   defaultValue: false,
 );
 
+/// [StatefulNavigationShell] branch index for Home. Must match shell ordering.
+const int kHomeShellBranchIndex = 0;
+
 /// [StatefulNavigationShell] branch index for Community when
 /// [kFeatureCommunity] is true (0=home, 1=browse, 2=orders, 3=community,
 /// 4=profile). Must match [LolipantsBottomNavBar] ordering.

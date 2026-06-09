@@ -12,7 +12,6 @@ class TailorIncomingOrdersScreen extends StatelessWidget {
     return const TailorQueueScaffold(
       bucket: TailorQueueBucket.incoming,
       detailSubPath: 'incoming',
-      emptyMessage: 'No incoming orders right now. Pull to refresh.',
     );
   }
 }

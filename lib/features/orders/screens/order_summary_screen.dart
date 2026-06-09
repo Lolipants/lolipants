@@ -1,11 +1,16 @@
+import 'dart:ui' show Locale;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/constants/orders_strings.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/features/orders/models/order_design_draft.dart';
 import 'package:lolipants/features/orders/providers/checkout_providers.dart';
+import 'package:lolipants/features/settings/providers/settings_provider.dart';
 import 'package:lolipants/features/sizing/models/body_measurements.dart';
 import 'package:lolipants/features/sizing/providers/sizing_providers.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
@@ -42,12 +47,13 @@ class _OrderSummaryScreenState extends ConsumerState<OrderSummaryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final locale = ref.watch(settingsLocaleProvider);
     final draft = ref.watch(checkoutDraftProvider);
     final measurementsState = ref.watch(myMeasurementsProvider);
     final measurements = measurementsState.valueOrNull;
     final sizingReady = measurements != null && _hasUsableSizing(measurements);
     final design =
-        draft?.design ?? widget.designDraft ?? _fallbackDraft();
+        draft?.design ?? widget.designDraft ?? _fallbackDraft(locale);
     final fabric = _fabricSummary(design);
     final pattern = (design.patternId?.trim().isNotEmpty ?? false)
         ? design.patternId!.trim()
@@ -56,9 +62,22 @@ class _OrderSummaryScreenState extends ConsumerState<OrderSummaryScreen> {
         ? design.primaryColour.trim()
         : '-';
     final name = design.name.trim();
+    final currentDesignLabel = localizedFromLocale(
+      locale,
+      OrdersStrings.currentDesign,
+      OrdersStrings.currentDesignAr,
+    );
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Order summary / ملخص الطلب')),
+      appBar: AppBar(
+        title: Text(
+          localizedFromLocale(
+            locale,
+            OrdersStrings.orderSummaryTitle,
+            OrdersStrings.orderSummaryTitleAr,
+          ),
+        ),
+      ),
       body: Stack(
         children: [
           const ArabesqueBackground(),
@@ -76,7 +95,7 @@ class _OrderSummaryScreenState extends ConsumerState<OrderSummaryScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      name.isEmpty ? 'Current design' : name,
+                      name.isEmpty ? currentDesignLabel : name,
                       style: AppTextStyles.titleMedium,
                     ),
                     const SizedBox(height: AppSpacing.sm),
@@ -93,7 +112,12 @@ class _OrderSummaryScreenState extends ConsumerState<OrderSummaryScreen> {
                       ),
                       const SizedBox(height: AppSpacing.sm),
                     ],
-                    _Row(label: 'Garment', value: design.garmentType),
+                    _Row(
+                      locale: locale,
+                      label: OrdersStrings.garment,
+                      labelAr: OrdersStrings.garmentAr,
+                      value: design.garmentType,
+                    ),
                     if (design.configuratorSummary != null &&
                         design.configuratorSummary!.trim().isNotEmpty) ...[
                       const SizedBox(height: AppSpacing.xs),
@@ -104,13 +128,30 @@ class _OrderSummaryScreenState extends ConsumerState<OrderSummaryScreen> {
                         ),
                       ),
                     ],
-                    _Row(label: 'Fabric', value: fabric),
-                    _Row(label: 'Pattern', value: pattern),
-                    _Row(label: 'Primary colour', value: colour),
+                    _Row(
+                      locale: locale,
+                      label: OrdersStrings.fabric,
+                      labelAr: OrdersStrings.fabricAr,
+                      value: fabric,
+                    ),
+                    _Row(
+                      locale: locale,
+                      label: OrdersStrings.pattern,
+                      labelAr: OrdersStrings.patternAr,
+                      value: pattern,
+                    ),
+                    _Row(
+                      locale: locale,
+                      label: OrdersStrings.primaryColour,
+                      labelAr: OrdersStrings.primaryColourAr,
+                      value: colour,
+                    ),
                     if (design.accessoriesSummary != null &&
                         design.accessoriesSummary!.trim().isNotEmpty)
                       _Row(
-                        label: 'Accessories',
+                        locale: locale,
+                        label: OrdersStrings.accessories,
+                        labelAr: OrdersStrings.accessoriesAr,
                         value: design.accessoriesSummary!.trim(),
                       ),
                   ],
@@ -125,13 +166,17 @@ class _OrderSummaryScreenState extends ConsumerState<OrderSummaryScreen> {
                   border: Border.all(color: AppColors.borderSubtle),
                 ),
                 child: Text(
-                  'Your price is calculated after you enter a delivery '
-                  'location. We assign the nearest tailor and use their rates.',
+                  localizedFromLocale(
+                    locale,
+                    OrdersStrings.priceAfterDeliveryHint,
+                    OrdersStrings.priceAfterDeliveryHintAr,
+                  ),
                   style: AppTextStyles.bodySmall,
                 ),
               ),
               const SizedBox(height: AppSpacing.lg),
               _SizingStatusCard(
+                locale: locale,
                 measurements: measurements,
                 loading: measurementsState.isLoading,
                 onFixSizing: () => context.push('/sizing'),
@@ -139,13 +184,25 @@ class _OrderSummaryScreenState extends ConsumerState<OrderSummaryScreen> {
               const SizedBox(height: AppSpacing.lg),
               LolipantsButton(
                 label: sizingReady
-                    ? 'Continue to delivery'
-                    : 'Add measurements',
-                onPressed: () => _continue(context, sizingReady),
+                    ? localizedFromLocale(
+                        locale,
+                        OrdersStrings.continueToDelivery,
+                        OrdersStrings.continueToDeliveryAr,
+                      )
+                    : localizedFromLocale(
+                        locale,
+                        OrdersStrings.addMeasurements,
+                        OrdersStrings.addMeasurementsAr,
+                      ),
+                onPressed: () => _continue(context, locale, sizingReady),
               ),
               const SizedBox(height: AppSpacing.sm),
               LolipantsButton(
-                label: 'Back to editor',
+                label: localizedFromLocale(
+                  locale,
+                  OrdersStrings.backToEditor,
+                  OrdersStrings.backToEditorAr,
+                ),
                 variant: LolipantsButtonVariant.secondary,
                 onPressed: () => context.pop(),
               ),
@@ -156,22 +213,30 @@ class _OrderSummaryScreenState extends ConsumerState<OrderSummaryScreen> {
     );
   }
 
-  OrderDesignDraft _fallbackDraft() {
-    return const OrderDesignDraft(
-      name: 'Current design',
+  OrderDesignDraft _fallbackDraft(Locale locale) {
+    return OrderDesignDraft(
+      name: localizedFromLocale(
+        locale,
+        OrdersStrings.currentDesign,
+        OrdersStrings.currentDesignAr,
+      ),
       garmentType: 'thobe',
       primaryColour: '-',
     );
   }
 
-  void _continue(BuildContext context, bool sizingReady) {
+  void _continue(BuildContext context, Locale locale, bool sizingReady) {
     final draft = ref.read(checkoutDraftProvider);
     final designId = draft?.design.designId?.trim();
     if (designId == null || designId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text(
-            'Please save this design first, then order it from the editor.',
+            localizedFromLocale(
+              locale,
+              OrdersStrings.saveDesignBeforeOrderFromEditor,
+              OrdersStrings.saveDesignBeforeOrderFromEditorAr,
+            ),
           ),
         ),
       );
@@ -198,11 +263,13 @@ String _fabricSummary(OrderDesignDraft design) {
 
 class _SizingStatusCard extends StatelessWidget {
   const _SizingStatusCard({
+    required this.locale,
     required this.measurements,
     required this.loading,
     required this.onFixSizing,
   });
 
+  final Locale locale;
   final BodyMeasurements? measurements;
   final bool loading;
   final VoidCallback onFixSizing;
@@ -223,27 +290,58 @@ class _SizingStatusCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Sizing status', style: AppTextStyles.titleSmall),
+          Text(
+            localizedFromLocale(
+              locale,
+              OrdersStrings.sizingStatus,
+              OrdersStrings.sizingStatusAr,
+            ),
+            style: AppTextStyles.titleSmall,
+          ),
           const SizedBox(height: AppSpacing.xs),
           Text(
             loading
-                ? 'Checking your latest measurements...'
+                ? localizedFromLocale(
+                    locale,
+                    OrdersStrings.checkingMeasurements,
+                    OrdersStrings.checkingMeasurementsAr,
+                  )
                 : ready
-                    ? 'Measurements found. Checkout is enabled.'
-                    : 'Measurements are missing. Complete sizing before ordering.',
+                    ? localizedFromLocale(
+                        locale,
+                        OrdersStrings.measurementsFoundCheckoutEnabled,
+                        OrdersStrings.measurementsFoundCheckoutEnabledAr,
+                      )
+                    : localizedFromLocale(
+                        locale,
+                        OrdersStrings.measurementsMissingCompleteSizing,
+                        OrdersStrings.measurementsMissingCompleteSizingAr,
+                      ),
             style: AppTextStyles.bodyMedium,
           ),
           if (measurements != null) ...[
             const SizedBox(height: AppSpacing.sm),
             Text(
-              'Chest: ${measurements!.chest?.toStringAsFixed(1) ?? '-'} cm, '
-              'Waist: ${measurements!.waist?.toStringAsFixed(1) ?? '-'} cm, '
-              'Height: ${measurements!.height?.toStringAsFixed(1) ?? '-'} cm',
+              OrdersStrings.measurementsSummaryLine(
+                measurements!.chest?.toStringAsFixed(1) ?? '-',
+                measurements!.waist?.toStringAsFixed(1) ?? '-',
+                measurements!.height?.toStringAsFixed(1) ?? '-',
+                locale,
+              ),
               style: AppTextStyles.bodySmall,
             ),
           ],
           const SizedBox(height: AppSpacing.sm),
-          TextButton(onPressed: onFixSizing, child: const Text('Update sizing')),
+          TextButton(
+            onPressed: onFixSizing,
+            child: Text(
+              localizedFromLocale(
+                locale,
+                OrdersStrings.updateSizing,
+                OrdersStrings.updateSizingAr,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -252,12 +350,16 @@ class _SizingStatusCard extends StatelessWidget {
 
 class _Row extends StatelessWidget {
   const _Row({
+    required this.locale,
     required this.label,
+    required this.labelAr,
     required this.value,
     this.emphasize = false,
   });
 
+  final Locale locale;
   final String label;
+  final String labelAr;
   final String value;
   final bool emphasize;
 
@@ -269,7 +371,12 @@ class _Row extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          Expanded(child: Text(label, style: AppTextStyles.bodyMedium)),
+          Expanded(
+            child: Text(
+              localizedFromLocale(locale, label, labelAr),
+              style: AppTextStyles.bodyMedium,
+            ),
+          ),
           Text(value, style: valueStyle),
         ],
       ),

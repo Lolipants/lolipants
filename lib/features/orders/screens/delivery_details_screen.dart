@@ -1,14 +1,17 @@
+import 'dart:ui' show Locale;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/constants/orders_strings.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/core/location/delivery_location_service.dart';
 import 'package:lolipants/core/permissions/device_permission_prompt.dart';
-import 'package:lolipants/features/orders/models/checkout_draft.dart';
-import 'package:lolipants/features/orders/models/wedding_checkout_draft.dart';
 import 'package:lolipants/features/orders/providers/checkout_providers.dart';
+import 'package:lolipants/features/settings/providers/settings_provider.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
 
@@ -94,14 +97,22 @@ class _DeliveryDetailsScreenState extends ConsumerState<DeliveryDetailsScreen> {
     });
   }
 
-  void _saveAndContinue() {
+  void _saveAndContinue(Locale locale) {
     if (!_formKey.currentState!.validate()) return;
     final accessoryDraft = ref.read(accessoryCheckoutDraftProvider);
     final weddingDraft = ref.read(weddingCheckoutDraftProvider);
     final draft = ref.read(checkoutDraftProvider);
     if (accessoryDraft == null && weddingDraft == null && draft == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Checkout session expired. Restart.')),
+        SnackBar(
+          content: Text(
+            localizedFromLocale(
+              locale,
+              OrdersStrings.checkoutExpiredRestart,
+              OrdersStrings.checkoutExpiredRestartAr,
+            ),
+          ),
+        ),
       );
       return;
     }
@@ -109,7 +120,15 @@ class _DeliveryDetailsScreenState extends ConsumerState<DeliveryDetailsScreen> {
     final lng = _deliveryLng;
     if (lat == null || lng == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Still detecting your location. Wait a moment.')),
+        SnackBar(
+          content: Text(
+            localizedFromLocale(
+              locale,
+              OrdersStrings.detectingLocation,
+              OrdersStrings.detectingLocationAr,
+            ),
+          ),
+        ),
       );
       return;
     }
@@ -159,11 +178,20 @@ class _DeliveryDetailsScreenState extends ConsumerState<DeliveryDetailsScreen> {
     context.push('/order/quote-review');
   }
 
-  Widget _locationStatusCard() {
+  Widget _locationStatusCard(Locale locale) {
     final resolved = _resolvedLocation;
     final label = _locating
-        ? 'Detecting your location…'
-        : resolved?.statusLabel ?? 'Preparing location…';
+        ? localizedFromLocale(
+            locale,
+            OrdersStrings.detectingLocationEllipsis,
+            OrdersStrings.detectingLocationEllipsisAr,
+          )
+        : resolved?.statusLabel ??
+            localizedFromLocale(
+              locale,
+              OrdersStrings.preparingLocation,
+              OrdersStrings.preparingLocationAr,
+            );
     final icon = _locating
         ? null
         : switch (resolved?.source) {
@@ -217,7 +245,13 @@ class _DeliveryDetailsScreenState extends ConsumerState<DeliveryDetailsScreen> {
           if (!_locating)
             TextButton(
               onPressed: () => _collectLocation(),
-              child: const Text('Refresh'),
+              child: Text(
+                localizedFromLocale(
+                  locale,
+                  OrdersStrings.refresh,
+                  OrdersStrings.refreshAr,
+                ),
+              ),
             ),
         ],
       ),
@@ -226,8 +260,22 @@ class _DeliveryDetailsScreenState extends ConsumerState<DeliveryDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final locale = ref.watch(settingsLocaleProvider);
+    final requiredLabel = localizedFromLocale(
+      locale,
+      OrdersStrings.required,
+      OrdersStrings.requiredAr,
+    );
     return Scaffold(
-      appBar: AppBar(title: const Text('Delivery details')),
+      appBar: AppBar(
+        title: Text(
+          localizedFromLocale(
+            locale,
+            OrdersStrings.deliveryDetailsTitle,
+            OrdersStrings.deliveryDetailsTitleAr,
+          ),
+        ),
+      ),
       body: Stack(
         children: [
           const ArabesqueBackground(),
@@ -237,44 +285,72 @@ class _DeliveryDetailsScreenState extends ConsumerState<DeliveryDetailsScreen> {
               padding: const EdgeInsets.all(AppSpacing.xl),
               children: [
                 Text(
-                  'Where should we deliver your order?',
+                  localizedFromLocale(
+                    locale,
+                    OrdersStrings.deliveryPrompt,
+                    OrdersStrings.deliveryPromptAr,
+                  ),
                   style: AppTextStyles.bodyMedium,
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 Text(
-                  'We use your location automatically to assign the nearest tailor.',
+                  localizedFromLocale(
+                    locale,
+                    OrdersStrings.deliveryLocationHint,
+                    OrdersStrings.deliveryLocationHintAr,
+                  ),
                   style: AppTextStyles.bodySmall.copyWith(
                     color: AppColors.fog,
                   ),
                 ),
                 const SizedBox(height: AppSpacing.lg),
-                _locationStatusCard(),
+                _locationStatusCard(locale),
                 const SizedBox(height: AppSpacing.lg),
                 TextFormField(
                   controller: _addressController,
-                  decoration: const InputDecoration(
-                    labelText: 'Street address',
+                  decoration: InputDecoration(
+                    labelText: localizedFromLocale(
+                      locale,
+                      OrdersStrings.streetAddress,
+                      OrdersStrings.streetAddressAr,
+                    ),
                   ),
                   textInputAction: TextInputAction.next,
                   validator: (v) =>
-                      (v == null || v.trim().length < 5) ? 'Required' : null,
+                      (v == null || v.trim().length < 5) ? requiredLabel : null,
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 TextFormField(
                   controller: _cityController,
-                  decoration: const InputDecoration(labelText: 'City'),
+                  decoration: InputDecoration(
+                    labelText: localizedFromLocale(
+                      locale,
+                      OrdersStrings.city,
+                      OrdersStrings.cityAr,
+                    ),
+                  ),
                   textInputAction: TextInputAction.next,
                   validator: (v) =>
-                      (v == null || v.trim().isEmpty) ? 'Required' : null,
+                      (v == null || v.trim().isEmpty) ? requiredLabel : null,
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 TextFormField(
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
-                  decoration: const InputDecoration(labelText: 'Phone'),
+                  decoration: InputDecoration(
+                    labelText: localizedFromLocale(
+                      locale,
+                      OrdersStrings.phone,
+                      OrdersStrings.phoneAr,
+                    ),
+                  ),
                   textInputAction: TextInputAction.next,
                   validator: (v) => (v == null || v.trim().length < 6)
-                      ? 'Enter a reachable phone'
+                      ? localizedFromLocale(
+                          locale,
+                          OrdersStrings.enterReachablePhone,
+                          OrdersStrings.enterReachablePhoneAr,
+                        )
                       : null,
                 ),
                 const SizedBox(height: AppSpacing.sm),
@@ -282,14 +358,28 @@ class _DeliveryDetailsScreenState extends ConsumerState<DeliveryDetailsScreen> {
                   controller: _notesController,
                   minLines: 2,
                   maxLines: 4,
-                  decoration: const InputDecoration(
-                    labelText: 'Delivery notes (optional)',
+                  decoration: InputDecoration(
+                    labelText: localizedFromLocale(
+                      locale,
+                      OrdersStrings.deliveryNotesOptional,
+                      OrdersStrings.deliveryNotesOptionalAr,
+                    ),
                   ),
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 LolipantsButton(
-                  label: _locating ? 'Detecting location…' : 'Get price & tailor',
-                  onPressed: _locating ? null : _saveAndContinue,
+                  label: _locating
+                      ? localizedFromLocale(
+                          locale,
+                          OrdersStrings.detectingLocationEllipsis,
+                          OrdersStrings.detectingLocationEllipsisAr,
+                        )
+                      : localizedFromLocale(
+                          locale,
+                          OrdersStrings.getPriceAndTailor,
+                          OrdersStrings.getPriceAndTailorAr,
+                        ),
+                  onPressed: _locating ? null : () => _saveAndContinue(locale),
                 ),
               ],
             ),

@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/features/orders/models/order.dart';
 import 'package:lolipants/features/orders/models/order_status.dart';
+import 'package:lolipants/features/settings/providers/settings_provider.dart';
 
 /// List row used across the three tailor queue screens.
-class TailorOrderRow extends StatelessWidget {
+class TailorOrderRow extends ConsumerWidget {
   /// Shows [order] and triggers [onTap] when pressed.
   const TailorOrderRow({required this.order, required this.onTap, super.key});
 
@@ -17,7 +19,9 @@ class TailorOrderRow extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final locale = ref.watch(settingsLocaleProvider);
+    final statusLabel = order.status.labelFor(locale);
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(AppRadius.md),
@@ -43,7 +47,7 @@ class TailorOrderRow extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '${order.deliveryCity ?? '—'} · ${_labelFor(order.status)}',
+                    '${order.deliveryCity ?? '—'} · $statusLabel',
                     style: AppTextStyles.bodySmall,
                   ),
                 ],
@@ -62,30 +66,5 @@ class TailorOrderRow extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  String _labelFor(OrderStatus status) {
-    switch (status) {
-      case OrderStatus.placed:
-        return 'Placed';
-      case OrderStatus.confirmed:
-        return 'Confirmed';
-      case OrderStatus.cutting:
-        return 'Cutting';
-      case OrderStatus.stitching:
-        return 'Stitching';
-      case OrderStatus.embroidery:
-        return 'Embroidery';
-      case OrderStatus.qualityCheck:
-        return 'QC';
-      case OrderStatus.readyToShip:
-        return 'Ready to ship';
-      case OrderStatus.outForDelivery:
-        return 'Out for delivery';
-      case OrderStatus.delivered:
-        return 'Delivered';
-      case OrderStatus.cancelled:
-        return 'Cancelled';
-    }
   }
 }

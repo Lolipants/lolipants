@@ -1,3 +1,7 @@
+import 'dart:ui' show Locale;
+
+import 'package:lolipants/core/l10n/app_localization.dart';
+
 /// Lifecycle states for a garment order (status-only tracking).
 enum OrderStatus {
   /// Received, awaiting tailor confirmation.
@@ -46,6 +50,10 @@ extension OrderStatusX on OrderStatus {
         OrderStatus.delivered => 'Delivered',
         OrderStatus.cancelled => 'Cancelled',
       };
+
+  /// Locale-aware label for UI.
+  String labelFor(Locale locale) =>
+      localizedFromLocale(locale, labelEn, labelAr);
 
   /// Arabic label for UI.
   String get labelAr => switch (this) {

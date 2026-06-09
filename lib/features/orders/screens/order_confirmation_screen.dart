@@ -6,7 +6,10 @@ import 'package:lolipants/core/config/app_features.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/constants/orders_strings.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/features/orders/providers/checkout_providers.dart';
+import 'package:lolipants/features/settings/providers/settings_provider.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
 
@@ -20,6 +23,7 @@ class OrderConfirmationScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final locale = ref.watch(settingsLocaleProvider);
     return Scaffold(
       backgroundColor: AppColors.ink,
       body: Stack(
@@ -34,14 +38,18 @@ class OrderConfirmationScreen extends ConsumerWidget {
                   const _StarBadge(),
                   const SizedBox(height: AppSpacing.lg),
                   Text(
-                    'Order confirmed',
+                    localizedFromLocale(
+                      locale,
+                      OrdersStrings.orderConfirmed,
+                      OrdersStrings.orderConfirmedAr,
+                    ),
                     textAlign: TextAlign.center,
                     style: AppTextStyles.titleLarge
                         .copyWith(color: AppColors.sand),
                   ).animate().fadeIn(delay: 200.ms, duration: 400.ms),
                   const SizedBox(height: AppSpacing.sm),
                   Text(
-                    'Reference: $orderId',
+                    OrdersStrings.orderReference(orderId, locale),
                     textAlign: TextAlign.center,
                     style: AppTextStyles.bodyMedium
                         .copyWith(color: AppColors.sand.withValues(alpha: 0.8)),
@@ -49,7 +57,11 @@ class OrderConfirmationScreen extends ConsumerWidget {
                   if (kFeatureMockPayment) ...[
                     const SizedBox(height: AppSpacing.md),
                     Text(
-                      'Demo payment mode: no real charge was captured.',
+                      localizedFromLocale(
+                        locale,
+                        OrdersStrings.demoPaymentNoCharge,
+                        OrdersStrings.demoPaymentNoChargeAr,
+                      ),
                       textAlign: TextAlign.center,
                       style: AppTextStyles.bodySmall.copyWith(
                         color: AppColors.gold,
@@ -58,7 +70,11 @@ class OrderConfirmationScreen extends ConsumerWidget {
                   ],
                   const SizedBox(height: AppSpacing.xxl),
                   LolipantsButton(
-                    label: 'Track order',
+                    label: localizedFromLocale(
+                      locale,
+                      OrdersStrings.trackOrder,
+                      OrdersStrings.trackOrderAr,
+                    ),
                     onPressed: () {
                       ref.read(checkoutDraftProvider.notifier).state = null;
                       context.go('/orders/detail/$orderId');
@@ -66,7 +82,11 @@ class OrderConfirmationScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   LolipantsButton(
-                    label: 'Continue designing',
+                    label: localizedFromLocale(
+                      locale,
+                      OrdersStrings.continueDesigning,
+                      OrdersStrings.continueDesigningAr,
+                    ),
                     variant: LolipantsButtonVariant.secondary,
                     onPressed: () {
                       ref.read(checkoutDraftProvider.notifier).state = null;

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
 import 'package:lolipants/features/orders/models/order_status.dart';
+import 'package:lolipants/features/settings/providers/settings_provider.dart';
 
 /// Compact coloured pill for an [OrderStatus].
-class OrderStatusBadge extends StatelessWidget {
+class OrderStatusBadge extends ConsumerWidget {
   /// Creates a badge for [status].
   const OrderStatusBadge({
     required this.status,
@@ -15,7 +17,8 @@ class OrderStatusBadge extends StatelessWidget {
   final OrderStatus status;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final locale = ref.watch(settingsLocaleProvider);
     final (bg, fg) = _colors;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -24,7 +27,7 @@ class OrderStatusBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(100),
       ),
       child: Text(
-        status.labelEn,
+        status.labelFor(locale),
         style: AppTextStyles.bodySmall.copyWith(
           fontSize: 7,
           fontWeight: FontWeight.w700,

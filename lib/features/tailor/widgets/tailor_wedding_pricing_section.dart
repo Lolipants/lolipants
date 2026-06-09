@@ -4,8 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/constants/tailor_strings.dart';
 import 'package:lolipants/core/errors/app_exception_message_mapper.dart';
-import 'package:lolipants/features/tailor/data/tailor_wedding_pricing_repository.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
+import 'package:lolipants/features/settings/providers/settings_provider.dart';
 import 'package:lolipants/features/tailor/models/tailor_wedding_pricing.dart';
 import 'package:lolipants/features/tailor/providers/tailor_wedding_pricing_providers.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
@@ -67,6 +69,7 @@ class _TailorWeddingPricingSectionState
 
   Future<void> _save() async {
     setState(() => _saving = true);
+    final locale = ref.read(settingsLocaleProvider);
     final repo = ref.read(tailorWeddingPricingRepositoryProvider);
     final prices = _rentControllers.keys.map((category) {
       return {
@@ -85,9 +88,21 @@ class _TailorWeddingPricingSectionState
           content: Text(
             mapAppExceptionMessage(
               e,
-              fallback: 'Could not save wedding pricing',
-              networkMessage: 'Network issue while saving wedding pricing.',
-              authMessage: 'Your session has expired. Please sign in again.',
+              fallback: localizedFromLocale(
+                locale,
+                TailorStrings.couldNotSaveWeddingPricing,
+                TailorStrings.couldNotSaveWeddingPricingAr,
+              ),
+              networkMessage: localizedFromLocale(
+                locale,
+                TailorStrings.networkIssueSavingWeddingPricing,
+                TailorStrings.networkIssueSavingWeddingPricingAr,
+              ),
+              authMessage: localizedFromLocale(
+                locale,
+                TailorStrings.sessionExpired,
+                TailorStrings.sessionExpiredAr,
+              ),
             ),
           ),
         ),
@@ -95,19 +110,35 @@ class _TailorWeddingPricingSectionState
       (_) {
         ref.invalidate(tailorWeddingPricingProvider);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Wedding pricing saved')),
+          SnackBar(
+            content: Text(
+              localizedFromLocale(
+                locale,
+                TailorStrings.weddingPricingSaved,
+                TailorStrings.weddingPricingSavedAr,
+              ),
+            ),
+          ),
         );
       },
     );
     if (mounted) setState(() => _saving = false);
   }
 
-  String _labelFor(String category) {
+  String _labelFor(String category, Locale locale) {
     switch (category) {
       case 'wedding_dress':
-        return 'Bridal gown';
+        return localizedFromLocale(
+          locale,
+          TailorStrings.bridalGown,
+          TailorStrings.bridalGownAr,
+        );
       case 'bridesmaid':
-        return 'Bridesmaid';
+        return localizedFromLocale(
+          locale,
+          TailorStrings.bridesmaid,
+          TailorStrings.bridesmaidAr,
+        );
       default:
         return category;
     }
@@ -115,13 +146,14 @@ class _TailorWeddingPricingSectionState
 
   @override
   Widget build(BuildContext context) {
+    final locale = ref.watch(settingsLocaleProvider);
     final async = ref.watch(tailorWeddingPricingProvider);
     return async.when(
       loading: () => const Padding(
         padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
         child: Center(child: CircularProgressIndicator()),
       ),
-      error: (e, _) => Text('Wedding pricing: $e'),
+      error: (e, _) => Text(TailorStrings.weddingPricingError(e, locale)),
       data: (catalog) {
         if (_rentControllers.isEmpty) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -131,10 +163,21 @@ class _TailorWeddingPricingSectionState
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Wedding pricing', style: AppTextStyles.titleSmall),
+            Text(
+              localizedFromLocale(
+                locale,
+                TailorStrings.weddingPricing,
+                TailorStrings.weddingPricingAr,
+              ),
+              style: AppTextStyles.titleSmall,
+            ),
             const SizedBox(height: AppSpacing.xs),
             Text(
-              'Rent per day, sale price, and insurance deposit by category.',
+              localizedFromLocale(
+                locale,
+                TailorStrings.weddingPricingSubtitle,
+                TailorStrings.weddingPricingSubtitleAr,
+              ),
               style: AppTextStyles.bodySmall,
             ),
             const SizedBox(height: AppSpacing.sm),
@@ -148,7 +191,10 @@ class _TailorWeddingPricingSectionState
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(_labelFor(cat), style: AppTextStyles.bodyMedium),
+                      Text(
+                        _labelFor(cat, locale),
+                        style: AppTextStyles.bodyMedium,
+                      ),
                       const SizedBox(height: AppSpacing.sm),
                       TextField(
                         controller: _rentControllers[cat],
@@ -156,8 +202,12 @@ class _TailorWeddingPricingSectionState
                         inputFormatters: [
                           FilteringTextInputFormatter.digitsOnly,
                         ],
-                        decoration: const InputDecoration(
-                          labelText: 'Rent / day (QAR)',
+                        decoration: InputDecoration(
+                          labelText: localizedFromLocale(
+                            locale,
+                            TailorStrings.rentPerDayQar,
+                            TailorStrings.rentPerDayQarAr,
+                          ),
                         ),
                       ),
                       const SizedBox(height: AppSpacing.sm),
@@ -167,8 +217,12 @@ class _TailorWeddingPricingSectionState
                         inputFormatters: [
                           FilteringTextInputFormatter.digitsOnly,
                         ],
-                        decoration: const InputDecoration(
-                          labelText: 'Sale price (QAR)',
+                        decoration: InputDecoration(
+                          labelText: localizedFromLocale(
+                            locale,
+                            TailorStrings.salePriceQar,
+                            TailorStrings.salePriceQarAr,
+                          ),
                         ),
                       ),
                       const SizedBox(height: AppSpacing.sm),
@@ -178,8 +232,12 @@ class _TailorWeddingPricingSectionState
                         inputFormatters: [
                           FilteringTextInputFormatter.digitsOnly,
                         ],
-                        decoration: const InputDecoration(
-                          labelText: 'Insurance deposit (QAR)',
+                        decoration: InputDecoration(
+                          labelText: localizedFromLocale(
+                            locale,
+                            TailorStrings.insuranceDepositQar,
+                            TailorStrings.insuranceDepositQarAr,
+                          ),
                         ),
                       ),
                     ],
@@ -188,7 +246,11 @@ class _TailorWeddingPricingSectionState
               );
             }),
             LolipantsButton(
-              label: 'Save wedding pricing',
+              label: localizedFromLocale(
+                locale,
+                TailorStrings.saveWeddingPricing,
+                TailorStrings.saveWeddingPricingAr,
+              ),
               loading: _saving,
               variant: LolipantsButtonVariant.secondary,
               onPressed: _saving ? null : _save,

@@ -4,8 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/constants/orders_strings.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/features/orders/models/accessory_order_draft.dart';
 import 'package:lolipants/features/orders/providers/checkout_providers.dart';
+import 'package:lolipants/features/settings/providers/settings_provider.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
 
@@ -39,18 +42,32 @@ class _OrderAccessorySummaryScreenState
 
   @override
   Widget build(BuildContext context) {
+    final locale = ref.watch(settingsLocaleProvider);
     final checkout = ref.watch(accessoryCheckoutDraftProvider);
     final accessory = checkout?.accessory ?? widget.accessoryDraft;
+    final title = localizedFromLocale(
+      locale,
+      OrdersStrings.accessoryOrderTitle,
+      OrdersStrings.accessoryOrderTitleAr,
+    );
 
     if (accessory == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Accessory order')),
-        body: const Center(child: Text('No accessory selected.')),
+        appBar: AppBar(title: Text(title)),
+        body: Center(
+          child: Text(
+            localizedFromLocale(
+              locale,
+              OrdersStrings.noAccessorySelected,
+              OrdersStrings.noAccessorySelectedAr,
+            ),
+          ),
+        ),
       );
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Accessory order')),
+      appBar: AppBar(title: Text(title)),
       body: Stack(
         children: [
           const ArabesqueBackground(),
@@ -76,7 +93,11 @@ class _OrderAccessorySummaryScreenState
               ),
               const SizedBox(height: AppSpacing.xl),
               LolipantsButton(
-                label: 'Continue to delivery',
+                label: localizedFromLocale(
+                  locale,
+                  OrdersStrings.continueToDelivery,
+                  OrdersStrings.continueToDeliveryAr,
+                ),
                 onPressed: () => context.push('/order/delivery'),
               ),
             ],

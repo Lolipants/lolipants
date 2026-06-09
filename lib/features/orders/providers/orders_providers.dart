@@ -180,6 +180,27 @@ String orderErrorMessage(
       when msg.toLowerCase().contains('cancel')) {
     return 'This order can no longer be cancelled.';
   }
+  if (appError case ServerException(
+        code: 'ORDER_CREATE_FAILED',
+        message: final msg,
+      )) {
+    return msg.trim().isNotEmpty
+        ? msg
+        : 'The server could not save your order before payment was attempted. '
+            'Please try again in a moment.';
+  }
+  if (appError case ServerException(
+        code: 'QUOTE_MISMATCH',
+        message: final msg,
+      )) {
+    return msg;
+  }
+  if (appError case ServerException(
+        code: 'MEASUREMENTS_REQUIRED',
+        message: final msg,
+      )) {
+    return msg;
+  }
   return mapAppExceptionMessage(
     appError,
     fallback: fallback,

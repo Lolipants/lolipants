@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
+import 'package:lolipants/core/constants/tailor_strings.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/features/auth/providers/auth_providers.dart';
+import 'package:lolipants/features/settings/providers/settings_provider.dart';
 
 /// Three-tab shell for tailor-role users (incoming / active / completed).
 class TailorShell extends ConsumerWidget {
@@ -14,9 +17,16 @@ class TailorShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final locale = ref.watch(settingsLocaleProvider);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Tailor dashboard'),
+        title: Text(
+          localizedFromLocale(
+            locale,
+            TailorStrings.dashboardTitle,
+            TailorStrings.dashboardTitleAr,
+          ),
+        ),
         actions: [
           IconButton(
             onPressed: () async {
@@ -24,7 +34,11 @@ class TailorShell extends ConsumerWidget {
               if (context.mounted) context.go('/login');
             },
             icon: const Icon(Icons.logout),
-            tooltip: 'Sign out',
+            tooltip: localizedFromLocale(
+              locale,
+              TailorStrings.signOut,
+              TailorStrings.signOutAr,
+            ),
           ),
         ],
       ),
@@ -33,31 +47,51 @@ class TailorShell extends ConsumerWidget {
         backgroundColor: AppColors.stone,
         selectedIndex: navigationShell.currentIndex,
         onDestinationSelected: navigationShell.goBranch,
-        destinations: const [
+        destinations: [
           NavigationDestination(
-            icon: Icon(Icons.inbox_outlined),
-            selectedIcon: Icon(Icons.inbox),
-            label: 'Incoming',
+            icon: const Icon(Icons.inbox_outlined),
+            selectedIcon: const Icon(Icons.inbox),
+            label: localizedFromLocale(
+              locale,
+              TailorStrings.navIncoming,
+              TailorStrings.navIncomingAr,
+            ),
           ),
           NavigationDestination(
-            icon: Icon(Icons.price_change_outlined),
-            selectedIcon: Icon(Icons.price_change),
-            label: 'Offers',
+            icon: const Icon(Icons.price_change_outlined),
+            selectedIcon: const Icon(Icons.price_change),
+            label: localizedFromLocale(
+              locale,
+              TailorStrings.navOffers,
+              TailorStrings.navOffersAr,
+            ),
           ),
           NavigationDestination(
-            icon: Icon(Icons.construction_outlined),
-            selectedIcon: Icon(Icons.construction),
-            label: 'Active',
+            icon: const Icon(Icons.construction_outlined),
+            selectedIcon: const Icon(Icons.construction),
+            label: localizedFromLocale(
+              locale,
+              TailorStrings.navActive,
+              TailorStrings.navActiveAr,
+            ),
           ),
           NavigationDestination(
-            icon: Icon(Icons.check_circle_outline),
-            selectedIcon: Icon(Icons.check_circle),
-            label: 'Completed',
+            icon: const Icon(Icons.check_circle_outline),
+            selectedIcon: const Icon(Icons.check_circle),
+            label: localizedFromLocale(
+              locale,
+              TailorStrings.navCompleted,
+              TailorStrings.navCompletedAr,
+            ),
           ),
           NavigationDestination(
-            icon: Icon(Icons.payments_outlined),
-            selectedIcon: Icon(Icons.payments),
-            label: 'Pricing',
+            icon: const Icon(Icons.payments_outlined),
+            selectedIcon: const Icon(Icons.payments),
+            label: localizedFromLocale(
+              locale,
+              TailorStrings.navPricing,
+              TailorStrings.navPricingAr,
+            ),
           ),
         ],
       ),

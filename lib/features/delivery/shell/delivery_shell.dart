@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
+import 'package:lolipants/core/constants/delivery_strings.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/features/auth/providers/auth_providers.dart';
+import 'package:lolipants/features/settings/providers/settings_provider.dart';
 
 /// Three-tab shell for delivery-person accounts (Queue / Active / History).
 class DeliveryShell extends ConsumerWidget {
@@ -14,9 +17,16 @@ class DeliveryShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final locale = ref.watch(settingsLocaleProvider);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Delivery dashboard'),
+        title: Text(
+          localizedFromLocale(
+            locale,
+            DeliveryStrings.dashboardTitle,
+            DeliveryStrings.dashboardTitleAr,
+          ),
+        ),
         actions: [
           IconButton(
             onPressed: () async {
@@ -24,7 +34,11 @@ class DeliveryShell extends ConsumerWidget {
               if (context.mounted) context.go('/login');
             },
             icon: const Icon(Icons.logout),
-            tooltip: 'Sign out',
+            tooltip: localizedFromLocale(
+              locale,
+              DeliveryStrings.signOut,
+              DeliveryStrings.signOutAr,
+            ),
           ),
         ],
       ),
@@ -33,21 +47,33 @@ class DeliveryShell extends ConsumerWidget {
         backgroundColor: AppColors.stone,
         selectedIndex: navigationShell.currentIndex,
         onDestinationSelected: navigationShell.goBranch,
-        destinations: const [
+        destinations: [
           NavigationDestination(
-            icon: Icon(Icons.inventory_2_outlined),
-            selectedIcon: Icon(Icons.inventory_2),
-            label: 'Queue',
+            icon: const Icon(Icons.inventory_2_outlined),
+            selectedIcon: const Icon(Icons.inventory_2),
+            label: localizedFromLocale(
+              locale,
+              DeliveryStrings.navQueue,
+              DeliveryStrings.navQueueAr,
+            ),
           ),
           NavigationDestination(
-            icon: Icon(Icons.local_shipping_outlined),
-            selectedIcon: Icon(Icons.local_shipping),
-            label: 'Active',
+            icon: const Icon(Icons.local_shipping_outlined),
+            selectedIcon: const Icon(Icons.local_shipping),
+            label: localizedFromLocale(
+              locale,
+              DeliveryStrings.navActive,
+              DeliveryStrings.navActiveAr,
+            ),
           ),
           NavigationDestination(
-            icon: Icon(Icons.history),
-            selectedIcon: Icon(Icons.history_toggle_off),
-            label: 'History',
+            icon: const Icon(Icons.history),
+            selectedIcon: const Icon(Icons.history_toggle_off),
+            label: localizedFromLocale(
+              locale,
+              DeliveryStrings.navHistory,
+              DeliveryStrings.navHistoryAr,
+            ),
           ),
         ],
       ),

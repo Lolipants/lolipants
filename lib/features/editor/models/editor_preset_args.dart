@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lolipants/features/home/models/home_flow_selection.dart';
 
 /// Payload passed to [EditorScreen] via `state.extra` when opening the editor
 /// from a preset button (regional styles, browse grid, home grid).
@@ -74,6 +75,7 @@ class EditorBootstrapArgs {
     this.source = 'unknown',
     this.customMannequinImagePath,
     this.initialTab,
+    this.homeFlow,
   });
 
   final String? mannequinId;
@@ -86,6 +88,9 @@ class EditorBootstrapArgs {
   /// Optional editor bottom tab: `designs`, `build`, or `wedding`.
   final String? initialTab;
 
+  /// Home wizard selections when [source] is `home_flow`.
+  final HomeFlowSelection? homeFlow;
+
   Map<String, dynamic> toJson() {
     return {
       'mannequinId': mannequinId,
@@ -94,11 +99,42 @@ class EditorBootstrapArgs {
       'source': source,
       'customMannequinImagePath': customMannequinImagePath,
       'initialTab': initialTab,
+      'homeFlowStyle': homeFlow?.style?.name,
+      'homeFlowService': homeFlow?.serviceType?.name,
+      'homeFlowGender': homeFlow?.gender,
     };
   }
 
   factory EditorBootstrapArgs.fromJson(Map<String, dynamic> json) {
     final presetJson = json['preset'];
+    HomeStyleLane? styleLane;
+    final styleRaw = json['homeFlowStyle']?.toString();
+    if (styleRaw != null) {
+      for (final lane in HomeStyleLane.values) {
+        if (lane.name == styleRaw) {
+          styleLane = lane;
+          break;
+        }
+      }
+    }
+    HomeServiceType? serviceType;
+    final serviceRaw = json['homeFlowService']?.toString();
+    if (serviceRaw != null) {
+      for (final type in HomeServiceType.values) {
+        if (type.name == serviceRaw) {
+          serviceType = type;
+          break;
+        }
+      }
+    }
+    final gender = json['homeFlowGender']?.toString();
+    final homeFlow = (styleLane != null || serviceType != null || gender != null)
+        ? HomeFlowSelection(
+            gender: gender,
+            style: styleLane,
+            serviceType: serviceType,
+          )
+        : null;
     return EditorBootstrapArgs(
       mannequinId: json['mannequinId']?.toString(),
       preset: presetJson is Map<String, dynamic>
@@ -109,6 +145,7 @@ class EditorBootstrapArgs {
       customMannequinImagePath:
           json['customMannequinImagePath']?.toString(),
       initialTab: json['initialTab']?.toString(),
+      homeFlow: homeFlow,
     );
   }
 }

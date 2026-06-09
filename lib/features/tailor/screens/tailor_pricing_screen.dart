@@ -4,10 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/constants/tailor_strings.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/core/location/delivery_location_service.dart';
 import 'package:lolipants/core/permissions/device_permission_prompt.dart';
 import 'package:lolipants/core/errors/app_exception.dart';
 import 'package:lolipants/core/errors/app_exception_message_mapper.dart';
+import 'package:lolipants/features/settings/providers/settings_provider.dart';
 import 'package:lolipants/features/tailor/models/tailor_pricing_catalog.dart';
 import 'package:lolipants/features/tailor/providers/tailor_pricing_providers.dart';
 import 'package:lolipants/features/tailor/widgets/tailor_wedding_pricing_section.dart';
@@ -147,13 +150,19 @@ class _TailorPricingScreenState extends ConsumerState<TailorPricingScreen> {
     });
   }
 
-  Future<void> _saveAll() async {
+  Future<void> _saveAll(Locale locale) async {
     setState(() => _saving = true);
     final repo = ref.read(tailorPricingRepositoryProvider);
     final lat = double.tryParse(_latController.text.trim());
     final lng = double.tryParse(_lngController.text.trim());
     if (lat == null || lng == null) {
-      _snack('Enter valid workshop latitude and longitude');
+      _snack(
+        localizedFromLocale(
+          locale,
+          TailorStrings.enterValidWorkshopCoords,
+          TailorStrings.enterValidWorkshopCoordsAr,
+        ),
+      );
       setState(() => _saving = false);
       return;
     }
@@ -170,7 +179,7 @@ class _TailorPricingScreenState extends ConsumerState<TailorPricingScreen> {
     if (!mounted) return;
     final profileFailed = profileResult.fold(
       (AppException e) {
-        _snack(_errorMessage(e));
+        _snack(_errorMessage(e, locale));
         return true;
       },
       (_) => false,
@@ -201,7 +210,7 @@ class _TailorPricingScreenState extends ConsumerState<TailorPricingScreen> {
     if (!mounted) return;
     final garmentFailed = garmentResult.fold(
       (AppException e) {
-        _snack(_errorMessage(e));
+        _snack(_errorMessage(e, locale));
         return true;
       },
       (_) => false,
@@ -222,10 +231,16 @@ class _TailorPricingScreenState extends ConsumerState<TailorPricingScreen> {
     final deliveryResult = await repo.saveDeliveryFees(fees);
     if (!mounted) return;
     deliveryResult.fold(
-      (AppException e) => _snack(_errorMessage(e)),
+      (AppException e) => _snack(_errorMessage(e, locale)),
       (_) async {
         await ref.read(tailorPricingCatalogProvider.notifier).reload();
-        _snack('Pricing saved');
+        _snack(
+          localizedFromLocale(
+            locale,
+            TailorStrings.pricingSaved,
+            TailorStrings.pricingSavedAr,
+          ),
+        );
       },
     );
     if (mounted) setState(() => _saving = false);
@@ -237,16 +252,23 @@ class _TailorPricingScreenState extends ConsumerState<TailorPricingScreen> {
     );
   }
 
-  Widget _workshopLocationCard() {
+  Widget _workshopLocationCard(Locale locale) {
     final lat = double.tryParse(_latController.text.trim());
     final lng = double.tryParse(_lngController.text.trim());
     final note = _workshopLocating
-        ? 'Detecting workshop location…'
+        ? localizedFromLocale(
+            locale,
+            TailorStrings.detectingWorkshopLocation,
+            TailorStrings.detectingWorkshopLocationAr,
+          )
         : _workshopLocationNote ??
             (lat != null && lng != null
-                ? 'Workshop pin: ${lat.toStringAsFixed(4)}, '
-                    '${lng.toStringAsFixed(4)}'
-                : 'Set your workshop on the map for customer matching');
+                ? TailorStrings.workshopPin(lat, lng, locale)
+                : localizedFromLocale(
+                    locale,
+                    TailorStrings.setWorkshopOnMap,
+                    TailorStrings.setWorkshopOnMapAr,
+                  ));
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -276,29 +298,50 @@ class _TailorPricingScreenState extends ConsumerState<TailorPricingScreen> {
           if (!_workshopLocating)
             TextButton(
               onPressed: _autoDetectWorkshopLocation,
-              child: const Text('Update'),
+              child: Text(
+                localizedFromLocale(
+                  locale,
+                  TailorStrings.update,
+                  TailorStrings.updateAr,
+                ),
+              ),
             ),
         ],
       ),
     );
   }
 
-  String _errorMessage(AppException error) {
+  String _errorMessage(AppException error, Locale locale) {
     return mapAppExceptionMessage(
       error,
-      fallback: 'Could not save pricing. Please try again.',
-      networkMessage: 'Network issue while saving pricing. Please retry.',
-      authMessage: 'Your session has expired. Please sign in again.',
+      fallback: localizedFromLocale(
+        locale,
+        TailorStrings.couldNotSavePricing,
+        TailorStrings.couldNotSavePricingAr,
+      ),
+      networkMessage: localizedFromLocale(
+        locale,
+        TailorStrings.networkIssueSavingPricing,
+        TailorStrings.networkIssueSavingPricingAr,
+      ),
+      authMessage: localizedFromLocale(
+        locale,
+        TailorStrings.sessionExpired,
+        TailorStrings.sessionExpiredAr,
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final locale = ref.watch(settingsLocaleProvider);
     final catalogState = ref.watch(tailorPricingCatalogProvider);
 
     return catalogState.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Could not load pricing: $e')),
+      error: (e, _) => Center(
+        child: Text(TailorStrings.couldNotLoadPricing(e, locale)),
+      ),
       data: (catalog) {
         if (_baseControllers.isEmpty) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -311,27 +354,58 @@ class _TailorPricingScreenState extends ConsumerState<TailorPricingScreen> {
           child: ListView(
             padding: const EdgeInsets.all(AppSpacing.xl),
             children: [
-              Text('Workshop & prices', style: AppTextStyles.titleMedium),
+              Text(
+                localizedFromLocale(
+                  locale,
+                  TailorStrings.workshopAndPrices,
+                  TailorStrings.workshopAndPricesAr,
+                ),
+                style: AppTextStyles.titleMedium,
+              ),
               const SizedBox(height: AppSpacing.md),
-              _sectionTitle('Workshop location'),
+              _sectionTitle(
+                localizedFromLocale(
+                  locale,
+                  TailorStrings.workshopLocation,
+                  TailorStrings.workshopLocationAr,
+                ),
+              ),
               TextField(
                 controller: _shopNameController,
-                decoration: const InputDecoration(labelText: 'Shop name'),
+                decoration: InputDecoration(
+                  labelText: localizedFromLocale(
+                    locale,
+                    TailorStrings.shopName,
+                    TailorStrings.shopNameAr,
+                  ),
+                ),
               ),
               const SizedBox(height: AppSpacing.sm),
               TextField(
                 controller: _addressController,
-                decoration: const InputDecoration(labelText: 'Address'),
+                decoration: InputDecoration(
+                  labelText: localizedFromLocale(
+                    locale,
+                    TailorStrings.address,
+                    TailorStrings.addressAr,
+                  ),
+                ),
               ),
               const SizedBox(height: AppSpacing.sm),
               TextField(
                 controller: _cityController,
-                decoration: const InputDecoration(labelText: 'City'),
+                decoration: InputDecoration(
+                  labelText: localizedFromLocale(
+                    locale,
+                    TailorStrings.city,
+                    TailorStrings.cityAr,
+                  ),
+                ),
               ),
               const SizedBox(height: AppSpacing.sm),
-              _workshopLocationCard(),
+              _workshopLocationCard(locale),
               const SizedBox(height: AppSpacing.sm),
-              Text('Service radius: ${_radiusKm.round()} km'),
+              Text(TailorStrings.serviceRadius(_radiusKm.round(), locale)),
               Slider(
                 value: _radiusKm,
                 min: 5,
@@ -340,23 +414,49 @@ class _TailorPricingScreenState extends ConsumerState<TailorPricingScreen> {
                 onChanged: (v) => setState(() => _radiusKm = v),
               ),
               SwitchListTile(
-                title: const Text('Accepting new orders'),
-                subtitle: const Text(
-                  'Requires workshop coordinates and at least one price row',
+                title: Text(
+                  localizedFromLocale(
+                    locale,
+                    TailorStrings.acceptingNewOrders,
+                    TailorStrings.acceptingNewOrdersAr,
+                  ),
+                ),
+                subtitle: Text(
+                  localizedFromLocale(
+                    locale,
+                    TailorStrings.requiresWorkshopCoords,
+                    TailorStrings.requiresWorkshopCoordsAr,
+                  ),
                 ),
                 value: _acceptingOrders,
                 onChanged: (v) => setState(() => _acceptingOrders = v),
               ),
               const SizedBox(height: AppSpacing.lg),
-              _sectionTitle('Garment prices (QAR)'),
+              _sectionTitle(
+                localizedFromLocale(
+                  locale,
+                  TailorStrings.garmentPricesQar,
+                  TailorStrings.garmentPricesQarAr,
+                ),
+              ),
               Text(
-                'Base + fabric fee per garment type and fabric tier.',
+                localizedFromLocale(
+                  locale,
+                  TailorStrings.basePlusFabricFee,
+                  TailorStrings.basePlusFabricFeeAr,
+                ),
                 style: AppTextStyles.bodySmall,
               ),
               const SizedBox(height: AppSpacing.sm),
-              ..._garmentTypes.map(_garmentSection),
+              ..._garmentTypes.map((g) => _garmentSection(g, locale)),
               const SizedBox(height: AppSpacing.lg),
-              _sectionTitle('Delivery fees (QAR)'),
+              _sectionTitle(
+                localizedFromLocale(
+                  locale,
+                  TailorStrings.deliveryFeesQar,
+                  TailorStrings.deliveryFeesQarAr,
+                ),
+              ),
               ...kDefaultDeliveryFeeCities.map((entry) {
                 final controller = _deliveryControllers[entry.$1];
                 return Padding(
@@ -373,9 +473,13 @@ class _TailorPricingScreenState extends ConsumerState<TailorPricingScreen> {
               const TailorWeddingPricingSection(),
               const SizedBox(height: AppSpacing.lg),
               LolipantsButton(
-                label: 'Save pricing',
+                label: localizedFromLocale(
+                  locale,
+                  TailorStrings.savePricing,
+                  TailorStrings.savePricingAr,
+                ),
                 loading: _saving,
-                onPressed: _saving ? null : _saveAll,
+                onPressed: _saving ? null : () => _saveAll(locale),
               ),
             ],
           ),
@@ -391,7 +495,7 @@ class _TailorPricingScreenState extends ConsumerState<TailorPricingScreen> {
     );
   }
 
-  Widget _garmentSection(String garment) {
+  Widget _garmentSection(String garment, Locale locale) {
     return Card(
       margin: const EdgeInsets.only(bottom: AppSpacing.md),
       color: AppColors.stone,
@@ -414,8 +518,12 @@ class _TailorPricingScreenState extends ConsumerState<TailorPricingScreen> {
                       inputFormatters: [
                         FilteringTextInputFormatter.digitsOnly,
                       ],
-                      decoration: const InputDecoration(
-                        labelText: 'Base',
+                      decoration: InputDecoration(
+                        labelText: localizedFromLocale(
+                          locale,
+                          TailorStrings.base,
+                          TailorStrings.baseAr,
+                        ),
                         isDense: true,
                       ),
                     ),
@@ -429,8 +537,12 @@ class _TailorPricingScreenState extends ConsumerState<TailorPricingScreen> {
                       inputFormatters: [
                         FilteringTextInputFormatter.digitsOnly,
                       ],
-                      decoration: const InputDecoration(
-                        labelText: 'Fabric fee',
+                      decoration: InputDecoration(
+                        labelText: localizedFromLocale(
+                          locale,
+                          TailorStrings.fabricFee,
+                          TailorStrings.fabricFeeAr,
+                        ),
                         isDense: true,
                       ),
                     ),

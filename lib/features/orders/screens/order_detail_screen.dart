@@ -1,3 +1,5 @@
+import 'dart:ui' show Locale;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,12 +7,15 @@ import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/constants/orders_strings.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/features/orders/models/order.dart';
 import 'package:lolipants/features/orders/models/order_status.dart';
 import 'package:lolipants/features/orders/providers/orders_providers.dart';
 import 'package:lolipants/features/orders/widgets/order_status_badge.dart';
 import 'package:lolipants/features/orders/widgets/order_status_timeline.dart';
 import 'package:lolipants/features/orders/widgets/tailor_strip.dart';
+import 'package:lolipants/features/settings/providers/settings_provider.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
 
@@ -27,6 +32,7 @@ class OrderDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final locale = ref.watch(settingsLocaleProvider);
     final orderState = ref.watch(watchOrderProvider(orderId));
 
     return Scaffold(
@@ -42,15 +48,17 @@ class OrderDetailScreen extends ConsumerWidget {
           orderState.when(
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (error, _) => _ErrorBody(
+              locale: locale,
               message: orderErrorMessage(
                 error,
-                fallback: 'Could not load this order.',
+                fallback: OrdersStrings.couldNotLoadOrder(locale),
               ),
               onRetry: () => ref.invalidate(watchOrderProvider(orderId)),
             ),
             data: (order) => _OrderDetailBody(
+              locale: locale,
               order: order,
-              onCancel: () => _cancelOrder(context, ref),
+              onCancel: () => _cancelOrder(context, ref, locale),
             ),
           ),
         ],
@@ -58,20 +66,40 @@ class OrderDetailScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _cancelOrder(BuildContext context, WidgetRef ref) async {
+  Future<void> _cancelOrder(
+    BuildContext context,
+    WidgetRef ref,
+    Locale locale,
+  ) async {
     final shouldCancel = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Cancel this order?'),
-        content: const Text('This will mark the order as cancelled.'),
+        title: Text(
+          localizedFromLocale(
+            locale,
+            OrdersStrings.cancelOrderTitle,
+            OrdersStrings.cancelOrderTitleAr,
+          ),
+        ),
+        content: Text(
+          localizedFromLocale(
+            locale,
+            OrdersStrings.cancelOrderBody,
+            OrdersStrings.cancelOrderBodyAr,
+          ),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('No'),
+            child: Text(
+              localizedFromLocale(locale, OrdersStrings.no, OrdersStrings.noAr),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Yes'),
+            child: Text(
+              localizedFromLocale(locale, OrdersStrings.yes, OrdersStrings.yesAr),
+            ),
           ),
         ],
       ),
@@ -84,7 +112,15 @@ class OrderDetailScreen extends ConsumerWidget {
       ref.invalidate(orderByIdProvider(orderId));
       if (!context.mounted) return;
       ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-        const SnackBar(content: Text('Order cancelled')),
+        SnackBar(
+          content: Text(
+            localizedFromLocale(
+              locale,
+              OrdersStrings.orderCancelled,
+              OrdersStrings.orderCancelledAr,
+            ),
+          ),
+        ),
       );
     } on Object catch (error) {
       if (!context.mounted) return;
@@ -93,7 +129,7 @@ class OrderDetailScreen extends ConsumerWidget {
           content: Text(
             orderErrorMessage(
               error,
-              fallback: 'Could not cancel order',
+              fallback: OrdersStrings.couldNotCancelOrder(locale),
             ),
           ),
         ),
@@ -104,10 +140,12 @@ class OrderDetailScreen extends ConsumerWidget {
 
 class _OrderDetailBody extends StatelessWidget {
   const _OrderDetailBody({
+    required this.locale,
     required this.order,
     required this.onCancel,
   });
 
+  final Locale locale;
   final Order order;
   final VoidCallback onCancel;
 
@@ -116,28 +154,50 @@ class _OrderDetailBody extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.xl),
       children: [
-        _OrderSummaryCard(order: order),
+        _OrderSummaryCard(locale: locale, order: order),
         const SizedBox(height: AppSpacing.lg),
-        Text('Status updates', style: AppTextStyles.titleSmall),
+        Text(
+          localizedFromLocale(
+            locale,
+            OrdersStrings.statusUpdates,
+            OrdersStrings.statusUpdatesAr,
+          ),
+          style: AppTextStyles.titleSmall,
+        ),
         const SizedBox(height: AppSpacing.sm),
         OrderStatusTimeline(order: order),
         const SizedBox(height: AppSpacing.xl),
         TailorStrip(order: order),
         if (order.courierName != null && order.courierName!.isNotEmpty) ...[
           const SizedBox(height: AppSpacing.md),
-          _InfoRow(label: 'Delivery partner', value: order.courierName!),
+          _InfoRow(
+            label: localizedFromLocale(
+              locale,
+              OrdersStrings.deliveryPartner,
+              OrdersStrings.deliveryPartnerAr,
+            ),
+            value: order.courierName!,
+          ),
         ],
         if (order.status.isActive) ...[
           const SizedBox(height: AppSpacing.xl),
           LolipantsButton(
-            label: 'Cancel order',
+            label: localizedFromLocale(
+              locale,
+              OrdersStrings.cancelOrder,
+              OrdersStrings.cancelOrderAr,
+            ),
             variant: LolipantsButtonVariant.destructive,
             onPressed: onCancel,
           ),
         ],
         const SizedBox(height: AppSpacing.sm),
         LolipantsButton(
-          label: 'Back',
+          label: localizedFromLocale(
+            locale,
+            OrdersStrings.back,
+            OrdersStrings.backAr,
+          ),
           variant: LolipantsButtonVariant.secondary,
           onPressed: () => context.pop(),
         ),
@@ -147,12 +207,14 @@ class _OrderDetailBody extends StatelessWidget {
 }
 
 class _OrderSummaryCard extends StatelessWidget {
-  const _OrderSummaryCard({required this.order});
+  const _OrderSummaryCard({required this.locale, required this.order});
 
+  final Locale locale;
   final Order order;
 
   @override
   Widget build(BuildContext context) {
+    final placedDate = dateFormatYMMMd(locale).format(order.placedAt);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
@@ -179,29 +241,51 @@ class _OrderSummaryCard extends StatelessWidget {
           _InfoRow(label: AppStrings.designLabel, value: order.designName),
           _InfoRow(label: AppStrings.tailorLabel, value: order.tailorName),
           if (order.deliveryCity != null && order.deliveryCity!.isNotEmpty)
-            _InfoRow(label: 'City', value: order.deliveryCity!),
+            _InfoRow(
+              label: localizedFromLocale(
+                locale,
+                OrdersStrings.city,
+                OrdersStrings.cityAr,
+              ),
+              value: order.deliveryCity!,
+            ),
           if (order.deliveryAddress != null &&
               order.deliveryAddress!.isNotEmpty)
-            _InfoRow(label: 'Address', value: order.deliveryAddress!),
+            _InfoRow(
+              label: localizedFromLocale(
+                locale,
+                OrdersStrings.address,
+                OrdersStrings.addressAr,
+              ),
+              value: order.deliveryAddress!,
+            ),
           if (order.totalPrice != null)
             _InfoRow(
-              label: 'Total',
+              label: localizedFromLocale(
+                locale,
+                OrdersStrings.total,
+                OrdersStrings.totalAr,
+              ),
               value: '${order.totalPrice} ${order.currency}',
             ),
           if (order.paymentStatus != null)
-            _InfoRow(label: 'Payment', value: order.paymentStatus!),
+            _InfoRow(
+              label: localizedFromLocale(
+                locale,
+                OrdersStrings.payment,
+                OrdersStrings.paymentAr,
+              ),
+              value: order.paymentStatus!,
+            ),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            'Placed ${_formatDate(order.placedAt)}',
+            OrdersStrings.placedOn(placedDate, locale),
             style: AppTextStyles.bodySmall,
           ),
         ],
       ),
     );
   }
-
-  String _formatDate(DateTime dt) =>
-      '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
 }
 
 class _InfoRow extends StatelessWidget {
@@ -229,8 +313,13 @@ class _InfoRow extends StatelessWidget {
 }
 
 class _ErrorBody extends StatelessWidget {
-  const _ErrorBody({required this.message, required this.onRetry});
+  const _ErrorBody({
+    required this.locale,
+    required this.message,
+    required this.onRetry,
+  });
 
+  final Locale locale;
   final String message;
   final VoidCallback onRetry;
 
@@ -244,10 +333,21 @@ class _ErrorBody extends StatelessWidget {
           children: [
             Text(message, textAlign: TextAlign.center),
             const SizedBox(height: AppSpacing.lg),
-            LolipantsButton(label: 'Retry', onPressed: onRetry),
+            LolipantsButton(
+              label: localizedFromLocale(
+                locale,
+                OrdersStrings.retry,
+                OrdersStrings.retryAr,
+              ),
+              onPressed: onRetry,
+            ),
             const SizedBox(height: AppSpacing.sm),
             LolipantsButton(
-              label: 'Back',
+              label: localizedFromLocale(
+                locale,
+                OrdersStrings.back,
+                OrdersStrings.backAr,
+              ),
               variant: LolipantsButtonVariant.secondary,
               onPressed: () => context.pop(),
             ),

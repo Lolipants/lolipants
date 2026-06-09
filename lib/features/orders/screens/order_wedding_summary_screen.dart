@@ -6,8 +6,11 @@ import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/constants/orders_strings.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/features/orders/models/wedding_order_draft.dart';
 import 'package:lolipants/features/orders/providers/checkout_providers.dart';
+import 'package:lolipants/features/settings/providers/settings_provider.dart';
 import 'package:lolipants/features/sizing/models/body_measurements.dart';
 import 'package:lolipants/features/sizing/providers/sizing_providers.dart';
 import 'package:lolipants/features/wedding/models/wedding_dress.dart';
@@ -44,24 +47,38 @@ class _OrderWeddingSummaryScreenState
 
   @override
   Widget build(BuildContext context) {
+    final locale = ref.watch(settingsLocaleProvider);
     final checkout = ref.watch(weddingCheckoutDraftProvider);
     final wedding = checkout?.wedding ?? widget.weddingDraft;
     final measurementsState = ref.watch(myMeasurementsProvider);
     final measurements = measurementsState.valueOrNull;
     final sizingReady =
         measurements != null && _hasUsableSizing(measurements);
+    final summaryTitle = localizedFromLocale(
+      locale,
+      AppStrings.weddingOrderSummaryTitle,
+      AppStrings.weddingOrderSummaryTitleAr,
+    );
 
     if (wedding == null) {
       return Scaffold(
-        appBar: AppBar(title: Text(AppStrings.weddingOrderSummaryTitle)),
-        body: const Center(child: Text('No wedding dress selected.')),
+        appBar: AppBar(title: Text(summaryTitle)),
+        body: Center(
+          child: Text(
+            localizedFromLocale(
+              locale,
+              OrdersStrings.noWeddingDressSelected,
+              OrdersStrings.noWeddingDressSelectedAr,
+            ),
+          ),
+        ),
       );
     }
 
     final isRent = wedding.fulfillment == WeddingFulfillment.rent;
 
     return Scaffold(
-      appBar: AppBar(title: Text(AppStrings.weddingOrderSummaryTitle)),
+      appBar: AppBar(title: Text(summaryTitle)),
       body: Stack(
         children: [
           const ArabesqueBackground(),
@@ -97,8 +114,16 @@ class _OrderWeddingSummaryScreenState
               const SizedBox(height: AppSpacing.xl),
               LolipantsButton(
                 label: sizingReady
-                    ? 'Continue to sizing'
-                    : 'Add measurements first',
+                    ? localizedFromLocale(
+                        locale,
+                        OrdersStrings.continueToSizing,
+                        OrdersStrings.continueToSizingAr,
+                      )
+                    : localizedFromLocale(
+                        locale,
+                        OrdersStrings.addMeasurementsFirst,
+                        OrdersStrings.addMeasurementsFirstAr,
+                      ),
                 onPressed: () {
                   if (sizingReady) {
                     context.push('/order/size-confirm');

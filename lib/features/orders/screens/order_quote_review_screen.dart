@@ -1,14 +1,19 @@
+import 'dart:ui' show Locale;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/constants/orders_strings.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/features/orders/models/order_quote.dart';
 import 'package:lolipants/features/orders/models/quote_negotiation.dart';
 import 'package:lolipants/features/orders/models/tailor_quote_option.dart';
 import 'package:lolipants/features/orders/providers/checkout_providers.dart';
 import 'package:lolipants/features/orders/providers/orders_providers.dart';
+import 'package:lolipants/features/settings/providers/settings_provider.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
 import 'package:lolipants/shared/widgets/lolipants_text_field.dart';
@@ -36,6 +41,7 @@ class _OrderQuoteReviewScreenState extends ConsumerState<OrderQuoteReviewScreen>
   }
 
   Future<void> _fetchQuotes() async {
+    final locale = ref.read(settingsLocaleProvider);
     final draft = ref.read(checkoutDraftProvider);
     final designId = draft?.design.designId?.trim();
     final lat = draft?.deliveryLat;
@@ -47,7 +53,11 @@ class _OrderQuoteReviewScreenState extends ConsumerState<OrderQuoteReviewScreen>
         lng == null) {
       setState(() {
         _loading = false;
-        _error = 'Delivery details missing. Go back and try again.';
+        _error = localizedFromLocale(
+          locale,
+          OrdersStrings.deliveryDetailsMissing,
+          OrdersStrings.deliveryDetailsMissingAr,
+        );
       });
       return;
     }
@@ -71,7 +81,11 @@ class _OrderQuoteReviewScreenState extends ConsumerState<OrderQuoteReviewScreen>
         _loading = false;
         _error = orderErrorMessage(
           e,
-          fallback: 'No tailor available near this location.',
+          fallback: localizedFromLocale(
+            locale,
+            OrdersStrings.noTailorNearLocation,
+            OrdersStrings.noTailorNearLocationAr,
+          ),
         );
       }),
       (options) {
@@ -117,6 +131,7 @@ class _OrderQuoteReviewScreenState extends ConsumerState<OrderQuoteReviewScreen>
       _negotiationsByTailor[tailorId];
 
   Future<void> _openNegotiateSheet(TailorQuoteOption option) async {
+    final locale = ref.read(settingsLocaleProvider);
     final draft = ref.read(checkoutDraftProvider);
     if (draft == null) return;
     final designId = draft.design.designId?.trim() ?? '';
@@ -147,25 +162,48 @@ class _OrderQuoteReviewScreenState extends ConsumerState<OrderQuoteReviewScreen>
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('Negotiate price', style: AppTextStyles.titleSmall),
               Text(
-                'List price: ${option.total} QAR • min offer $floor QAR',
+                localizedFromLocale(
+                  locale,
+                  OrdersStrings.negotiatePrice,
+                  OrdersStrings.negotiatePriceAr,
+                ),
+                style: AppTextStyles.titleSmall,
+              ),
+              Text(
+                OrdersStrings.listPriceMinOffer(
+                  '${option.total}',
+                  '$floor',
+                  locale,
+                ),
                 style: AppTextStyles.bodySmall,
               ),
               const SizedBox(height: AppSpacing.md),
               LolipantsTextField(
                 controller: totalCtrl,
-                label: 'Your offer (QAR)',
+                label: localizedFromLocale(
+                  locale,
+                  OrdersStrings.yourOfferQar,
+                  OrdersStrings.yourOfferQarAr,
+                ),
                 keyboardType: TextInputType.number,
               ),
               const SizedBox(height: AppSpacing.sm),
               LolipantsTextField(
                 controller: noteCtrl,
-                label: 'Note to tailor (optional)',
+                label: localizedFromLocale(
+                  locale,
+                  OrdersStrings.noteToTailor,
+                  OrdersStrings.noteToTailorAr,
+                ),
               ),
               const SizedBox(height: AppSpacing.lg),
               LolipantsButton(
-                label: 'Send to tailor',
+                label: localizedFromLocale(
+                  locale,
+                  OrdersStrings.sendToTailor,
+                  OrdersStrings.sendToTailorAr,
+                ),
                 onPressed: () => Navigator.pop(ctx, true),
               ),
             ],
@@ -178,7 +216,9 @@ class _OrderQuoteReviewScreenState extends ConsumerState<OrderQuoteReviewScreen>
     final offered = int.tryParse(totalCtrl.text.trim());
     if (offered == null || offered < floor) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Offer must be at least $floor QAR')),
+        SnackBar(
+          content: Text(OrdersStrings.offerMinQar('$floor', locale)),
+        ),
       );
       return;
     }
@@ -200,7 +240,14 @@ class _OrderQuoteReviewScreenState extends ConsumerState<OrderQuoteReviewScreen>
       (e) => ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            orderErrorMessage(e, fallback: 'Could not send offer.'),
+            orderErrorMessage(
+              e,
+              fallback: localizedFromLocale(
+                locale,
+                OrdersStrings.couldNotSendOffer,
+                OrdersStrings.couldNotSendOfferAr,
+              ),
+            ),
           ),
         ),
       ),
@@ -209,7 +256,15 @@ class _OrderQuoteReviewScreenState extends ConsumerState<OrderQuoteReviewScreen>
           _negotiationsByTailor[option.tailorId] = detail.negotiation;
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Offer sent to tailor')),
+          SnackBar(
+            content: Text(
+              localizedFromLocale(
+                locale,
+                OrdersStrings.offerSent,
+                OrdersStrings.offerSentAr,
+              ),
+            ),
+          ),
         );
       },
     );
@@ -247,6 +302,7 @@ class _OrderQuoteReviewScreenState extends ConsumerState<OrderQuoteReviewScreen>
 
   @override
   Widget build(BuildContext context) {
+    final locale = ref.watch(settingsLocaleProvider);
     final selectedNeg = _selectedTailorId != null
         ? _negotiationFor(_selectedTailorId!)
         : null;
@@ -255,7 +311,15 @@ class _OrderQuoteReviewScreenState extends ConsumerState<OrderQuoteReviewScreen>
     final hasActiveSelected = selectedNeg?.isActive ?? false;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Compare tailors & prices')),
+      appBar: AppBar(
+        title: Text(
+          localizedFromLocale(
+            locale,
+            OrdersStrings.compareTailorsTitle,
+            OrdersStrings.compareTailorsTitleAr,
+          ),
+        ),
+      ),
       body: Stack(
         children: [
           const ArabesqueBackground(),
@@ -268,10 +332,21 @@ class _OrderQuoteReviewScreenState extends ConsumerState<OrderQuoteReviewScreen>
                 children: [
                   Text(_error!, style: AppTextStyles.bodyMedium),
                   const SizedBox(height: AppSpacing.lg),
-                  LolipantsButton(label: 'Retry', onPressed: _fetchQuotes),
+                  LolipantsButton(
+                    label: localizedFromLocale(
+                      locale,
+                      OrdersStrings.retry,
+                      OrdersStrings.retryAr,
+                    ),
+                    onPressed: _fetchQuotes,
+                  ),
                   const SizedBox(height: AppSpacing.sm),
                   LolipantsButton(
-                    label: 'Change delivery',
+                    label: localizedFromLocale(
+                      locale,
+                      OrdersStrings.changeDelivery,
+                      OrdersStrings.changeDeliveryAr,
+                    ),
                     variant: LolipantsButtonVariant.secondary,
                     onPressed: () => context.pop(),
                   ),
@@ -282,15 +357,27 @@ class _OrderQuoteReviewScreenState extends ConsumerState<OrderQuoteReviewScreen>
             ListView(
               padding: const EdgeInsets.all(AppSpacing.xl),
               children: [
-                Text('Choose your tailor', style: AppTextStyles.titleSmall),
+                Text(
+                  localizedFromLocale(
+                    locale,
+                    OrdersStrings.chooseYourTailor,
+                    OrdersStrings.chooseYourTailorAr,
+                  ),
+                  style: AppTextStyles.titleSmall,
+                ),
                 const SizedBox(height: AppSpacing.sm),
                 Text(
-                  'Continue at list price or negotiate with a tailor.',
+                  localizedFromLocale(
+                    locale,
+                    OrdersStrings.continueAtListOrNegotiate,
+                    OrdersStrings.continueAtListOrNegotiateAr,
+                  ),
                   style: AppTextStyles.bodySmall.copyWith(color: AppColors.fog),
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 for (final option in _options)
                   _TailorQuoteCard(
+                    locale: locale,
                     option: option,
                     selected: _selectedTailorId == option.tailorId,
                     negotiation: _negotiationFor(option.tailorId),
@@ -313,8 +400,16 @@ class _OrderQuoteReviewScreenState extends ConsumerState<OrderQuoteReviewScreen>
                 if (hasActiveSelected && selectedNeg != null) ...[
                   Text(
                     selectedNeg.status == QuoteNegotiationStatus.countered
-                        ? 'Accept the counter offer before paying, or choose another tailor.'
-                        : 'Payment is unavailable while your price offer is pending.',
+                        ? localizedFromLocale(
+                            locale,
+                            OrdersStrings.acceptCounterBeforePay,
+                            OrdersStrings.acceptCounterBeforePayAr,
+                          )
+                        : localizedFromLocale(
+                            locale,
+                            OrdersStrings.paymentUnavailablePendingOffer,
+                            OrdersStrings.paymentUnavailablePendingOfferAr,
+                          ),
                     style: AppTextStyles.bodySmall.copyWith(
                       color: AppColors.fog,
                     ),
@@ -323,8 +418,16 @@ class _OrderQuoteReviewScreenState extends ConsumerState<OrderQuoteReviewScreen>
                   LolipantsButton(
                     label: selectedNeg.status ==
                             QuoteNegotiationStatus.countered
-                        ? 'Review counter offer'
-                        : 'View negotiation',
+                        ? localizedFromLocale(
+                            locale,
+                            OrdersStrings.reviewCounterOffer,
+                            OrdersStrings.reviewCounterOfferAr,
+                          )
+                        : localizedFromLocale(
+                            locale,
+                            OrdersStrings.viewNegotiation,
+                            OrdersStrings.viewNegotiationAr,
+                          ),
                     onPressed: () => context.push(
                       '/order/quote-negotiation/${selectedNeg.id}',
                     ),
@@ -332,8 +435,16 @@ class _OrderQuoteReviewScreenState extends ConsumerState<OrderQuoteReviewScreen>
                 ] else
                   LolipantsButton(
                     label: hasAcceptedSelected
-                        ? 'Pay agreed price'
-                        : 'Continue to payment',
+                        ? localizedFromLocale(
+                            locale,
+                            OrdersStrings.payAgreedPrice,
+                            OrdersStrings.payAgreedPriceAr,
+                          )
+                        : localizedFromLocale(
+                            locale,
+                            OrdersStrings.continueToPayment,
+                            OrdersStrings.continueToPaymentAr,
+                          ),
                     onPressed: _selectedTailorId == null
                         ? null
                         : () {
@@ -349,14 +460,26 @@ class _OrderQuoteReviewScreenState extends ConsumerState<OrderQuoteReviewScreen>
                   ),
                 const SizedBox(height: AppSpacing.sm),
                 LolipantsButton(
-                  label: 'Back',
+                  label: localizedFromLocale(
+                    locale,
+                    OrdersStrings.back,
+                    OrdersStrings.backAr,
+                  ),
                   variant: LolipantsButtonVariant.secondary,
                   onPressed: () => context.pop(),
                 ),
               ],
             )
           else
-            const Center(child: Text('No quotes available')),
+            Center(
+              child: Text(
+                localizedFromLocale(
+                  locale,
+                  OrdersStrings.noQuotesAvailable,
+                  OrdersStrings.noQuotesAvailableAr,
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -365,6 +488,7 @@ class _OrderQuoteReviewScreenState extends ConsumerState<OrderQuoteReviewScreen>
 
 class _TailorQuoteCard extends StatelessWidget {
   const _TailorQuoteCard({
+    required this.locale,
     required this.option,
     required this.selected,
     required this.onTap,
@@ -374,6 +498,7 @@ class _TailorQuoteCard extends StatelessWidget {
     this.negotiation,
   });
 
+  final Locale locale;
   final TailorQuoteOption option;
   final bool selected;
   final QuoteNegotiation? negotiation;
@@ -445,18 +570,46 @@ class _TailorQuoteCard extends StatelessWidget {
                 if (option.distanceKm != null) ...[
                   const SizedBox(height: AppSpacing.xs),
                   Text(
-                    '~${option.distanceKm!.toStringAsFixed(1)} km from workshop',
+                    OrdersStrings.kmFromWorkshop(
+                      option.distanceKm!.toStringAsFixed(1),
+                      locale,
+                    ),
                     style: AppTextStyles.bodySmall.copyWith(
                       color: AppColors.fog,
                     ),
                   ),
                 ],
                 const SizedBox(height: AppSpacing.sm),
-                _priceRow('Base', option.basePrice),
-                _priceRow('Fabric', option.fabricFee),
-                _priceRow('Delivery', option.deliveryFee),
+                _priceRow(
+                  localizedFromLocale(locale, OrdersStrings.base, OrdersStrings.baseAr),
+                  option.basePrice,
+                ),
+                _priceRow(
+                  localizedFromLocale(
+                    locale,
+                    OrdersStrings.fabric,
+                    OrdersStrings.fabricAr,
+                  ),
+                  option.fabricFee,
+                ),
+                _priceRow(
+                  localizedFromLocale(
+                    locale,
+                    OrdersStrings.delivery,
+                    OrdersStrings.deliveryAr,
+                  ),
+                  option.deliveryFee,
+                ),
                 const Divider(height: AppSpacing.md),
-                _priceRow('Total', option.total, bold: true),
+                _priceRow(
+                  localizedFromLocale(
+                    locale,
+                    OrdersStrings.total,
+                    OrdersStrings.totalAr,
+                  ),
+                  option.total,
+                  bold: true,
+                ),
                 const SizedBox(height: AppSpacing.sm),
                 Wrap(
                   spacing: AppSpacing.sm,
@@ -465,24 +618,48 @@ class _TailorQuoteCard extends StatelessWidget {
                     if (accepted)
                       TextButton(
                         onPressed: onPayAgreed,
-                        child: const Text('Pay agreed price'),
+                        child: Text(
+                          localizedFromLocale(
+                            locale,
+                            OrdersStrings.payAgreedPrice,
+                            OrdersStrings.payAgreedPriceAr,
+                          ),
+                        ),
                       )
                     else if (neg != null &&
                         neg.status == QuoteNegotiationStatus.countered)
                       TextButton(
                         onPressed: onViewNegotiation,
-                        child: const Text('Review counter offer'),
+                        child: Text(
+                          localizedFromLocale(
+                            locale,
+                            OrdersStrings.reviewCounterOffer,
+                            OrdersStrings.reviewCounterOfferAr,
+                          ),
+                        ),
                       )
                     else if (neg == null ||
                         neg.status == QuoteNegotiationStatus.declined)
                       TextButton(
                         onPressed: onNegotiate,
-                        child: const Text('Negotiate price'),
+                        child: Text(
+                          localizedFromLocale(
+                            locale,
+                            OrdersStrings.negotiatePrice,
+                            OrdersStrings.negotiatePriceAr,
+                          ),
+                        ),
                       ),
                     if (neg != null)
                       TextButton(
                         onPressed: onViewNegotiation,
-                        child: const Text('Messages'),
+                        child: Text(
+                          localizedFromLocale(
+                            locale,
+                            OrdersStrings.messages,
+                            OrdersStrings.messagesAr,
+                          ),
+                        ),
                       ),
                   ],
                 ),

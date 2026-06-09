@@ -2,6 +2,7 @@ import 'dart:ui' show Locale;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/features/settings/providers/settings_provider.dart';
 
@@ -53,3 +54,15 @@ String pickSlash(WidgetRef ref, String combined) {
   final locale = ref.watch(settingsLocaleProvider);
   return AppStrings.pickEmbedded(locale, combined);
 }
+
+/// Locale-aware medium date, e.g. Jan 5, 2026 / ٥ يناير ٢٠٢٦.
+DateFormat dateFormatYMMMd(Locale locale) =>
+    DateFormat.yMMMd(locale.languageCode);
+
+/// Locale-aware short month + day.
+DateFormat dateFormatMMMd(Locale locale) =>
+    DateFormat.MMMd(locale.languageCode);
+
+/// Locale-aware number formatter.
+NumberFormat numberFormatFor(Locale locale) =>
+    NumberFormat.decimalPattern(locale.languageCode);

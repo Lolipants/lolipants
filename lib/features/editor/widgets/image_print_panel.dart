@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:lolipants/core/permissions/device_permission_prompt.dart';
 import 'package:lolipants/features/editor/utils/picked_image_persist.dart';
@@ -8,11 +9,13 @@ import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/features/editor/models/print_placement.dart';
+import 'package:lolipants/features/settings/providers/settings_provider.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
 
 /// Image print controls shown when image tool is selected.
-class ImagePrintPanel extends StatelessWidget {
+class ImagePrintPanel extends ConsumerWidget {
   const ImagePrintPanel({
     required this.imagePath,
     required this.placement,
@@ -53,7 +56,8 @@ class ImagePrintPanel extends StatelessWidget {
   final VoidCallback onApply;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final locale = ref.watch(settingsLocaleProvider);
     return Container(
       margin: const EdgeInsets.all(AppSpacing.md),
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -67,7 +71,11 @@ class ImagePrintPanel extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            'Print on garment / طباعة على الملبس',
+            localizedFromLocale(
+              locale,
+              AppStrings.editorPrintOnGarment,
+              AppStrings.editorPrintOnGarmentAr,
+            ),
             style: AppTextStyles.titleMedium,
           ),
           const SizedBox(height: AppSpacing.sm),
@@ -82,12 +90,18 @@ class ImagePrintPanel extends StatelessWidget {
                 border: Border.all(color: AppColors.borderDefault),
               ),
               child: imagePath == null
-                  ? const Column(
+                  ? Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.upload_outlined, color: AppColors.gold),
-                        SizedBox(height: 6),
-                        Text('Upload image / ارفع صورة'),
+                        const Icon(Icons.upload_outlined, color: AppColors.gold),
+                        const SizedBox(height: 6),
+                        Text(
+                          localizedFromLocale(
+                            locale,
+                            AppStrings.editorUploadImage,
+                            AppStrings.editorUploadImageAr,
+                          ),
+                        ),
                       ],
                     )
                   : ClipRRect(
@@ -110,7 +124,11 @@ class ImagePrintPanel extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
-            AppStrings.editorSketchOptional,
+            localizedFromLocale(
+              locale,
+              AppStrings.editorSketchOptional,
+              AppStrings.editorSketchOptionalAr,
+            ),
             style: AppTextStyles.bodySmall,
           ),
           const SizedBox(height: AppSpacing.xs),
@@ -125,18 +143,29 @@ class ImagePrintPanel extends StatelessWidget {
                 border: Border.all(color: AppColors.borderDefault),
               ),
               child: sketchPath == null
-                  ? const Column(
+                  ? Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.draw_outlined, color: AppColors.gold),
-                        SizedBox(height: 6),
-                        Text('Upload sketch / ارفع السكتش'),
+                        const Icon(Icons.draw_outlined, color: AppColors.gold),
+                        const SizedBox(height: 6),
+                        Text(
+                          localizedFromLocale(
+                            locale,
+                            AppStrings.editorUploadSketch,
+                            AppStrings.editorUploadSketchAr,
+                          ),
+                        ),
                       ],
                     )
                   : ClipRRect(
                       borderRadius: BorderRadius.circular(AppRadius.sm),
                       child: sketchPath!.startsWith('http')
-                          ? Image.network(sketchPath!, width: 112, height: 112, fit: BoxFit.cover)
+                          ? Image.network(
+                              sketchPath!,
+                              width: 112,
+                              height: 112,
+                              fit: BoxFit.cover,
+                            )
                           : Image.file(
                               File(sketchPath!),
                               width: 112,
@@ -150,7 +179,13 @@ class ImagePrintPanel extends StatelessWidget {
             const SizedBox(height: AppSpacing.xs),
             TextButton(
               onPressed: () => onSketchSelected!(null),
-              child: Text(AppStrings.editorSketchClear),
+              child: Text(
+                localizedFromLocale(
+                  locale,
+                  AppStrings.editorSketchClear,
+                  AppStrings.editorSketchClearAr,
+                ),
+              ),
             ),
           ],
           const SizedBox(height: AppSpacing.md),
@@ -158,24 +193,38 @@ class ImagePrintPanel extends StatelessWidget {
             spacing: AppSpacing.xs,
             children: [
               _PlacementChip(
-                label: 'Chest',
+                label: localizedFromLocale(
+                  locale,
+                  AppStrings.editorPrintPlacementChest,
+                  AppStrings.editorPrintPlacementChestAr,
+                ),
                 selected: placement == PrintPlacement.chest,
                 onTap: () => onPlacementChanged(PrintPlacement.chest),
               ),
               _PlacementChip(
-                label: 'Back',
+                label: localizedFromLocale(
+                  locale,
+                  AppStrings.editorPrintPlacementBack,
+                  AppStrings.editorPrintPlacementBackAr,
+                ),
                 selected: placement == PrintPlacement.back,
                 onTap: () => onPlacementChanged(PrintPlacement.back),
               ),
               _PlacementChip(
-                label: 'Full front',
+                label: localizedFromLocale(
+                  locale,
+                  AppStrings.editorPrintPlacementFullFront,
+                  AppStrings.editorPrintPlacementFullFrontAr,
+                ),
                 selected: placement == PrintPlacement.fullFront,
                 onTap: () => onPlacementChanged(PrintPlacement.fullFront),
               ),
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
-          Text('Horizontal offset ${offsetX.toStringAsFixed(0)}px'),
+          Text(
+            '${localizedFromLocale(locale, AppStrings.editorPrintOffsetHorizontal, AppStrings.editorPrintOffsetHorizontalAr)} ${offsetX.toStringAsFixed(0)}px',
+          ),
           Slider(
             value: offsetX.clamp(-offsetXRange, offsetXRange),
             min: -offsetXRange,
@@ -183,7 +232,9 @@ class ImagePrintPanel extends StatelessWidget {
             divisions: 24,
             onChanged: onOffsetXChanged,
           ),
-          Text('Vertical offset ${offsetY.toStringAsFixed(0)}px'),
+          Text(
+            '${localizedFromLocale(locale, AppStrings.editorPrintOffsetVertical, AppStrings.editorPrintOffsetVerticalAr)} ${offsetY.toStringAsFixed(0)}px',
+          ),
           Slider(
             value: offsetY.clamp(-offsetYRange, offsetYRange),
             min: -offsetYRange,
@@ -192,7 +243,9 @@ class ImagePrintPanel extends StatelessWidget {
             onChanged: onOffsetYChanged,
           ),
           const SizedBox(height: AppSpacing.xs),
-          Text('Size ${scale.toStringAsFixed(0)}%'),
+          Text(
+            '${localizedFromLocale(locale, AppStrings.editorPrintSizePercent, AppStrings.editorPrintSizePercentAr)} ${scale.toStringAsFixed(0)}%',
+          ),
           Slider(
             value: scale.clamp(minScale, maxScale),
             min: minScale,
@@ -202,7 +255,11 @@ class ImagePrintPanel extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.sm),
           LolipantsButton(
-            label: 'Apply to design',
+            label: localizedFromLocale(
+              locale,
+              AppStrings.editorApplyToDesign,
+              AppStrings.editorApplyToDesignAr,
+            ),
             onPressed: onApply,
           ),
         ],

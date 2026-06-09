@@ -116,7 +116,9 @@ export function parseOrderInsertBinds(binds: unknown[]): Row {
     base_price: binds[13],
     fabric_fee: binds[14],
     delivery_fee: binds[15],
-    total_price: binds[16],
+    accessory_fee: binds[16],
+    total_price: binds[17],
+    payment_token: binds[18],
   };
 }
-
+

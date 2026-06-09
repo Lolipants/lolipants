@@ -1,3 +1,5 @@
+import 'dart:ui' show Locale;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lolipants/core/config/app_features.dart';
@@ -21,7 +23,10 @@ import 'package:lolipants/features/editor/widgets/catalog_design_header.dart';
 import 'package:lolipants/features/editor/widgets/catalog_design_picker.dart';
 import 'package:lolipants/features/editor/widgets/editor_panel_header.dart';
 import 'package:lolipants/features/editor/widgets/editor_studio_prompt_card.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
+import 'package:lolipants/core/l10n/localized_label.dart';
 import 'package:lolipants/features/editor/widgets/editor_style_dropdown.dart';
+import 'package:lolipants/features/settings/providers/settings_provider.dart';
 
 /// Minimal configurator panel: pick a garment part, then choose an option.
 class EditorDesignPanel extends ConsumerStatefulWidget {
@@ -45,6 +50,7 @@ class _EditorDesignPanelState extends ConsumerState<EditorDesignPanel> {
 
   @override
   Widget build(BuildContext context) {
+    final locale = ref.watch(settingsLocaleProvider);
     final editor = ref.watch(editorProvider);
     final notifier = ref.read(editorProvider.notifier);
     final catalogAsync = ref.watch(configuratorCatalogProvider);
@@ -69,7 +75,11 @@ class _EditorDesignPanelState extends ConsumerState<EditorDesignPanel> {
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (_, __) => Center(
         child: Text(
-          'Could not load design catalogue.',
+          localizedFromLocale(
+            locale,
+            AppStrings.editorDesignCatalogError,
+            AppStrings.editorDesignCatalogErrorAr,
+          ),
           style: AppTextStyles.bodySmall,
         ),
       ),
@@ -118,6 +128,7 @@ class _EditorDesignPanelState extends ConsumerState<EditorDesignPanel> {
               Expanded(
                 child: _aiExpanded
                     ? _AiSection(
+                        locale: locale,
                         expanded: true,
                         onToggle: () => setState(() => _aiExpanded = false),
                         onGenerate: widget.onGenerateAi ?? () async {},
@@ -130,6 +141,7 @@ class _EditorDesignPanelState extends ConsumerState<EditorDesignPanel> {
               ),
               if (kFeatureAiEditorTab && !_aiExpanded)
                 _AiSection(
+                  locale: locale,
                   expanded: false,
                   onToggle: () => setState(() => _aiExpanded = true),
                   onGenerate: widget.onGenerateAi ?? () async {},
@@ -141,7 +153,11 @@ class _EditorDesignPanelState extends ConsumerState<EditorDesignPanel> {
         if (templates.isEmpty) {
           return Center(
             child: Text(
-              AppStrings.editorBuildPickTemplate,
+              localizedFromLocale(
+                locale,
+                AppStrings.editorBuildPickTemplate,
+                AppStrings.editorBuildPickTemplateAr,
+              ),
               style: AppTextStyles.bodyMedium,
             ),
           );
@@ -197,7 +213,13 @@ class _EditorDesignPanelState extends ConsumerState<EditorDesignPanel> {
               chips: [
                 for (var index = 0; index < slots.length; index++)
                   EditorHeaderChipData(
-                    label: slots[index].titleEn,
+                    label: localizedLabel(
+                      locale,
+                      en: slots[index].titleEn,
+                      ar: slots[index].titleAr.trim().isNotEmpty
+                          ? slots[index].titleAr
+                          : slots[index].titleEn,
+                    ),
                     selected: slotIndex == index,
                     onTap: () => notifier.setConfiguratorSlotIndex(index),
                   ),
@@ -206,11 +228,13 @@ class _EditorDesignPanelState extends ConsumerState<EditorDesignPanel> {
             Expanded(
               child: _aiExpanded
                   ? _AiSection(
+                      locale: locale,
                       expanded: true,
                       onToggle: () => setState(() => _aiExpanded = false),
                       onGenerate: widget.onGenerateAi ?? () async {},
                     )
                   : _OptionGrid(
+                      locale: locale,
                       template: template,
                       primaryColour: editor.primaryColour,
                       accentColour: editor.accentColour,
@@ -225,6 +249,7 @@ class _EditorDesignPanelState extends ConsumerState<EditorDesignPanel> {
             ),
             if (kFeatureAiEditorTab && !_aiExpanded)
               _AiSection(
+                locale: locale,
                 expanded: false,
                 onToggle: () => setState(() => _aiExpanded = true),
                 onGenerate: widget.onGenerateAi ?? () async {},
@@ -266,6 +291,7 @@ class _EditorDesignPanelState extends ConsumerState<EditorDesignPanel> {
 
 class _OptionGrid extends StatelessWidget {
   const _OptionGrid({
+    required this.locale,
     required this.template,
     required this.primaryColour,
     required this.accentColour,
@@ -274,6 +300,7 @@ class _OptionGrid extends StatelessWidget {
     required this.onPick,
   });
 
+  final Locale locale;
   final ConfiguratorTemplate template;
   final Color primaryColour;
   final Color accentColour;
@@ -298,7 +325,11 @@ class _OptionGrid extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.all(AppSpacing.md),
               child: Text(
-                'No options available for this combination.',
+                localizedFromLocale(
+                  locale,
+                  AppStrings.editorNoOptionsForCombination,
+                  AppStrings.editorNoOptionsForCombinationAr,
+                ),
                 style: AppTextStyles.bodySmall.copyWith(color: AppColors.fog),
                 textAlign: TextAlign.center,
               ),
@@ -324,7 +355,11 @@ class _OptionGrid extends StatelessWidget {
             final opt = options[index];
             final selected = selectedOptionId == opt.id;
             return EditorCompactThumbCard(
-              label: opt.labelEn,
+              label: localizedLabel(
+                locale,
+                en: opt.labelEn,
+                ar: opt.labelAr.trim().isNotEmpty ? opt.labelAr : opt.labelEn,
+              ),
               selected: selected,
               onTap: () => onPick(opt.id),
               image: ConfiguratorOptionImage(
@@ -348,11 +383,13 @@ class _OptionGrid extends StatelessWidget {
 
 class _AiSection extends StatelessWidget {
   const _AiSection({
+    required this.locale,
     required this.expanded,
     required this.onToggle,
     required this.onGenerate,
   });
 
+  final Locale locale;
   final bool expanded;
   final VoidCallback onToggle;
   final Future<void> Function() onGenerate;
@@ -385,7 +422,17 @@ class _AiSection extends StatelessWidget {
                   ),
                   const SizedBox(width: AppSpacing.xs),
                   Text(
-                    expanded ? 'Back to parts' : 'Enhance with AI',
+                    expanded
+                        ? localizedFromLocale(
+                            locale,
+                            AppStrings.editorBackToParts,
+                            AppStrings.editorBackToPartsAr,
+                          )
+                        : localizedFromLocale(
+                            locale,
+                            AppStrings.editorEnhanceWithAi,
+                            AppStrings.editorEnhanceWithAiAr,
+                          ),
                     style: AppTextStyles.bodySmall.copyWith(
                       color: expanded ? AppColors.sand : AppColors.fog,
                       fontSize: 11,

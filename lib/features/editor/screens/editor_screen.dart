@@ -26,7 +26,6 @@ import 'package:lolipants/features/editor/data/editor_design_restore.dart';
 import 'package:lolipants/features/editor/logic/catalog_compose_hero.dart';
 import 'package:lolipants/features/editor/widgets/catalog_design_preview.dart';
 import 'package:lolipants/features/editor/models/configurator_catalog.dart';
-import 'package:lolipants/features/editor/providers/designs_providers.dart';
 import 'package:lolipants/features/editor/providers/editor_provider.dart';
 import 'package:lolipants/core/config/app_features.dart';
 import 'package:lolipants/features/editor/widgets/editor_ai_refine_cta.dart';
@@ -153,23 +152,16 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
     }
   }
 
-  /// After home AI "Apply", builds configurator defaults and runs look render.
+  /// After home AI "Apply", generates a look from the text prompt + mannequin only.
   Future<void> _runAiHomeDraftIfReady() async {
     if (!_pendingAiHomeDraft || _aiHomeDraftRunning || !mounted) return;
-    final catalogAsync = ref.read(configuratorCatalogProvider);
-    if (!catalogAsync.hasValue) return;
 
     _aiHomeDraftRunning = true;
     _pendingAiHomeDraft = false;
 
     final notifier = _editorNotifier;
-    final templates = ref.read(mannequinConfiguratorTemplatesProvider);
-    if (templates.isNotEmpty) {
-      notifier.ensureDefaultConfiguratorTemplate(templates);
-    }
 
     await WidgetsBinding.instance.endOfFrame;
-    await Future<void>.delayed(const Duration(milliseconds: 400));
     if (!mounted) return;
 
     final allowed = await AiDataSharingConsent.ensure(context, ref);
@@ -178,9 +170,8 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
       return;
     }
 
-    final composeBytes = await _captureHeroPng();
     final result = await notifier.generateRefinedLook(
-      composePreviewBytes: composeBytes,
+      promptOnlyRender: true,
     );
     if (!mounted) return;
     _aiHomeDraftRunning = false;

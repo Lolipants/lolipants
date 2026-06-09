@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show Locale;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -8,6 +9,8 @@ import 'package:lolipants/core/config/app_features.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/constants/orders_strings.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/features/orders/models/checkout_draft.dart';
 import 'package:lolipants/features/orders/models/order_design_draft.dart';
 import 'package:lolipants/features/orders/models/accessory_checkout_draft.dart';
@@ -41,26 +44,38 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final locale = ref.watch(settingsLocaleProvider);
+    final paymentTitle = localizedFromLocale(
+      locale,
+      OrdersStrings.payment,
+      OrdersStrings.paymentAr,
+    );
     final accessoryDraft = ref.watch(accessoryCheckoutDraftProvider);
     if (accessoryDraft != null) {
-      return _buildAccessoryPayment(context, accessoryDraft);
+      return _buildAccessoryPayment(context, locale, accessoryDraft);
     }
     final weddingDraft = ref.watch(weddingCheckoutDraftProvider);
     if (weddingDraft != null) {
-      return _buildWeddingPayment(context, weddingDraft);
+      return _buildWeddingPayment(context, locale, weddingDraft);
     }
     final draft = ref.watch(checkoutDraftProvider);
     if (draft == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Payment')),
-        body: const Center(
-          child: Text('Checkout session expired. Please restart.'),
+        appBar: AppBar(title: Text(paymentTitle)),
+        body: Center(
+          child: Text(
+            localizedFromLocale(
+              locale,
+              OrdersStrings.checkoutExpired,
+              OrdersStrings.checkoutExpiredAr,
+            ),
+          ),
         ),
       );
     }
     final quote = draft.quote;
     return Scaffold(
-      appBar: AppBar(title: const Text('Payment')),
+      appBar: AppBar(title: Text(paymentTitle)),
       body: Stack(
         children: [
           const ArabesqueBackground(),
@@ -68,12 +83,13 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
             padding: const EdgeInsets.all(AppSpacing.xl),
             children: [
               _PriceCard(
+                locale: locale,
                 draft: draft,
                 expanded: _expanded,
                 onToggle: () => setState(() => _expanded = !_expanded),
               ),
               const SizedBox(height: AppSpacing.md),
-              _DesignFabricSummary(design: draft.design),
+              _DesignFabricSummary(locale: locale, design: draft.design),
               const SizedBox(height: AppSpacing.lg),
               if (_errorMessage != null) ...[
                 ErrorBanner(
@@ -92,15 +108,27 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Pay with card', style: AppTextStyles.titleMedium),
+                    Text(
+                      localizedFromLocale(
+                        locale,
+                        OrdersStrings.payWithCard,
+                        OrdersStrings.payWithCardAr,
+                      ),
+                      style: AppTextStyles.titleMedium,
+                    ),
                     const SizedBox(height: AppSpacing.xs),
                     Text(
                       kFeatureMockPayment
-                          ? 'Demo payment mode is active. No real card will be '
-                              'charged in this build.'
-                          : 'Card payments: this build collects a Tap-compatible '
-                              'token manually (no Tap Flutter SDK). Your card '
-                              'details never touch our servers.',
+                          ? localizedFromLocale(
+                              locale,
+                              OrdersStrings.demoPaymentModeActive,
+                              OrdersStrings.demoPaymentModeActiveAr,
+                            )
+                          : localizedFromLocale(
+                              locale,
+                              OrdersStrings.cardPaymentManualMode,
+                              OrdersStrings.cardPaymentManualModeAr,
+                            ),
                       style: AppTextStyles.bodySmall,
                     ),
                   ],
@@ -109,16 +137,32 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
               const SizedBox(height: AppSpacing.lg),
               LolipantsButton(
                 label: _processing
-                    ? 'Processing...'
+                    ? localizedFromLocale(
+                        locale,
+                        OrdersStrings.processing,
+                        OrdersStrings.processingAr,
+                      )
                     : quote == null
-                        ? 'Pricing unavailable'
-                        : 'Pay ${quote.total} ${quote.currency}',
+                        ? localizedFromLocale(
+                            locale,
+                            OrdersStrings.pricingUnavailable,
+                            OrdersStrings.pricingUnavailableAr,
+                          )
+                        : OrdersStrings.payAmount(
+                            '${quote.total}',
+                            quote.currency,
+                            locale,
+                          ),
                 onPressed:
                     _processing || quote == null ? null : () => _pay(draft),
               ),
               const SizedBox(height: AppSpacing.sm),
               LolipantsButton(
-                label: 'Back',
+                label: localizedFromLocale(
+                  locale,
+                  OrdersStrings.back,
+                  OrdersStrings.backAr,
+                ),
                 variant: LolipantsButtonVariant.secondary,
                 onPressed: _processing ? null : () => context.pop(),
               ),
@@ -131,11 +175,20 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
 
   Widget _buildAccessoryPayment(
     BuildContext context,
+    Locale locale,
     AccessoryCheckoutDraft draft,
   ) {
     final quote = draft.quote;
     return Scaffold(
-      appBar: AppBar(title: const Text('Payment')),
+      appBar: AppBar(
+        title: Text(
+          localizedFromLocale(
+            locale,
+            OrdersStrings.payment,
+            OrdersStrings.paymentAr,
+          ),
+        ),
+      ),
       body: Stack(
         children: [
           const ArabesqueBackground(),
@@ -146,7 +199,11 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
               const SizedBox(height: AppSpacing.md),
               if (quote != null)
                 Text(
-                  'Total: ${quote.total} ${quote.currency}',
+                  OrdersStrings.totalLine(
+                    '${quote.total}',
+                    quote.currency,
+                    locale,
+                  ),
                   style: AppTextStyles.titleSmall,
                 ),
               const SizedBox(height: AppSpacing.lg),
@@ -159,10 +216,22 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
               ],
               LolipantsButton(
                 label: _processing
-                    ? 'Processing...'
+                    ? localizedFromLocale(
+                        locale,
+                        OrdersStrings.processing,
+                        OrdersStrings.processingAr,
+                      )
                     : quote == null
-                        ? 'Pricing unavailable'
-                        : 'Pay ${quote.total} ${quote.currency}',
+                        ? localizedFromLocale(
+                            locale,
+                            OrdersStrings.pricingUnavailable,
+                            OrdersStrings.pricingUnavailableAr,
+                          )
+                        : OrdersStrings.payAmount(
+                            '${quote.total}',
+                            quote.currency,
+                            locale,
+                          ),
                 onPressed: _processing || quote == null
                     ? null
                     : () => _payAccessory(draft),
@@ -175,6 +244,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
   }
 
   Future<void> _payAccessory(AccessoryCheckoutDraft draft) async {
+    final locale = ref.read(settingsLocaleProvider);
     setState(() {
       _processing = true;
       _errorMessage = null;
@@ -188,7 +258,13 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
         quote.tailorId!.isEmpty ||
         draft.deliveryLat == null ||
         draft.deliveryLng == null) {
-      _fail('Pricing expired. Go back and refresh your quote.');
+      _fail(
+        localizedFromLocale(
+          locale,
+          OrdersStrings.pricingExpiredGoBack,
+          OrdersStrings.pricingExpiredGoBackAr,
+        ),
+      );
       return;
     }
 
@@ -210,7 +286,14 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
       idempotencyKey: draft.idempotencyKey,
     );
     final orderOrError = orderResult.fold<String>(
-      (e) => orderErrorMessage(e, fallback: 'Could not create order.'),
+      (e) => orderErrorMessage(
+        e,
+        fallback: localizedFromLocale(
+          locale,
+          OrdersStrings.couldNotCreateOrder,
+          OrdersStrings.couldNotCreateOrderAr,
+        ),
+      ),
       (_) => '',
     );
     if (orderOrError.isNotEmpty) {
@@ -219,7 +302,13 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
     }
     final order = orderResult.toNullable();
     if (order == null) {
-      _fail('Order creation returned no payload.');
+      _fail(
+        localizedFromLocale(
+          locale,
+          OrdersStrings.orderCreationNoPayload,
+          OrdersStrings.orderCreationNoPayloadAr,
+        ),
+      );
       return;
     }
     ref.read(accessoryCheckoutDraftProvider.notifier).state =
@@ -230,7 +319,14 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
       idempotencyKey: draft.idempotencyKey,
     );
     final intentError = intentResult.fold<String>(
-      (e) => orderErrorMessage(e, fallback: 'Could not start payment.'),
+      (e) => orderErrorMessage(
+        e,
+        fallback: localizedFromLocale(
+          locale,
+          OrdersStrings.couldNotStartPayment,
+          OrdersStrings.couldNotStartPaymentAr,
+        ),
+      ),
       (_) => '',
     );
     if (intentError.isNotEmpty) {
@@ -239,7 +335,13 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
     }
     final intent = intentResult.toNullable();
     if (intent == null) {
-      _fail('Payment intent returned no payload.');
+      _fail(
+        localizedFromLocale(
+          locale,
+          OrdersStrings.paymentIntentNoPayload,
+          OrdersStrings.paymentIntentNoPayloadAr,
+        ),
+      );
       return;
     }
     ref.read(accessoryCheckoutDraftProvider.notifier).state = (ref
@@ -252,7 +354,13 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
 
     final tapToken = await _requestTapToken();
     if (tapToken == null) {
-      _fail('Payment was cancelled.');
+      _fail(
+        localizedFromLocale(
+          locale,
+          OrdersStrings.paymentCancelled,
+          OrdersStrings.paymentCancelledAr,
+        ),
+      );
       return;
     }
 
@@ -264,7 +372,14 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
             idempotencyKey: draft.idempotencyKey,
           );
     final chargeError = chargeResult.fold<String>(
-      (e) => orderErrorMessage(e, fallback: 'Payment could not be captured.'),
+      (e) => orderErrorMessage(
+        e,
+        fallback: localizedFromLocale(
+          locale,
+          OrdersStrings.paymentNotCaptured,
+          OrdersStrings.paymentNotCapturedAr,
+        ),
+      ),
       (_) => '',
     );
     if (chargeError.isNotEmpty) {
@@ -278,10 +393,22 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
     context.go('/order/confirmed/${order.id}');
   }
 
-  Widget _buildWeddingPayment(BuildContext context, WeddingCheckoutDraft draft) {
+  Widget _buildWeddingPayment(
+    BuildContext context,
+    Locale locale,
+    WeddingCheckoutDraft draft,
+  ) {
     final quote = draft.quote;
     return Scaffold(
-      appBar: AppBar(title: const Text('Payment')),
+      appBar: AppBar(
+        title: Text(
+          localizedFromLocale(
+            locale,
+            OrdersStrings.payment,
+            OrdersStrings.paymentAr,
+          ),
+        ),
+      ),
       body: Stack(
         children: [
           const ArabesqueBackground(),
@@ -292,14 +419,22 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
               const SizedBox(height: AppSpacing.md),
               if (quote != null) ...[
                 Text(
-                  'Total: ${quote.total} ${quote.currency}',
+                  OrdersStrings.totalLine(
+                    '${quote.total}',
+                    quote.currency,
+                    locale,
+                  ),
                   style: AppTextStyles.titleSmall,
                 ),
                 if (quote.isRent && quote.insuranceDeposit != null)
                   Padding(
                     padding: const EdgeInsets.only(top: AppSpacing.sm),
                     child: Text(
-                      'Includes ${quote.insuranceDeposit} ${quote.currency} refundable deposit',
+                      OrdersStrings.includesRefundableDeposit(
+                        '${quote.insuranceDeposit}',
+                        quote.currency,
+                        locale,
+                      ),
                       style: AppTextStyles.bodySmall,
                     ),
                   ),
@@ -314,10 +449,22 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
               ],
               LolipantsButton(
                 label: _processing
-                    ? 'Processing...'
+                    ? localizedFromLocale(
+                        locale,
+                        OrdersStrings.processing,
+                        OrdersStrings.processingAr,
+                      )
                     : quote == null
-                        ? 'Pricing unavailable'
-                        : 'Pay ${quote.total} ${quote.currency}',
+                        ? localizedFromLocale(
+                            locale,
+                            OrdersStrings.pricingUnavailable,
+                            OrdersStrings.pricingUnavailableAr,
+                          )
+                        : OrdersStrings.payAmount(
+                            '${quote.total}',
+                            quote.currency,
+                            locale,
+                          ),
                 onPressed:
                     _processing || quote == null ? null : () => _payWedding(draft),
               ),
@@ -329,6 +476,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
   }
 
   Future<void> _payWedding(WeddingCheckoutDraft draft) async {
+    final locale = ref.read(settingsLocaleProvider);
     setState(() {
       _processing = true;
       _errorMessage = null;
@@ -342,7 +490,13 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
         quote.tailorId!.isEmpty ||
         draft.deliveryLat == null ||
         draft.deliveryLng == null) {
-      _fail('Pricing expired. Go back and refresh your quote.');
+      _fail(
+        localizedFromLocale(
+          locale,
+          OrdersStrings.pricingExpiredGoBack,
+          OrdersStrings.pricingExpiredGoBackAr,
+        ),
+      );
       return;
     }
 
@@ -365,7 +519,14 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
       idempotencyKey: draft.idempotencyKey,
     );
     final orderOrError = orderResult.fold<String>(
-      (e) => orderErrorMessage(e, fallback: 'Could not create order.'),
+      (e) => orderErrorMessage(
+        e,
+        fallback: localizedFromLocale(
+          locale,
+          OrdersStrings.couldNotCreateOrder,
+          OrdersStrings.couldNotCreateOrderAr,
+        ),
+      ),
       (_) => '',
     );
     if (orderOrError.isNotEmpty) {
@@ -374,7 +535,13 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
     }
     final order = orderResult.toNullable();
     if (order == null) {
-      _fail('Order creation returned no payload.');
+      _fail(
+        localizedFromLocale(
+          locale,
+          OrdersStrings.orderCreationNoPayload,
+          OrdersStrings.orderCreationNoPayloadAr,
+        ),
+      );
       return;
     }
     ref.read(weddingCheckoutDraftProvider.notifier).state =
@@ -385,7 +552,14 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
       idempotencyKey: draft.idempotencyKey,
     );
     final intentError = intentResult.fold<String>(
-      (e) => orderErrorMessage(e, fallback: 'Could not start payment.'),
+      (e) => orderErrorMessage(
+        e,
+        fallback: localizedFromLocale(
+          locale,
+          OrdersStrings.couldNotStartPayment,
+          OrdersStrings.couldNotStartPaymentAr,
+        ),
+      ),
       (_) => '',
     );
     if (intentError.isNotEmpty) {
@@ -394,7 +568,13 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
     }
     final intent = intentResult.toNullable();
     if (intent == null) {
-      _fail('Payment intent returned no payload.');
+      _fail(
+        localizedFromLocale(
+          locale,
+          OrdersStrings.paymentIntentNoPayload,
+          OrdersStrings.paymentIntentNoPayloadAr,
+        ),
+      );
       return;
     }
     ref.read(weddingCheckoutDraftProvider.notifier).state = (ref
@@ -404,7 +584,13 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
 
     final tapToken = await _requestTapToken();
     if (tapToken == null) {
-      _fail('Payment was cancelled.');
+      _fail(
+        localizedFromLocale(
+          locale,
+          OrdersStrings.paymentCancelled,
+          OrdersStrings.paymentCancelledAr,
+        ),
+      );
       return;
     }
 
@@ -416,7 +602,14 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
             idempotencyKey: draft.idempotencyKey,
           );
     final chargeError = chargeResult.fold<String>(
-      (e) => orderErrorMessage(e, fallback: 'Payment could not be captured.'),
+      (e) => orderErrorMessage(
+        e,
+        fallback: localizedFromLocale(
+          locale,
+          OrdersStrings.paymentNotCaptured,
+          OrdersStrings.paymentNotCapturedAr,
+        ),
+      ),
       (_) => '',
     );
     if (chargeError.isNotEmpty) {
@@ -431,6 +624,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
   }
 
   Future<void> _pay(CheckoutDraft draft) async {
+    final locale = ref.read(settingsLocaleProvider);
     setState(() {
       _processing = true;
       _errorMessage = null;
@@ -442,7 +636,13 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
     final paymentsRepo = ref.read(paymentsRepositoryProvider);
     final designId = draft.design.designId;
     if (designId == null || designId.isEmpty) {
-      _fail('Please save the design before ordering.');
+      _fail(
+        localizedFromLocale(
+          locale,
+          OrdersStrings.saveDesignBeforeOrder,
+          OrdersStrings.saveDesignBeforeOrderAr,
+        ),
+      );
       return;
     }
 
@@ -452,7 +652,13 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
         quote.tailorId!.isEmpty ||
         draft.deliveryLat == null ||
         draft.deliveryLng == null) {
-      _fail('Pricing expired. Go back and refresh your quote.');
+      _fail(
+        localizedFromLocale(
+          locale,
+          OrdersStrings.pricingExpiredGoBack,
+          OrdersStrings.pricingExpiredGoBackAr,
+        ),
+      );
       return;
     }
 
@@ -476,7 +682,14 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
       quoteLockToken: quote.quoteLockToken,
     );
     final orderOrError = orderResult.fold<String>(
-      (e) => orderErrorMessage(e, fallback: 'Could not create order.'),
+      (e) => orderErrorMessage(
+        e,
+        fallback: localizedFromLocale(
+          locale,
+          OrdersStrings.couldNotCreateOrder,
+          OrdersStrings.couldNotCreateOrderAr,
+        ),
+      ),
       (_) => '',
     );
     if (orderOrError.isNotEmpty) {
@@ -485,7 +698,13 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
     }
     final order = orderResult.toNullable();
     if (order == null) {
-      _fail('Order creation returned no payload.');
+      _fail(
+        localizedFromLocale(
+          locale,
+          OrdersStrings.orderCreationNoPayload,
+          OrdersStrings.orderCreationNoPayloadAr,
+        ),
+      );
       return;
     }
     ref.read(checkoutDraftProvider.notifier).state =
@@ -496,7 +715,14 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
       idempotencyKey: draft.idempotencyKey,
     );
     final intentError = intentResult.fold<String>(
-      (e) => orderErrorMessage(e, fallback: 'Could not start payment.'),
+      (e) => orderErrorMessage(
+        e,
+        fallback: localizedFromLocale(
+          locale,
+          OrdersStrings.couldNotStartPayment,
+          OrdersStrings.couldNotStartPaymentAr,
+        ),
+      ),
       (_) => '',
     );
     if (intentError.isNotEmpty) {
@@ -505,7 +731,13 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
     }
     final intent = intentResult.toNullable();
     if (intent == null) {
-      _fail('Payment intent returned no payload.');
+      _fail(
+        localizedFromLocale(
+          locale,
+          OrdersStrings.paymentIntentNoPayload,
+          OrdersStrings.paymentIntentNoPayloadAr,
+        ),
+      );
       return;
     }
     ref.read(checkoutDraftProvider.notifier).state = (ref
@@ -518,7 +750,13 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
     // sandbox path so dev flows don't need a Tap merchant account.
     final tapToken = await _requestTapToken();
     if (tapToken == null) {
-      _fail('Payment was cancelled.');
+      _fail(
+        localizedFromLocale(
+          locale,
+          OrdersStrings.paymentCancelled,
+          OrdersStrings.paymentCancelledAr,
+        ),
+      );
       return;
     }
 
@@ -530,7 +768,14 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
             idempotencyKey: draft.idempotencyKey,
           );
     final chargeError = chargeResult.fold<String>(
-      (e) => orderErrorMessage(e, fallback: 'Payment could not be captured.'),
+      (e) => orderErrorMessage(
+        e,
+        fallback: localizedFromLocale(
+          locale,
+          OrdersStrings.paymentNotCaptured,
+          OrdersStrings.paymentNotCapturedAr,
+        ),
+      ),
       (_) => '',
     );
     if (chargeError.isNotEmpty) {
@@ -556,10 +801,11 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
     if (kDebugMode || kFeatureMockPayment) {
       return _kSandboxToken;
     }
+    final locale = ref.read(settingsLocaleProvider);
     final token = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => const _TapTokenEntrySheet(),
+      builder: (_) => _TapTokenEntrySheet(locale: locale),
     );
     return token;
   }
@@ -592,8 +838,9 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
 }
 
 class _DesignFabricSummary extends StatelessWidget {
-  const _DesignFabricSummary({required this.design});
+  const _DesignFabricSummary({required this.locale, required this.design});
 
+  final Locale locale;
   final OrderDesignDraft design;
 
   @override
@@ -617,7 +864,14 @@ class _DesignFabricSummary extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Fabric', style: AppTextStyles.titleSmall),
+          Text(
+            localizedFromLocale(
+              locale,
+              OrdersStrings.fabric,
+              OrdersStrings.fabricAr,
+            ),
+            style: AppTextStyles.titleSmall,
+          ),
           const SizedBox(height: AppSpacing.xs),
           Text(line, style: AppTextStyles.bodyMedium),
         ],
@@ -628,11 +882,13 @@ class _DesignFabricSummary extends StatelessWidget {
 
 class _PriceCard extends StatelessWidget {
   const _PriceCard({
+    required this.locale,
     required this.draft,
     required this.expanded,
     required this.onToggle,
   });
 
+  final Locale locale;
   final CheckoutDraft draft;
   final bool expanded;
   final VoidCallback onToggle;
@@ -655,30 +911,64 @@ class _PriceCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   quote == null
-                      ? 'Fetching price...'
-                      : 'Total: ${quote.total} ${quote.currency}',
+                      ? localizedFromLocale(
+                          locale,
+                          OrdersStrings.fetchingPrice,
+                          OrdersStrings.fetchingPriceAr,
+                        )
+                      : OrdersStrings.totalLine(
+                          '${quote.total}',
+                          quote.currency,
+                          locale,
+                        ),
                   style: AppTextStyles.titleMedium,
                 ),
               ),
               TextButton(
                 onPressed: quote == null ? null : onToggle,
-                child: Text(expanded ? 'Hide' : 'Details'),
+                child: Text(
+                  expanded
+                      ? localizedFromLocale(
+                          locale,
+                          OrdersStrings.hide,
+                          OrdersStrings.hideAr,
+                        )
+                      : localizedFromLocale(
+                          locale,
+                          OrdersStrings.details,
+                          OrdersStrings.detailsAr,
+                        ),
+                ),
               ),
             ],
           ),
           if (quote?.tailorName != null && quote!.tailorName!.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.xs),
             Text(
-              'Tailor: ${quote.tailorName}',
+              OrdersStrings.tailorColon(quote.tailorName!, locale),
               style: AppTextStyles.bodySmall,
             ),
           ],
           if (expanded && quote != null) ...[
             const Divider(),
-            _Line(label: 'Base garment', amount: '${quote.basePrice}'),
-            _Line(label: 'Fabric', amount: '${quote.fabricFee}'),
             _Line(
-              label: 'Delivery (${quote.city})',
+              label: localizedFromLocale(
+                locale,
+                OrdersStrings.baseGarment,
+                OrdersStrings.baseGarmentAr,
+              ),
+              amount: '${quote.basePrice}',
+            ),
+            _Line(
+              label: localizedFromLocale(
+                locale,
+                OrdersStrings.fabric,
+                OrdersStrings.fabricAr,
+              ),
+              amount: '${quote.fabricFee}',
+            ),
+            _Line(
+              label: OrdersStrings.deliveryCityLine(quote.city, locale),
               amount: '${quote.deliveryFee}',
             ),
           ],
@@ -697,7 +987,9 @@ const String _kSandboxToken = '__sandbox__';
 /// This keeps payment confirmation production-safe on the server side while
 /// we pass through the token returned by the provider card flow.
 class _TapTokenEntrySheet extends StatefulWidget {
-  const _TapTokenEntrySheet();
+  const _TapTokenEntrySheet({required this.locale});
+
+  final Locale locale;
 
   @override
   State<_TapTokenEntrySheet> createState() => _TapTokenEntrySheetState();
@@ -726,33 +1018,59 @@ class _TapTokenEntrySheetState extends State<_TapTokenEntrySheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Complete Tap payment', style: AppTextStyles.titleMedium),
+          Text(
+            localizedFromLocale(
+              widget.locale,
+              OrdersStrings.completeTapPayment,
+              OrdersStrings.completeTapPaymentAr,
+            ),
+            style: AppTextStyles.titleMedium,
+          ),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            'Paste the Tap token generated by the card widget/session. '
-            'The app sends only this token to Lolipants API for capture.',
+            localizedFromLocale(
+              widget.locale,
+              OrdersStrings.tapTokenDescription,
+              OrdersStrings.tapTokenDescriptionAr,
+            ),
             style: AppTextStyles.bodySmall,
           ),
           const SizedBox(height: AppSpacing.md),
           TextField(
             controller: _controller,
             autofocus: true,
-            decoration: const InputDecoration(
-              labelText: 'Tap token',
-              hintText: 'tok_xxx or src_xxx',
+            decoration: InputDecoration(
+              labelText: localizedFromLocale(
+                widget.locale,
+                OrdersStrings.tapToken,
+                OrdersStrings.tapTokenAr,
+              ),
+              hintText: localizedFromLocale(
+                widget.locale,
+                OrdersStrings.tapTokenHint,
+                OrdersStrings.tapTokenHintAr,
+              ),
             ),
             onChanged: (_) => setState(() {}),
           ),
           const SizedBox(height: AppSpacing.lg),
           LolipantsButton(
-            label: 'Confirm token',
+            label: localizedFromLocale(
+              widget.locale,
+              OrdersStrings.confirmToken,
+              OrdersStrings.confirmTokenAr,
+            ),
             onPressed: token.isEmpty
                 ? null
                 : () => Navigator.of(context).pop(token),
           ),
           const SizedBox(height: AppSpacing.sm),
           LolipantsButton(
-            label: 'Cancel',
+            label: localizedFromLocale(
+              widget.locale,
+              OrdersStrings.cancel,
+              OrdersStrings.cancelAr,
+            ),
             variant: LolipantsButtonVariant.secondary,
             onPressed: () => Navigator.of(context).pop(),
           ),

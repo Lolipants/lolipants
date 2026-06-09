@@ -61,7 +61,12 @@ class AiDesignService {
     final body = e.response?.data;
     var message = e.message ?? 'network';
     if (body is Map && body['error'] != null) {
-      message = body['error'].toString();
+      final err = body['error'];
+      if (err is Map && err['message'] != null) {
+        message = err['message'].toString();
+      } else {
+        message = err.toString();
+      }
     }
     if (e.type == DioExceptionType.connectionTimeout ||
         e.type == DioExceptionType.receiveTimeout ||

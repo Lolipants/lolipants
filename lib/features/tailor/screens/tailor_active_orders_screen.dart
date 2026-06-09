@@ -12,7 +12,6 @@ class TailorActiveOrdersScreen extends StatelessWidget {
     return const TailorQueueScaffold(
       bucket: TailorQueueBucket.active,
       detailSubPath: 'active',
-      emptyMessage: 'No orders in progress.',
     );
   }
 }

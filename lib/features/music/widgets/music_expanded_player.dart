@@ -1,11 +1,16 @@
+import 'dart:ui' show Locale;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
+import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
-import 'package:lolipants/features/music/models/track.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/core/permissions/device_permission_prompt.dart';
+import 'package:lolipants/features/music/models/track.dart';
 import 'package:lolipants/features/music/providers/music_provider.dart';
+import 'package:lolipants/features/settings/providers/settings_provider.dart';
 
 /// Full-height modal sheet showing artwork, transport controls, and the
 /// current queue. Opened from the mini-player.
@@ -15,6 +20,7 @@ class MusicExpandedPlayer extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final locale = ref.watch(settingsLocaleProvider);
     final state = ref.watch(musicProvider);
     final track = state.currentTrack;
     final mediaSize = MediaQuery.sizeOf(context);
@@ -29,10 +35,15 @@ class MusicExpandedPlayer extends ConsumerWidget {
             _Handle(),
             Expanded(
               child: state.queue.isEmpty
-                  ? const _EmptyQueue()
+                  ? _EmptyQueue(locale: locale)
                   : track == null
-                      ? const _EmptyState()
-                      : _LoadedBody(state: state, track: track, ref: ref),
+                      ? _EmptyState(locale: locale)
+                      : _LoadedBody(
+                          locale: locale,
+                          state: state,
+                          track: track,
+                          ref: ref,
+                        ),
             ),
           ],
         ),
@@ -59,7 +70,9 @@ class _Handle extends StatelessWidget {
 }
 
 class _EmptyQueue extends ConsumerWidget {
-  const _EmptyQueue();
+  const _EmptyQueue({required this.locale});
+
+  final Locale locale;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -75,14 +88,21 @@ class _EmptyQueue extends ConsumerWidget {
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
-            'No music yet',
+            localizedFromLocale(
+              locale,
+              AppStrings.musicNoTracksYet,
+              AppStrings.musicNoTracksYetAr,
+            ),
             textAlign: TextAlign.center,
             style: AppTextStyles.titleMedium,
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            'Choose MP3 or other audio files stored on this device. '
-            'Your selection is remembered for next time.',
+            localizedFromLocale(
+              locale,
+              AppStrings.musicEmptyQueueBody,
+              AppStrings.musicEmptyQueueBodyAr,
+            ),
             textAlign: TextAlign.center,
             style: AppTextStyles.bodySmall.copyWith(color: AppColors.dust),
           ),
@@ -97,7 +117,13 @@ class _EmptyQueue extends ConsumerWidget {
               await ref.read(musicProvider.notifier).pickAndAddTracks();
             },
             icon: const Icon(Icons.folder_open),
-            label: const Text('Choose files'),
+            label: Text(
+              localizedFromLocale(
+                locale,
+                AppStrings.musicChooseFiles,
+                AppStrings.musicChooseFilesAr,
+              ),
+            ),
             style: FilledButton.styleFrom(
               backgroundColor: AppColors.gold,
               foregroundColor: AppColors.ink,
@@ -110,13 +136,19 @@ class _EmptyQueue extends ConsumerWidget {
 }
 
 class _EmptyState extends StatelessWidget {
-  const _EmptyState();
+  const _EmptyState({required this.locale});
+
+  final Locale locale;
 
   @override
   Widget build(BuildContext context) {
     return Center(
       child: Text(
-        'No track loaded.',
+        localizedFromLocale(
+          locale,
+          AppStrings.musicNoTrackLoaded,
+          AppStrings.musicNoTrackLoadedAr,
+        ),
         style: AppTextStyles.bodyMedium,
       ),
     );
@@ -125,11 +157,13 @@ class _EmptyState extends StatelessWidget {
 
 class _LoadedBody extends StatelessWidget {
   const _LoadedBody({
+    required this.locale,
     required this.state,
     required this.track,
     required this.ref,
   });
 
+  final Locale locale;
   final MusicState state;
   final Track track;
   final WidgetRef ref;
@@ -161,7 +195,11 @@ class _LoadedBody extends StatelessWidget {
                 size: 20,
               ),
               label: Text(
-                'Add music',
+                localizedFromLocale(
+                  locale,
+                  AppStrings.musicAddMusic,
+                  AppStrings.musicAddMusicAr,
+                ),
                 style: AppTextStyles.labelGold.copyWith(fontSize: 13),
               ),
             ),

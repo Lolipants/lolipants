@@ -5,6 +5,24 @@ import {
 } from "../lib/geminiImageClient";
 
 describe("geminiImageClient", () => {
+  it("uses prompt-only home draft mode without refine or fabric language", () => {
+    const prompt = buildGarmentLookPrompt({
+      garmentType: "abaya",
+      primaryColour: "#C9A84C",
+      accentColour: "#FFFFFF",
+      fabricQuality: "standard",
+      userExtra: "Elegant gold abaya for a wedding",
+      isPromptOnlyHomeDraft: true,
+    });
+    expect(prompt).toContain("Creative brief:");
+    expect(prompt).toContain("Elegant gold abaya for a wedding");
+    expect(prompt).toContain("ON the mannequin");
+    expect(prompt).toContain("pure solid white (#FFFFFF)");
+    expect(prompt).not.toContain("REFINE");
+    expect(prompt).not.toContain("Modular design");
+    expect(prompt).not.toContain("Fabric material");
+  });
+
   it("uses catalogue dress prompt without configurator slots", () => {
     const prompt = buildGarmentLookPrompt({
       garmentType: "dress",

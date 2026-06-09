@@ -1,3 +1,5 @@
+import 'dart:ui' show Locale;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -14,20 +16,26 @@ import 'package:lolipants/features/browse/models/mannequin_option.dart';
 import 'package:lolipants/features/editor/data/built_in_mannequin_assets.dart';
 import 'package:lolipants/features/browse/logic/region_preset_editor.dart';
 import 'package:lolipants/features/editor/models/editor_preset_args.dart';
+import 'package:lolipants/features/home/models/home_flow_selection.dart';
+import 'package:lolipants/features/home/providers/home_flow_provider.dart';
 import 'package:lolipants/features/editor/providers/editor_provider.dart';
 import 'package:lolipants/features/editor/widgets/bundled_mannequin_image.dart';
 import 'package:lolipants/features/editor/widgets/mannequin_viewer.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
 import 'package:lolipants/core/l10n/app_localization.dart';
+import 'package:lolipants/features/settings/providers/settings_provider.dart';
 
 /// Selects mannequin shape before opening the editor.
 class MannequinSelectorScreen extends ConsumerStatefulWidget {
   /// Creates the mannequin picker screen.
-  const MannequinSelectorScreen({this.pendingPreset, super.key});
+  const MannequinSelectorScreen({this.pendingPreset, this.homeFlow, super.key});
 
   /// Catalogue design to open after mannequin selection (from home/browse).
   final EditorPresetArgs? pendingPreset;
+
+  /// Home wizard selections when opened from the guided home flow.
+  final HomeFlowSelection? homeFlow;
 
   @override
   ConsumerState<MannequinSelectorScreen> createState() =>
@@ -50,6 +58,7 @@ class _MannequinSelectorScreenState
   String? _customPhotoPath;
 
   Future<void> _pickPhoto() async {
+    final locale = ref.read(settingsLocaleProvider);
     final picker = ImagePicker();
     final source = await showModalBottomSheet<ImageSource>(
       context: context,
@@ -59,12 +68,24 @@ class _MannequinSelectorScreenState
           children: [
             ListTile(
               leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('Choose from gallery'),
+              title: Text(
+                localizedFromLocale(
+                  locale,
+                  AppStrings.mannequinChooseFromGallery,
+                  AppStrings.mannequinChooseFromGalleryAr,
+                ),
+              ),
               onTap: () => Navigator.of(context).pop(ImageSource.gallery),
             ),
             ListTile(
               leading: const Icon(Icons.camera_alt_outlined),
-              title: const Text('Take a photo'),
+              title: Text(
+                localizedFromLocale(
+                  locale,
+                  AppStrings.mannequinTakePhoto,
+                  AppStrings.mannequinTakePhotoAr,
+                ),
+              ),
               onTap: () => Navigator.of(context).pop(ImageSource.camera),
             ),
           ],
@@ -110,6 +131,7 @@ class _MannequinSelectorScreenState
 
   @override
   Widget build(BuildContext context) {
+    final locale = ref.watch(settingsLocaleProvider);
     final editor = ref.watch(editorProvider);
     final gender = ref.watch(userGenderProvider);
     final mannequins = sortMannequinsForGender(_bundledMannequins, gender);
@@ -121,9 +143,21 @@ class _MannequinSelectorScreenState
       });
     }
 
-    return Scaffold(
+    return PopScope(
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop && widget.homeFlow != null) {
+          ref.read(homeFlowSelectionProvider.notifier).resetToStart();
+        }
+      },
+      child: Scaffold(
       appBar: AppBar(
-        title: Text(pickSlashFromContext(context, AppStrings.chooseMannequin)),
+        title: Text(
+          localizedFromLocale(
+            locale,
+            AppStrings.chooseMannequinEn,
+            AppStrings.chooseMannequinAr,
+          ),
+        ),
       ),
       body: Stack(
         children: [
@@ -148,6 +182,7 @@ class _MannequinSelectorScreenState
                               final item = mannequins[index];
                               final selected = _selectedId == item.id;
                               return _MannequinCard(
+                                locale: locale,
                                 selected: selected,
                                 english: item.labelEn,
                                 arabic: item.labelAr,
@@ -183,14 +218,22 @@ class _MannequinSelectorScreenState
                         OutlinedButton.icon(
                           onPressed: _pickPhoto,
                           icon: const Icon(Icons.add_a_photo_outlined),
-                          label: const Text(
-                            'Upload your photo (AI body reference)',
+                          label: Text(
+                            localizedFromLocale(
+                              locale,
+                              AppStrings.mannequinUploadPhotoCta,
+                              AppStrings.mannequinUploadPhotoCtaAr,
+                            ),
                           ),
                         ),
                         if (_customPhotoPath != null) ...[
                           const SizedBox(height: AppSpacing.sm),
                           Text(
-                            'Custom photo selected — used for AI output.',
+                            localizedFromLocale(
+                              locale,
+                              AppStrings.mannequinCustomPhotoHint,
+                              AppStrings.mannequinCustomPhotoHintAr,
+                            ),
                             style: AppTextStyles.bodySmall.copyWith(
                               color: AppColors.gold,
                             ),
@@ -204,21 +247,31 @@ class _MannequinSelectorScreenState
               Padding(
                 padding: const EdgeInsets.all(AppSpacing.xl),
                 child: LolipantsButton(
-                  label: AppStrings.startDesigningCta,
+                  label: localizedFromLocale(
+                    locale,
+                    AppStrings.homeFlowStartDesigning,
+                    AppStrings.homeFlowStartDesigningAr,
+                  ),
                   onPressed: () {
                     final pending = widget.pendingPreset;
+                    final homeFlow = widget.homeFlow;
                     final preset = pending != null
                         ? editorPresetWithMannequin(pending, _selectedId)
                         : null;
+                    final source = homeFlow != null && homeFlow.isComplete
+                        ? 'home_flow'
+                        : preset != null
+                            ? 'browse_design'
+                            : 'mannequin_selector';
                     context.push(
                       '/editor',
                       extra: EditorBootstrapArgs(
                         mannequinId: _selectedId,
                         customMannequinImagePath: _customPhotoPath,
                         preset: preset,
-                        source: preset != null
-                            ? 'browse_design'
-                            : 'mannequin_selector',
+                        source: source,
+                        homeFlow: homeFlow,
+                        initialTab: _initialTabForFlow(homeFlow),
                       ),
                     );
                   },
@@ -228,12 +281,26 @@ class _MannequinSelectorScreenState
           ),
         ],
       ),
+      ),
     );
   }
 }
 
+String? _initialTabForFlow(HomeFlowSelection? flow) {
+  if (flow == null || !flow.isComplete) return null;
+  if (flow.style == HomeStyleLane.wedding &&
+      flow.serviceType == HomeServiceType.finishProduct) {
+    return 'wedding';
+  }
+  if (flow.serviceType == HomeServiceType.designYourself) {
+    return 'build';
+  }
+  return 'build';
+}
+
 class _MannequinCard extends StatelessWidget {
   const _MannequinCard({
+    required this.locale,
     required this.selected,
     required this.english,
     required this.arabic,
@@ -241,6 +308,7 @@ class _MannequinCard extends StatelessWidget {
     required this.child,
   });
 
+  final Locale locale;
   final bool selected;
   final String english;
   final String arabic;
@@ -249,6 +317,11 @@ class _MannequinCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final label = localizedFromLocale(
+      locale,
+      english,
+      arabic.isNotEmpty ? arabic : english,
+    );
     return InkWell(
       borderRadius: BorderRadius.circular(AppRadius.md),
       onTap: onTap,
@@ -273,18 +346,10 @@ class _MannequinCard extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(
-              english,
+              label,
               textAlign: TextAlign.center,
               style: AppTextStyles.bodySmall.copyWith(
                 color: selected ? AppColors.gold : AppColors.dust,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              arabic,
-              textAlign: TextAlign.center,
-              style: AppTextStyles.bodySmall.copyWith(
-                color: selected ? AppColors.gold : AppColors.fog,
               ),
             ),
           ],

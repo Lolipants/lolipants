@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
+import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/features/editor/data/editor_text_fonts.dart';
 import 'package:lolipants/features/editor/providers/editor_provider.dart';
+import 'package:lolipants/features/settings/providers/settings_provider.dart';
 import 'package:lolipants/shared/widgets/full_spectrum_color_picker.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
 
 /// Text editing controls shown in the editor bottom panel.
-class TextToolPanel extends StatefulWidget {
+class TextToolPanel extends ConsumerStatefulWidget {
   const TextToolPanel({
     required this.layers,
     required this.selectedLayer,
@@ -32,10 +36,10 @@ class TextToolPanel extends StatefulWidget {
   final VoidCallback onRemoveSelected;
 
   @override
-  State<TextToolPanel> createState() => _TextToolPanelState();
+  ConsumerState<TextToolPanel> createState() => _TextToolPanelState();
 }
 
-class _TextToolPanelState extends State<TextToolPanel> {
+class _TextToolPanelState extends ConsumerState<TextToolPanel> {
   final _textController = TextEditingController();
 
   static const _colours = <Color>[
@@ -55,6 +59,7 @@ class _TextToolPanelState extends State<TextToolPanel> {
 
   @override
   Widget build(BuildContext context) {
+    final locale = ref.watch(settingsLocaleProvider);
     final selected = widget.selectedLayer;
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -64,8 +69,12 @@ class _TextToolPanelState extends State<TextToolPanel> {
             Expanded(
               child: TextField(
                 controller: _textController,
-                decoration: const InputDecoration(
-                  labelText: 'Type your text / اكتب نصك',
+                decoration: InputDecoration(
+                  labelText: localizedFromLocale(
+                    locale,
+                    AppStrings.editorTextTypeHint,
+                    AppStrings.editorTextTypeHintAr,
+                  ),
                 ),
               ),
             ),
@@ -75,13 +84,26 @@ class _TextToolPanelState extends State<TextToolPanel> {
                 widget.onAddLayer(_textController.text);
                 _textController.clear();
               },
-              child: const Text('Add to design'),
+              child: Text(
+                localizedFromLocale(
+                  locale,
+                  AppStrings.editorTextAddToDesign,
+                  AppStrings.editorTextAddToDesignAr,
+                ),
+              ),
             ),
           ],
         ),
         const SizedBox(height: AppSpacing.md),
         if (widget.layers.isNotEmpty) ...[
-          Text('Layers', style: AppTextStyles.titleSmall),
+          Text(
+            localizedFromLocale(
+              locale,
+              AppStrings.editorTextLayers,
+              AppStrings.editorTextLayersAr,
+            ),
+            style: AppTextStyles.titleSmall,
+          ),
           const SizedBox(height: AppSpacing.xs),
           Wrap(
             spacing: AppSpacing.xs,
@@ -96,7 +118,14 @@ class _TextToolPanelState extends State<TextToolPanel> {
           ),
           const SizedBox(height: AppSpacing.md),
         ],
-        Text('Font', style: AppTextStyles.titleSmall),
+        Text(
+          localizedFromLocale(
+            locale,
+            AppStrings.editorTextFont,
+            AppStrings.editorTextFontAr,
+          ),
+          style: AppTextStyles.titleSmall,
+        ),
         const SizedBox(height: AppSpacing.xs),
         SizedBox(
           height: 44,
@@ -132,7 +161,9 @@ class _TextToolPanelState extends State<TextToolPanel> {
           ),
         ],
         const SizedBox(height: AppSpacing.md),
-        Text('Size: ${selected?.fontSize.toStringAsFixed(0) ?? '-'}'),
+        Text(
+          '${localizedFromLocale(locale, AppStrings.editorTextSizePrefix, AppStrings.editorTextSizePrefixAr)}: ${selected?.fontSize.toStringAsFixed(0) ?? '-'}',
+        ),
         Slider(
           value: (selected?.fontSize ?? 20).clamp(12, 48),
           min: 12,
@@ -143,7 +174,9 @@ class _TextToolPanelState extends State<TextToolPanel> {
               : (value) => widget.onUpdateSelected(fontSize: value),
         ),
         const SizedBox(height: AppSpacing.xs),
-        Text('Rotation ${(selected?.rotation ?? 0).toStringAsFixed(2)} rad'),
+        Text(
+          '${localizedFromLocale(locale, AppStrings.editorTextRotationPrefix, AppStrings.editorTextRotationPrefixAr)} ${(selected?.rotation ?? 0).toStringAsFixed(2)} rad',
+        ),
         Slider(
           value: (selected?.rotation ?? 0).clamp(-3.14, 3.14),
           min: -3.14,
@@ -154,7 +187,14 @@ class _TextToolPanelState extends State<TextToolPanel> {
               : (value) => widget.onUpdateSelected(rotation: value),
         ),
         const SizedBox(height: AppSpacing.sm),
-        Text('Colour', style: AppTextStyles.titleSmall),
+        Text(
+          localizedFromLocale(
+            locale,
+            AppStrings.editorTextColour,
+            AppStrings.editorTextColourAr,
+          ),
+          style: AppTextStyles.titleSmall,
+        ),
         const SizedBox(height: AppSpacing.xs),
         Wrap(
           spacing: AppSpacing.xs,
@@ -195,13 +235,21 @@ class _TextToolPanelState extends State<TextToolPanel> {
         ),
         const SizedBox(height: AppSpacing.md),
         Text(
-          'Drag the text on the garment to reposition / اسحب النص على الملبس لتغيير موضعه',
+          localizedFromLocale(
+            locale,
+            AppStrings.editorTextDragHint,
+            AppStrings.editorTextDragHintAr,
+          ),
           style: AppTextStyles.bodySmall,
         ),
         const SizedBox(height: AppSpacing.md),
         if (selected != null)
           LolipantsButton(
-            label: 'Remove text / حذف النص',
+            label: localizedFromLocale(
+              locale,
+              AppStrings.editorTextRemove,
+              AppStrings.editorTextRemoveAr,
+            ),
             variant: LolipantsButtonVariant.destructive,
             onPressed: widget.onRemoveSelected,
           ),

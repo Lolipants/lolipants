@@ -1,3 +1,8 @@
+import 'dart:ui' show Locale;
+
+import 'package:lolipants/core/constants/app_strings.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
+
 /// Platform accessories catalogue row from `accessories`.
 class Accessory {
   const Accessory({
@@ -69,17 +74,37 @@ String accessoryCategoryFilterApiValue(AccessoryCategoryFilter filter) {
   }
 }
 
-String accessoryCategoryLabel(AccessoryCategoryFilter filter) {
+String accessoryCategoryLabel(Locale locale, AccessoryCategoryFilter filter) {
   switch (filter) {
     case AccessoryCategoryFilter.all:
-      return 'All';
+      return localizedFromLocale(
+        locale,
+        AppStrings.accessoryFilterAll,
+        AppStrings.accessoryFilterAllAr,
+      );
     case AccessoryCategoryFilter.scarf:
-      return 'Scarves';
+      return localizedFromLocale(
+        locale,
+        AppStrings.accessoryFilterScarves,
+        AppStrings.accessoryFilterScarvesAr,
+      );
     case AccessoryCategoryFilter.bag:
-      return 'Bags';
+      return localizedFromLocale(
+        locale,
+        AppStrings.accessoryFilterBags,
+        AppStrings.accessoryFilterBagsAr,
+      );
     case AccessoryCategoryFilter.jewellery:
-      return 'Jewellery';
+      return localizedFromLocale(
+        locale,
+        AppStrings.accessoryFilterJewellery,
+        AppStrings.accessoryFilterJewelleryAr,
+      );
     case AccessoryCategoryFilter.other:
-      return 'Other';
+      return localizedFromLocale(
+        locale,
+        AppStrings.accessoryFilterOther,
+        AppStrings.accessoryFilterOtherAr,
+      );
   }
 }

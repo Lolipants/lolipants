@@ -4,7 +4,9 @@ import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/features/editor/providers/editor_provider.dart';
+import 'package:lolipants/features/settings/providers/settings_provider.dart';
 import 'package:lolipants/shared/widgets/full_spectrum_color_picker.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
 
@@ -54,16 +56,42 @@ class EditorStylePickerSheet extends ConsumerWidget {
     Color(0xFF4A5568),
   ];
 
-  static const _qualityOptions = <({String id, String label})>[
-    (id: 'standard', label: 'Standard'),
-    (id: 'premium', label: 'Premium'),
-    (id: 'suit_grade', label: 'Suit grade'),
+  static const _qualityOptionIds = <String>[
+    'standard',
+    'premium',
+    'suit_grade',
   ];
+
+  static String _qualityLabel(Locale locale, String id) {
+    return switch (id) {
+      'premium' => localizedFromLocale(
+          locale,
+          AppStrings.editorQualityPremium,
+          AppStrings.editorQualityPremiumAr,
+        ),
+      'suit_grade' => localizedFromLocale(
+          locale,
+          AppStrings.editorQualitySuitGrade,
+          AppStrings.editorQualitySuitGradeAr,
+        ),
+      _ => localizedFromLocale(
+          locale,
+          AppStrings.editorQualityStandard,
+          AppStrings.editorQualityStandardAr,
+        ),
+    };
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final locale = ref.watch(settingsLocaleProvider);
     final editor = ref.watch(editorProvider);
     final notifier = ref.read(editorProvider.notifier);
+    final primaryColourTitle = localizedFromLocale(
+      locale,
+      AppStrings.editorBuildColorPrimary,
+      AppStrings.editorBuildColorPrimaryAr,
+    );
 
     return Column(
       children: [
@@ -80,29 +108,39 @@ class EditorStylePickerSheet extends ConsumerWidget {
             ),
             children: [
               Text(
-                'Style your piece',
+                localizedFromLocale(
+                  locale,
+                  AppStrings.editorStyleYourPiece,
+                  AppStrings.editorStyleYourPieceAr,
+                ),
                 style: AppTextStyles.titleMedium.copyWith(
                   color: AppColors.sand,
                 ),
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
-                'Choose a colour — changes apply to your design right away.',
+                localizedFromLocale(
+                  locale,
+                  AppStrings.editorStyleColourHint,
+                  AppStrings.editorStyleColourHintAr,
+                ),
                 style: AppTextStyles.bodySmall.copyWith(color: AppColors.fog),
               ),
               const SizedBox(height: AppSpacing.xl),
               _SectionCard(
                 icon: Icons.palette_outlined,
-                title: AppStrings.editorBuildColorPrimary,
+                title: primaryColourTitle,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
                         _SelectedColourPreview(
+                          locale: locale,
                           colour: editor.primaryColour,
                           onCustomTap: () => _pickCustomColour(
                             context,
+                            locale,
                             editor.primaryColour,
                             notifier.setPrimaryColour,
                           ),
@@ -121,11 +159,18 @@ class EditorStylePickerSheet extends ConsumerWidget {
                     TextButton.icon(
                       onPressed: () => _pickCustomColour(
                         context,
+                        locale,
                         editor.primaryColour,
                         notifier.setPrimaryColour,
                       ),
                       icon: const Icon(Icons.tune, size: 18),
-                      label: const Text('More colours…'),
+                      label: Text(
+                        localizedFromLocale(
+                          locale,
+                          AppStrings.editorMoreColours,
+                          AppStrings.editorMoreColoursAr,
+                        ),
+                      ),
                       style: TextButton.styleFrom(
                         foregroundColor: AppColors.gold,
                         padding: EdgeInsets.zero,
@@ -138,16 +183,20 @@ class EditorStylePickerSheet extends ConsumerWidget {
               const SizedBox(height: AppSpacing.lg),
               _SectionCard(
                 icon: Icons.grade_outlined,
-                title: 'Quality tier',
+                title: localizedFromLocale(
+                  locale,
+                  AppStrings.editorQualityTier,
+                  AppStrings.editorQualityTierAr,
+                ),
                 child: LayoutBuilder(
                   builder: (context, constraints) {
                     return SegmentedButton<String>(
                       segments: [
-                        for (final q in _qualityOptions)
+                        for (final id in _qualityOptionIds)
                           ButtonSegment<String>(
-                            value: q.id,
+                            value: id,
                             label: Text(
-                              q.label,
+                              _qualityLabel(locale, id),
                               style: const TextStyle(fontSize: 11),
                             ),
                           ),
@@ -183,7 +232,11 @@ class EditorStylePickerSheet extends ConsumerWidget {
             AppSpacing.lg + MediaQuery.paddingOf(context).bottom,
           ),
           child: LolipantsButton(
-            label: 'Done',
+            label: localizedFromLocale(
+              locale,
+              AppStrings.editorDone,
+              AppStrings.editorDoneAr,
+            ),
             onPressed: () => Navigator.of(context).pop(),
           ),
         ),
@@ -193,13 +246,18 @@ class EditorStylePickerSheet extends ConsumerWidget {
 
   Future<void> _pickCustomColour(
     BuildContext context,
+    Locale locale,
     Color current,
     ValueChanged<Color> onSelected,
   ) async {
     final picked = await showFullSpectrumColorPicker(
       context,
       initialColor: current,
-      title: 'Custom colour',
+      title: localizedFromLocale(
+        locale,
+        AppStrings.editorCustomColour,
+        AppStrings.editorCustomColourAr,
+      ),
     );
     if (picked != null) onSelected(picked);
   }
@@ -270,10 +328,12 @@ class _SectionCard extends StatelessWidget {
 
 class _SelectedColourPreview extends StatelessWidget {
   const _SelectedColourPreview({
+    required this.locale,
     required this.colour,
     required this.onCustomTap,
   });
 
+  final Locale locale;
   final Color colour;
   final VoidCallback onCustomTap;
 
@@ -302,7 +362,11 @@ class _SelectedColourPreview extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.xs),
         Text(
-          'Tap to fine-tune',
+          localizedFromLocale(
+            locale,
+            AppStrings.editorTapToFineTune,
+            AppStrings.editorTapToFineTuneAr,
+          ),
           style: AppTextStyles.bodySmall.copyWith(
             fontSize: 9,
             color: AppColors.fog,
@@ -393,4 +457,3 @@ class _ColourDot extends StatelessWidget {
     );
   }
 }
-

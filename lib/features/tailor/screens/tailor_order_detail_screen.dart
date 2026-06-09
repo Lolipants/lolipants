@@ -5,10 +5,13 @@ import 'package:lolipants/core/errors/app_exception.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/constants/tailor_strings.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/features/orders/models/order.dart';
 import 'package:lolipants/features/orders/models/order_status.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:lolipants/features/orders/widgets/order_status_timeline.dart';
+import 'package:lolipants/features/settings/providers/settings_provider.dart';
 import 'package:lolipants/features/tailor/providers/tailor_providers.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
@@ -43,19 +46,22 @@ class _TailorOrderDetailScreenState
 
   @override
   Widget build(BuildContext context) {
+    final locale = ref.watch(settingsLocaleProvider);
     final async = ref.watch(tailorOrderDetailProvider(widget.orderId));
     final displayOrder = _orderOverride ?? async.valueOrNull;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Order ${widget.orderId}',
-            style: AppTextStyles.titleMedium),
+        title: Text(
+          TailorStrings.orderTitle(widget.orderId, locale),
+          style: AppTextStyles.titleMedium,
+        ),
       ),
       body: Stack(
         children: [
           const ArabesqueBackground(),
           if (displayOrder != null)
-            _content(displayOrder)
+            _content(displayOrder, locale)
           else
             async.when(
               loading: () =>
@@ -64,20 +70,20 @@ class _TailorOrderDetailScreenState
                 child: Padding(
                   padding: const EdgeInsets.all(AppSpacing.xl),
                   child: Text(
-                    'Could not load order. $e',
+                    TailorStrings.couldNotLoadOrderError(e, locale),
                     textAlign: TextAlign.center,
                     style: AppTextStyles.bodyMedium,
                   ),
                 ),
               ),
-              data: (order) => _content(order),
+              data: (order) => _content(order, locale),
             ),
         ],
       ),
     );
   }
 
-  Widget _content(Order order) {
+  Widget _content(Order order, Locale locale) {
     final current = order.status;
     final allowed = _tailorTransitions[current.name] ??
         _tailorTransitions[_serverKey(current)] ??
@@ -85,23 +91,31 @@ class _TailorOrderDetailScreenState
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.xl),
       children: [
-        _SummaryCard(order: order, showStatus: true),
+        _SummaryCard(order: order, showStatus: true, locale: locale),
         if (order.printImageUrl != null &&
             order.printImageUrl!.trim().isNotEmpty) ...[
           const SizedBox(height: AppSpacing.md),
           LolipantsButton(
-            label: 'Download print file / تحميل ملف الطباعة',
+            label: localizedFromLocale(
+              locale,
+              TailorStrings.downloadPrintFile,
+              TailorStrings.downloadPrintFileAr,
+            ),
             variant: LolipantsButtonVariant.secondary,
-            onPressed: () => _openUrl(order.printImageUrl!),
+            onPressed: () => _openUrl(order.printImageUrl!, locale),
           ),
         ],
         if (order.sketchImageUrl != null &&
             order.sketchImageUrl!.trim().isNotEmpty) ...[
           const SizedBox(height: AppSpacing.sm),
           LolipantsButton(
-            label: 'Download sketch / تحميل السكتش',
+            label: localizedFromLocale(
+              locale,
+              TailorStrings.downloadSketch,
+              TailorStrings.downloadSketchAr,
+            ),
             variant: LolipantsButtonVariant.secondary,
-            onPressed: () => _openUrl(order.sketchImageUrl!),
+            onPressed: () => _openUrl(order.sketchImageUrl!, locale),
           ),
         ],
         const SizedBox(height: AppSpacing.lg),
@@ -109,33 +123,45 @@ class _TailorOrderDetailScreenState
         const SizedBox(height: AppSpacing.lg),
         if (current == OrderStatus.placed) ...[
           LolipantsButton(
-            label: 'Accept this order',
+            label: localizedFromLocale(
+              locale,
+              TailorStrings.acceptThisOrder,
+              TailorStrings.acceptThisOrderAr,
+            ),
             loading: _busy,
-            onPressed: _busy ? null : () => _accept(order),
+            onPressed: _busy ? null : () => _accept(order, locale),
           ),
           const SizedBox(height: AppSpacing.sm),
           LolipantsButton(
-            label: 'Decline with reason',
+            label: localizedFromLocale(
+              locale,
+              TailorStrings.declineWithReason,
+              TailorStrings.declineWithReasonAr,
+            ),
             variant: LolipantsButtonVariant.destructive,
-            onPressed: _busy ? null : () => _declineWithReason(order),
+            onPressed: _busy ? null : () => _declineWithReason(order, locale),
           ),
         ] else ...[
           for (final next in allowed)
             Padding(
               padding: const EdgeInsets.only(bottom: AppSpacing.sm),
               child: LolipantsButton(
-                label: _advanceButtonLabel(next),
+                label: _advanceButtonLabel(next, locale),
                 variant: next == 'cancelled'
                     ? LolipantsButtonVariant.destructive
                     : LolipantsButtonVariant.primary,
                 loading: _busy,
-                onPressed: _busy ? null : () => _advance(order, next),
+                onPressed: _busy ? null : () => _advance(order, next, locale),
               ),
             ),
         ],
         const SizedBox(height: AppSpacing.sm),
         LolipantsButton(
-          label: 'Back',
+          label: localizedFromLocale(
+            locale,
+            TailorStrings.back,
+            TailorStrings.backAr,
+          ),
           variant: LolipantsButtonVariant.secondary,
           onPressed: () => context.pop(),
         ),
@@ -156,49 +182,73 @@ class _TailorOrderDetailScreenState
     }
   }
 
-  String _advanceButtonLabel(String next) {
-    if (next == 'cancelled') return 'Cancel order';
-    if (next == 'ready_to_ship') return 'Hand off to delivery';
-    return 'Advance to ${_prettyStatus(next)}';
-  }
-
-  String _prettyStatus(String key) {
+  OrderStatus? _statusFromKey(String key) {
     switch (key) {
       case 'confirmed':
-        return 'Confirmed';
+        return OrderStatus.confirmed;
       case 'cutting':
-        return 'Cutting';
+        return OrderStatus.cutting;
       case 'stitching':
-        return 'Stitching';
+        return OrderStatus.stitching;
       case 'embroidery':
-        return 'Embroidery';
+        return OrderStatus.embroidery;
       case 'quality_check':
-        return 'Quality check';
+        return OrderStatus.qualityCheck;
       case 'ready_to_ship':
-        return 'Ready to ship';
+        return OrderStatus.readyToShip;
       case 'out_for_delivery':
-        return 'Out for delivery';
+        return OrderStatus.outForDelivery;
       case 'delivered':
-        return 'Delivered';
+        return OrderStatus.delivered;
       case 'cancelled':
-        return 'Cancelled';
+        return OrderStatus.cancelled;
       default:
-        return key;
+        return null;
     }
   }
 
-  Future<void> _accept(Order order) async {
+  String _prettyStatus(String key, Locale locale) {
+    final status = _statusFromKey(key);
+    if (status != null) return status.labelFor(locale);
+    return key;
+  }
+
+  String _advanceButtonLabel(String next, Locale locale) {
+    if (next == 'cancelled') {
+      return localizedFromLocale(
+        locale,
+        TailorStrings.cancelOrder,
+        TailorStrings.cancelOrderAr,
+      );
+    }
+    if (next == 'ready_to_ship') {
+      return localizedFromLocale(
+        locale,
+        TailorStrings.handOffToDelivery,
+        TailorStrings.handOffToDeliveryAr,
+      );
+    }
+    return TailorStrings.advanceTo(_prettyStatus(next, locale), locale);
+  }
+
+  Future<void> _accept(Order order, Locale locale) async {
     setState(() => _busy = true);
     final tailorRepo = ref.read(tailorRepositoryProvider);
     if (order.status != OrderStatus.placed) {
-      _snack('Order is already confirmed');
+      _snack(
+        localizedFromLocale(
+          locale,
+          TailorStrings.orderAlreadyConfirmed,
+          TailorStrings.orderAlreadyConfirmedAr,
+        ),
+      );
       _unbusy();
       return;
     }
     final claim = await tailorRepo.claim(order.id);
     final claimErr = claim.fold<String?>(_tailorErrorMessage, (_) => null);
     if (claimErr != null) {
-      _snack('Could not accept order: $claimErr');
+      _snack(TailorStrings.couldNotAcceptOrder(claimErr, locale));
       _unbusy();
       return;
     }
@@ -207,34 +257,64 @@ class _TailorOrderDetailScreenState
       status: 'confirmed',
     );
     advance.fold(
-      (e) => _snack('Could not confirm: ${_tailorErrorMessage(e)}'),
+      (e) => _snack(TailorStrings.couldNotConfirm(_tailorErrorMessage(e), locale)),
       (updated) {
-        _snack('Order accepted');
+        _snack(
+          localizedFromLocale(
+            locale,
+            TailorStrings.orderAccepted,
+            TailorStrings.orderAcceptedAr,
+          ),
+        );
         _finishMutation(updated);
       },
     );
     if (!advance.isRight()) _unbusy();
   }
 
-  Future<void> _declineWithReason(Order order) async {
+  Future<void> _declineWithReason(Order order, Locale locale) async {
     final controller = TextEditingController();
     final reason = await showDialog<String?>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Decline order'),
+        title: Text(
+          localizedFromLocale(
+            locale,
+            TailorStrings.declineOrderTitle,
+            TailorStrings.declineOrderTitleAr,
+          ),
+        ),
         content: TextField(
           controller: controller,
-          decoration: const InputDecoration(labelText: 'Reason'),
+          decoration: InputDecoration(
+            labelText: localizedFromLocale(
+              locale,
+              TailorStrings.reason,
+              TailorStrings.reasonAr,
+            ),
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(null),
-            child: const Text('Cancel'),
+            child: Text(
+              localizedFromLocale(
+                locale,
+                TailorStrings.cancel,
+                TailorStrings.cancelAr,
+              ),
+            ),
           ),
           TextButton(
             onPressed: () =>
                 Navigator.of(dialogContext).pop(controller.text.trim()),
-            child: const Text('Decline'),
+            child: Text(
+              localizedFromLocale(
+                locale,
+                TailorStrings.decline,
+                TailorStrings.declineAr,
+              ),
+            ),
           ),
         ],
       ),
@@ -248,16 +328,22 @@ class _TailorOrderDetailScreenState
       note: reason.isEmpty ? null : reason,
     );
     result.fold(
-      (e) => _snack('Could not decline: ${_tailorErrorMessage(e)}'),
+      (e) => _snack(TailorStrings.couldNotDecline(_tailorErrorMessage(e), locale)),
       (updated) {
-        _snack('Order declined');
+        _snack(
+          localizedFromLocale(
+            locale,
+            TailorStrings.orderDeclined,
+            TailorStrings.orderDeclinedAr,
+          ),
+        );
         _finishMutation(updated);
       },
     );
     if (!result.isRight()) _unbusy();
   }
 
-  Future<void> _advance(Order order, String next) async {
+  Future<void> _advance(Order order, String next, Locale locale) async {
     setState(() => _busy = true);
     final repo = ref.read(tailorRepositoryProvider);
     final result = await repo.advanceStatus(
@@ -265,17 +351,23 @@ class _TailorOrderDetailScreenState
       status: next,
     );
     result.fold(
-      (e) => _snack('Could not advance: ${_tailorErrorMessage(e)}'),
+      (e) => _snack(TailorStrings.couldNotAdvance(_tailorErrorMessage(e), locale)),
       (updated) {
         if (next == 'ready_to_ship') {
           final courier = updated.courierName;
           _snack(
             courier != null && courier.isNotEmpty
-                ? 'Handed off to $courier'
-                : 'Handed off to delivery',
+                ? TailorStrings.handedOffToCourier(courier, locale)
+                : localizedFromLocale(
+                    locale,
+                    TailorStrings.handedOffToDelivery,
+                    TailorStrings.handedOffToDeliveryAr,
+                  ),
           );
         } else {
-          _snack('Status updated to ${_prettyStatus(next)}');
+          _snack(
+            TailorStrings.statusUpdatedTo(_prettyStatus(next, locale), locale),
+          );
         }
         _finishMutation(updated);
       },
@@ -326,18 +418,29 @@ class _TailorOrderDetailScreenState
     messenger.showSnackBar(SnackBar(content: Text(message)));
   }
 
-  Future<void> _openUrl(String url) async {
+  Future<void> _openUrl(String url, Locale locale) async {
     final uri = Uri.tryParse(url);
     if (uri == null || !await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-      _snack('Could not open file link.');
+      _snack(
+        localizedFromLocale(
+          locale,
+          TailorStrings.couldNotOpenFileLink,
+          TailorStrings.couldNotOpenFileLinkAr,
+        ),
+      );
     }
   }
 }
 
 class _SummaryCard extends StatelessWidget {
-  const _SummaryCard({required this.order, this.showStatus = false});
+  const _SummaryCard({
+    required this.order,
+    required this.locale,
+    this.showStatus = false,
+  });
 
   final Order order;
+  final Locale locale;
   final bool showStatus;
 
   @override
@@ -363,27 +466,63 @@ class _SummaryCard extends StatelessWidget {
           if (showStatus) ...[
             const SizedBox(height: AppSpacing.xs),
             Text(
-              'Status: ${order.status.labelEn}',
+              TailorStrings.statusLine(order.status.labelFor(locale), locale),
               style: AppTextStyles.labelGold.copyWith(fontSize: 12),
             ),
           ],
           const SizedBox(height: AppSpacing.xs),
           _LabelValue(
-            label: 'Address',
+            label: localizedFromLocale(
+              locale,
+              TailorStrings.address,
+              TailorStrings.addressAr,
+            ),
             value: order.deliveryAddress ?? '—',
           ),
-          _LabelValue(label: 'City', value: order.deliveryCity ?? '—'),
-          _LabelValue(label: 'Phone', value: order.deliveryPhone ?? '—'),
           _LabelValue(
-            label: 'Total',
+            label: localizedFromLocale(
+              locale,
+              TailorStrings.city,
+              TailorStrings.cityAr,
+            ),
+            value: order.deliveryCity ?? '—',
+          ),
+          _LabelValue(
+            label: localizedFromLocale(
+              locale,
+              TailorStrings.phone,
+              TailorStrings.phoneAr,
+            ),
+            value: order.deliveryPhone ?? '—',
+          ),
+          _LabelValue(
+            label: localizedFromLocale(
+              locale,
+              TailorStrings.total,
+              TailorStrings.totalAr,
+            ),
             value: order.totalPrice == null
                 ? '—'
                 : '${order.totalPrice} ${order.currency}',
           ),
           if (order.courierName != null && order.courierName!.isNotEmpty)
-            _LabelValue(label: 'Courier', value: order.courierName!),
+            _LabelValue(
+              label: localizedFromLocale(
+                locale,
+                TailorStrings.courier,
+                TailorStrings.courierAr,
+              ),
+              value: order.courierName!,
+            ),
           if (order.paymentStatus != null)
-            _LabelValue(label: 'Payment', value: order.paymentStatus!),
+            _LabelValue(
+              label: localizedFromLocale(
+                locale,
+                TailorStrings.payment,
+                TailorStrings.paymentAr,
+              ),
+              value: order.paymentStatus!,
+            ),
         ],
       ),
     );

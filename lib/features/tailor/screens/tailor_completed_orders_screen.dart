@@ -12,7 +12,6 @@ class TailorCompletedOrdersScreen extends StatelessWidget {
     return const TailorQueueScaffold(
       bucket: TailorQueueBucket.completed,
       detailSubPath: 'completed',
-      emptyMessage: 'No completed orders yet.',
     );
   }
 }

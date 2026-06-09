@@ -1,3 +1,5 @@
+import 'dart:ui' show Locale;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,11 +7,12 @@ import 'package:lolipants/core/config/app_features.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/features/accessories/models/accessory.dart';
 import 'package:lolipants/features/accessories/providers/accessories_providers.dart';
 import 'package:lolipants/features/accessories/widgets/accessory_card.dart';
+import 'package:lolipants/features/settings/providers/settings_provider.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
-import 'package:lolipants/core/l10n/app_localization.dart';
 
 /// Accessories category hub: filters + CMS-backed product grid.
 class AccessoriesBrowseSection extends ConsumerStatefulWidget {
@@ -27,8 +30,13 @@ class _AccessoriesBrowseSectionState extends ConsumerState<AccessoriesBrowseSect
 
   @override
   Widget build(BuildContext context) {
+    final locale = ref.watch(settingsLocaleProvider);
+
     if (!kFeatureAccessories) {
-      return _LegacyPlaceholder(onDesignTshirt: widget.onDesignTshirt);
+      return _LegacyPlaceholder(
+        locale: locale,
+        onDesignTshirt: widget.onDesignTshirt,
+      );
     }
 
     final accessoriesAsync = ref.watch(accessoriesListProvider(_filter));
@@ -42,14 +50,18 @@ class _AccessoriesBrowseSectionState extends ConsumerState<AccessoriesBrowseSect
       ),
       children: [
         Text(
-          AppStrings.homeAccessoriesSubtitle,
+          localizedFromLocale(
+            locale,
+            AppStrings.homeAccessoriesSubtitle,
+            AppStrings.homeAccessoriesSubtitleAr,
+          ),
           style: AppTextStyles.bodyMedium,
         ),
         if (kFeatureCasual) ...[
           const SizedBox(height: AppSpacing.lg),
           LolipantsButton(
-            label: localizedFromContext(
-              context,
+            label: localizedFromLocale(
+              locale,
               AppStrings.accessoriesTshirtCta,
               AppStrings.accessoriesTshirtCtaAr,
             ),
@@ -65,7 +77,7 @@ class _AccessoriesBrowseSectionState extends ConsumerState<AccessoriesBrowseSect
                 Padding(
                   padding: const EdgeInsets.only(right: AppSpacing.sm),
                   child: FilterChip(
-                    label: Text(accessoryCategoryLabel(f)),
+                    label: Text(accessoryCategoryLabel(locale, f)),
                     selected: _filter == f,
                     onSelected: (_) => setState(() => _filter = f),
                   ),
@@ -76,10 +88,22 @@ class _AccessoriesBrowseSectionState extends ConsumerState<AccessoriesBrowseSect
         const SizedBox(height: AppSpacing.lg),
         accessoriesAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (_, __) => const Text('Could not load accessories.'),
+          error: (_, __) => Text(
+            localizedFromLocale(
+              locale,
+              AppStrings.accessoriesLoadError,
+              AppStrings.accessoriesLoadErrorAr,
+            ),
+          ),
           data: (items) {
             if (items.isEmpty) {
-              return const Text('No accessories in this category yet.');
+              return Text(
+                localizedFromLocale(
+                  locale,
+                  AppStrings.accessoriesEmptyCategory,
+                  AppStrings.accessoriesEmptyCategoryAr,
+                ),
+              );
             }
             return GridView.builder(
               shrinkWrap: true,
@@ -112,8 +136,12 @@ class _AccessoriesBrowseSectionState extends ConsumerState<AccessoriesBrowseSect
 }
 
 class _LegacyPlaceholder extends StatelessWidget {
-  const _LegacyPlaceholder({required this.onDesignTshirt});
+  const _LegacyPlaceholder({
+    required this.locale,
+    required this.onDesignTshirt,
+  });
 
+  final Locale locale;
   final VoidCallback onDesignTshirt;
 
   @override
@@ -121,12 +149,19 @@ class _LegacyPlaceholder extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.xl),
       children: [
-        Text(AppStrings.homeAccessoriesSubtitle, style: AppTextStyles.bodyMedium),
+        Text(
+          localizedFromLocale(
+            locale,
+            AppStrings.homeAccessoriesSubtitle,
+            AppStrings.homeAccessoriesSubtitleAr,
+          ),
+          style: AppTextStyles.bodyMedium,
+        ),
         if (kFeatureCasual) ...[
           const SizedBox(height: AppSpacing.lg),
           LolipantsButton(
-            label: localizedFromContext(
-              context,
+            label: localizedFromLocale(
+              locale,
               AppStrings.accessoriesTshirtCta,
               AppStrings.accessoriesTshirtCtaAr,
             ),

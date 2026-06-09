@@ -4,10 +4,13 @@ import 'package:go_router/go_router.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/constants/orders_strings.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/features/orders/models/quote_negotiation.dart';
 import 'package:lolipants/features/orders/providers/checkout_providers.dart';
 import 'package:lolipants/features/orders/providers/orders_providers.dart';
 import 'package:lolipants/features/orders/utils/negotiation_checkout.dart';
+import 'package:lolipants/features/settings/providers/settings_provider.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
 import 'package:lolipants/shared/widgets/lolipants_text_field.dart';
 
@@ -43,6 +46,7 @@ class _QuoteNegotiationDetailScreenState
   }
 
   Future<void> _load() async {
+    final locale = ref.read(settingsLocaleProvider);
     setState(() {
       _loading = true;
       _error = null;
@@ -54,7 +58,14 @@ class _QuoteNegotiationDetailScreenState
     result.fold(
       (e) => setState(() {
         _loading = false;
-        _error = orderErrorMessage(e, fallback: 'Could not load negotiation.');
+        _error = orderErrorMessage(
+          e,
+          fallback: localizedFromLocale(
+            locale,
+            OrdersStrings.couldNotLoadNegotiation,
+            OrdersStrings.couldNotLoadNegotiationAr,
+          ),
+        );
       }),
       (detail) => setState(() {
         _loading = false;
@@ -87,6 +98,7 @@ class _QuoteNegotiationDetailScreenState
   }
 
   Future<void> _acceptCounter() async {
+    final locale = ref.read(settingsLocaleProvider);
     final result = await ref
         .read(ordersRepositoryProvider)
         .acceptNegotiation(widget.negotiationId);
@@ -98,9 +110,13 @@ class _QuoteNegotiationDetailScreenState
       (detail) {
         setState(() => _detail = detail);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text(
-              'Price agreed — continue to payment from here or Profile → Price negotiations',
+              localizedFromLocale(
+                locale,
+                OrdersStrings.priceAgreedContinuePayment,
+                OrdersStrings.priceAgreedContinuePaymentAr,
+              ),
             ),
           ),
         );
@@ -109,11 +125,17 @@ class _QuoteNegotiationDetailScreenState
   }
 
   void _checkoutWithLock(QuoteNegotiation neg) {
+    final locale = ref.read(settingsLocaleProvider);
     final draft = ref.read(checkoutDraftProvider);
     applyNegotiationToCheckout(
       ref,
       neg,
-      designName: draft?.design.name ?? 'My design',
+      designName: draft?.design.name ??
+          localizedFromLocale(
+            locale,
+            OrdersStrings.currentDesign,
+            OrdersStrings.currentDesignAr,
+          ),
       garmentType: draft?.design.garmentType ?? 'thobe',
       tailorName: neg.tailorName,
       shopName: neg.shopName,
@@ -123,15 +145,32 @@ class _QuoteNegotiationDetailScreenState
 
   @override
   Widget build(BuildContext context) {
+    final locale = ref.watch(settingsLocaleProvider);
     final neg = _detail?.negotiation;
     return Scaffold(
-      appBar: AppBar(title: const Text('Price negotiation')),
+      appBar: AppBar(
+        title: Text(
+          localizedFromLocale(
+            locale,
+            OrdersStrings.priceNegotiationTitle,
+            OrdersStrings.priceNegotiationTitleAr,
+          ),
+        ),
+      ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
               ? Center(child: Text(_error!))
               : neg == null
-                  ? const Center(child: Text('Not found'))
+                  ? Center(
+                      child: Text(
+                        localizedFromLocale(
+                          locale,
+                          OrdersStrings.notFound,
+                          OrdersStrings.notFoundAr,
+                        ),
+                      ),
+                    )
                   : Column(
                       children: [
                         Expanded(
@@ -139,8 +178,12 @@ class _QuoteNegotiationDetailScreenState
                             padding: const EdgeInsets.all(AppSpacing.lg),
                             children: [
                               Text(
-                                'List ${neg.listTotal} ${neg.currency} → '
-                                'Current offer ${neg.offeredTotal} ${neg.currency}',
+                                OrdersStrings.listToCurrentOffer(
+                                  '${neg.listTotal}',
+                                  '${neg.offeredTotal}',
+                                  neg.currency,
+                                  locale,
+                                ),
                                 style: AppTextStyles.titleSmall,
                               ),
                               Text(neg.statusLabel, style: AppTextStyles.bodySmall),
@@ -175,8 +218,11 @@ class _QuoteNegotiationDetailScreenState
                           Padding(
                             padding: const EdgeInsets.all(AppSpacing.lg),
                             child: LolipantsButton(
-                              label:
-                                  'Accept counter (${neg.offeredTotal} ${neg.currency})',
+                              label: OrdersStrings.acceptCounter(
+                                '${neg.offeredTotal}',
+                                neg.currency,
+                                locale,
+                              ),
                               onPressed: _acceptCounter,
                             ),
                           ),
@@ -184,7 +230,11 @@ class _QuoteNegotiationDetailScreenState
                           Padding(
                             padding: const EdgeInsets.all(AppSpacing.lg),
                             child: LolipantsButton(
-                              label: 'Pay agreed price',
+                              label: localizedFromLocale(
+                                locale,
+                                OrdersStrings.payAgreedPrice,
+                                OrdersStrings.payAgreedPriceAr,
+                              ),
                               onPressed: () => _checkoutWithLock(neg),
                             ),
                           ),
@@ -196,7 +246,11 @@ class _QuoteNegotiationDetailScreenState
                                 Expanded(
                                   child: LolipantsTextField(
                                     controller: _messageCtrl,
-                                    label: 'Message',
+                                    label: localizedFromLocale(
+                                      locale,
+                                      OrdersStrings.message,
+                                      OrdersStrings.messageAr,
+                                    ),
                                   ),
                                 ),
                                 IconButton(

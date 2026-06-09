@@ -10,6 +10,7 @@ import 'package:lolipants/features/browse/data/region_presets.dart';
 import 'package:lolipants/features/browse/logic/region_preset_editor.dart';
 import 'package:lolipants/features/browse/widgets/region_pattern_painter.dart';
 import 'package:lolipants/features/editor/models/editor_preset_args.dart';
+import 'package:lolipants/features/home/models/home_flow_selection.dart';
 import 'package:lolipants/shared/widgets/catalog_image.dart';
 
 /// Choose a mannequin, then open the editor. Pass [preset] to land on that
@@ -21,7 +22,19 @@ void openDesignMannequinFlow(
   final EditorPresetArgs? pending = preset != null
       ? editorPresetArgsFromRegionPreset(preset)
       : null;
-  context.push('/mannequin-selector', extra: pending);
+  context.push(
+    '/mannequin-selector',
+    extra: pending != null ? MannequinSelectorArgs(preset: pending) : null,
+  );
+}
+
+/// Opens mannequin selection from the home guided design flow.
+void openHomeDesignFlow(BuildContext context, HomeFlowSelection flow) {
+  if (!flow.isComplete) return;
+  context.push(
+    '/mannequin-selector',
+    extra: MannequinSelectorArgs(homeFlow: flow),
+  );
 }
 
 /// Featured designs — frosted-glass tiles in a vertical two-column grid.

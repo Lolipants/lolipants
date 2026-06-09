@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/constants/tailor_strings.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/features/orders/models/quote_negotiation.dart';
 import 'package:lolipants/features/orders/providers/orders_providers.dart';
+import 'package:lolipants/features/settings/providers/settings_provider.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
 import 'package:lolipants/shared/widgets/lolipants_text_field.dart';
 
@@ -48,6 +51,7 @@ class _TailorQuoteNegotiationDetailScreenState
       _loading = true;
       _error = null;
     });
+    final locale = ref.read(settingsLocaleProvider);
     final result = await ref
         .read(ordersRepositoryProvider)
         .getNegotiation(widget.negotiationId);
@@ -55,7 +59,14 @@ class _TailorQuoteNegotiationDetailScreenState
     result.fold(
       (e) => setState(() {
         _loading = false;
-        _error = orderErrorMessage(e, fallback: 'Could not load request.');
+        _error = orderErrorMessage(
+          e,
+          fallback: localizedFromLocale(
+            locale,
+            TailorStrings.couldNotLoadRequests,
+            TailorStrings.couldNotLoadRequestsAr,
+          ),
+        );
       }),
       (detail) {
         _counterCtrl.text = detail.negotiation.listTotal.toString();
@@ -140,27 +151,52 @@ class _TailorQuoteNegotiationDetailScreenState
 
   @override
   Widget build(BuildContext context) {
+    final locale = ref.watch(settingsLocaleProvider);
     final neg = _detail?.negotiation;
     final canRespond =
         neg?.status == QuoteNegotiationStatus.tailorReview && !_busy;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Price request')),
+      appBar: AppBar(
+        title: Text(
+          localizedFromLocale(
+            locale,
+            TailorStrings.priceRequestTitle,
+            TailorStrings.priceRequestTitleAr,
+          ),
+        ),
+      ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
               ? Center(child: Text(_error!))
               : neg == null
-                  ? const Center(child: Text('Not found'))
+                  ? Center(
+                      child: Text(
+                        localizedFromLocale(
+                          locale,
+                          TailorStrings.notFound,
+                          TailorStrings.notFoundAr,
+                        ),
+                      ),
+                    )
                   : ListView(
                       padding: const EdgeInsets.all(AppSpacing.lg),
                       children: [
                         Text(
-                          'Customer offer: ${neg.offeredTotal} ${neg.currency}',
+                          TailorStrings.customerOffer(
+                            neg.offeredTotal,
+                            neg.currency,
+                            locale,
+                          ),
                           style: AppTextStyles.titleMedium,
                         ),
                         Text(
-                          'List price: ${neg.listTotal} ${neg.currency}',
+                          TailorStrings.listPrice(
+                            neg.listTotal,
+                            neg.currency,
+                            locale,
+                          ),
                           style: AppTextStyles.bodySmall,
                         ),
                         if (neg.customerNote != null &&
@@ -168,7 +204,7 @@ class _TailorQuoteNegotiationDetailScreenState
                           Padding(
                             padding: const EdgeInsets.only(top: AppSpacing.sm),
                             child: Text(
-                              'Note: ${neg.customerNote}',
+                              TailorStrings.noteLine(neg.customerNote!, locale),
                               style: AppTextStyles.bodyMedium,
                             ),
                           ),
@@ -176,29 +212,51 @@ class _TailorQuoteNegotiationDetailScreenState
                         for (final m in _detail!.messages)
                           Padding(
                             padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                            child: Text('${m.senderRole}: ${m.body}'),
+                            child: Text(
+                              TailorStrings.messageLine(
+                                m.senderRole,
+                                m.body,
+                                locale,
+                              ),
+                            ),
                           ),
                         const Divider(),
                         if (canRespond) ...[
                           LolipantsButton(
-                            label: 'Accept offer',
+                            label: localizedFromLocale(
+                              locale,
+                              TailorStrings.acceptOffer,
+                              TailorStrings.acceptOfferAr,
+                            ),
                             onPressed: _accept,
                           ),
                           const SizedBox(height: AppSpacing.sm),
                           LolipantsTextField(
                             controller: _counterCtrl,
-                            label: 'Counter offer (QAR)',
+                            label: localizedFromLocale(
+                              locale,
+                              TailorStrings.counterOfferQar,
+                              TailorStrings.counterOfferQarAr,
+                            ),
                             keyboardType: TextInputType.number,
                           ),
                           const SizedBox(height: AppSpacing.sm),
                           LolipantsButton(
-                            label: 'Send counter',
+                            label: localizedFromLocale(
+                              locale,
+                              TailorStrings.sendCounter,
+                              TailorStrings.sendCounterAr,
+                            ),
                             variant: LolipantsButtonVariant.secondary,
                             onPressed: _counter,
                           ),
                           const SizedBox(height: AppSpacing.sm),
                           LolipantsButton(
-                            label: 'Decline',
+                            label: localizedFromLocale(
+                              locale,
+                              TailorStrings.decline,
+                              TailorStrings.declineAr,
+                            ),
                             variant: LolipantsButtonVariant.secondary,
                             onPressed: _decline,
                           ),
@@ -210,7 +268,11 @@ class _TailorQuoteNegotiationDetailScreenState
                               Expanded(
                                 child: LolipantsTextField(
                                   controller: _messageCtrl,
-                                  label: 'Reply',
+                                  label: localizedFromLocale(
+                                    locale,
+                                    TailorStrings.reply,
+                                    TailorStrings.replyAr,
+                                  ),
                                 ),
                               ),
                               IconButton(

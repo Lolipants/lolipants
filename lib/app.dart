@@ -20,7 +20,7 @@ class LolipantsApp extends ConsumerWidget {
     final reduceMotion = ref.watch(settingsReduceMotionProvider);
     return MaterialApp.router(
       title: AppStrings.appName,
-      theme: buildAppTheme(),
+      theme: buildAppTheme(locale: locale),
       routerConfig: router,
       debugShowCheckedModeBanner: false,
       locale: locale,

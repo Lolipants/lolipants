@@ -279,6 +279,23 @@ class AppStrings {
   /// Music player slot label (English).
   static const String musicPlayerLabel = 'Music player';
 
+  /// Expanded player: empty queue title (English).
+  static const String musicNoTracksYet = 'No music yet';
+
+  /// Expanded player: empty queue body (English).
+  static const String musicEmptyQueueBody =
+      'Choose MP3 or other audio files stored on this device. '
+      'Your selection is remembered for next time.';
+
+  /// Expanded player: pick local audio files (English).
+  static const String musicChooseFiles = 'Choose files';
+
+  /// Expanded player: no current track (English).
+  static const String musicNoTrackLoaded = 'No track loaded.';
+
+  /// Expanded player: add more tracks (English).
+  static const String musicAddMusic = 'Add music';
+
   /// Confirm password field (English).
   static const String confirmPassword = 'Confirm password';
 
@@ -382,6 +399,31 @@ class AppStrings {
   static const String homeAccessoriesSubtitleAr =
       'أكمل إطلالتك بالأوشحة والحقائب والمزيد';
 
+  /// Accessories browse: load failure (English).
+  static const String accessoriesLoadError = 'Could not load accessories.';
+
+  /// Accessories browse: empty category (English).
+  static const String accessoriesEmptyCategory =
+      'No accessories in this category yet.';
+
+  /// Accessories filter chip: all (English).
+  static const String accessoryFilterAll = 'All';
+
+  /// Accessories filter chip: scarves (English).
+  static const String accessoryFilterScarves = 'Scarves';
+
+  /// Accessories filter chip: bags (English).
+  static const String accessoryFilterBags = 'Bags';
+
+  /// Accessories filter chip: jewellery (English).
+  static const String accessoryFilterJewellery = 'Jewellery';
+
+  /// Accessories filter chip: other (English).
+  static const String accessoryFilterOther = 'Other';
+
+  /// Accessory detail route: missing item (English).
+  static const String accessoryNotFound = 'Accessory not found';
+
   /// Home casual / T-shirt lane title (English).
   static const String homeCasualTitle = 'T-shirts & casual';
 
@@ -395,6 +437,86 @@ class AppStrings {
   /// Home casual lane subtitle (Arabic).
   static const String homeCasualSubtitleAr =
       'أضف نصك أو صورتك على القمصان والملابس الكاجوال';
+
+  /// Home wizard step 1 title (English).
+  static const String homeFlowStepGender = 'Who are you designing for?';
+
+  /// Home wizard step 1 title (Arabic).
+  static const String homeFlowStepGenderAr = 'لمن تصمّم اليوم؟';
+
+  /// Home wizard step 2 title (English).
+  static const String homeFlowStepStyle = 'Choose your style';
+
+  /// Home wizard step 2 title (Arabic).
+  static const String homeFlowStepStyleAr = 'اختر أسلوبك';
+
+  /// Home wizard step 3 title (English).
+  static const String homeFlowStepService = 'How would you like to create it?';
+
+  /// Home wizard step 3 title (Arabic).
+  static const String homeFlowStepServiceAr = 'كيف تريد إنشاء قطعتك؟';
+
+  /// Home style: Modern (English).
+  static const String homeFlowStyleModern = 'Modern';
+
+  /// Home style: Modern (Arabic).
+  static const String homeFlowStyleModernAr = 'عصري';
+
+  /// Home style: Wedding (English).
+  static const String homeFlowStyleWedding = 'Wedding';
+
+  /// Home style: Wedding (Arabic).
+  static const String homeFlowStyleWeddingAr = 'عرس';
+
+  /// Wedding style hint for women only (English).
+  static const String homeFlowWeddingWomenOnly =
+      'Wedding styles are available for women';
+
+  /// Wedding style hint for women only (Arabic).
+  static const String homeFlowWeddingWomenOnlyAr =
+      'أزياء العرس متاحة للنساء فقط';
+
+  /// Design with yourself card title (English).
+  static const String homeFlowDesignYourself = 'Design it yourself';
+
+  /// Design with yourself card title (Arabic).
+  static const String homeFlowDesignYourselfAr = 'صمّمها بنفسك';
+
+  /// Design with yourself card body (English).
+  static const String homeFlowDesignYourselfBody =
+      'Pick fabrics, colours, and details on the mannequin';
+
+  /// Design with yourself card body (Arabic).
+  static const String homeFlowDesignYourselfBodyAr =
+      'اختر الأقمشة والألوان والتفاصيل على المانيكان';
+
+  /// Finish product card title (English).
+  static const String homeFlowFinishProduct = 'Finished product';
+
+  /// Finish product card title (Arabic).
+  static const String homeFlowFinishProductAr = 'منتج جاهز';
+
+  /// Finish product card body (English).
+  static const String homeFlowFinishProductBody =
+      'Choose from our ready-made catalogue designs';
+
+  /// Finish product card body (Arabic).
+  static const String homeFlowFinishProductBodyAr =
+      'اختر من تصاميم الكتالوج الجاهزة';
+
+  /// Home flow primary CTA (English).
+  static const String homeFlowStartDesigning = 'Start designing';
+
+  /// Home flow primary CTA (Arabic).
+  static const String homeFlowStartDesigningAr = 'ابدأ التصميم';
+
+  /// Home flow measurements note (English).
+  static const String homeFlowMeasurementsNote =
+      'You will add your measurements before we tailor your order';
+
+  /// Home flow measurements note (Arabic).
+  static const String homeFlowMeasurementsNoteAr =
+      'ستضيف مقاساتك قبل أن نبدأ بتفصيل طلبك';
 
   /// Sign-up gender label (English).
   static const String signupGenderLabel = 'I design for';
@@ -683,6 +805,38 @@ class AppStrings {
   static const String partnerLoadingRequests =
       'Loading your previous requests…';
 
+  /// Partner history load failure (English).
+  static const String partnerCouldNotLoadRequests = 'Could not load requests.';
+
+  /// Partner history network error (English).
+  static const String partnerNetworkError =
+      'Network issue. Check your connection and try again.';
+
+  /// Partner history auth error (English).
+  static const String partnerSessionExpiredError =
+      'Session expired. Sign in again to continue.';
+
+  /// Partner application submit failure (English).
+  static const String partnerRequestFailed = 'Request failed.';
+
+  /// Partner application network snackbar (English).
+  static const String partnerNetworkErrorShort = 'Network issue.';
+
+  /// Partner application auth snackbar (English).
+  static const String partnerSessionIssueShort = 'Session issue.';
+
+  /// Partner review step role label prefix (English).
+  static const String partnerReviewRolePrefix = 'Role';
+
+  /// Partner request history status: pending (English).
+  static const String partnerStatusPending = 'Pending';
+
+  /// Partner request history status: approved (English).
+  static const String partnerStatusApproved = 'Approved';
+
+  /// Partner request history status: rejected (English).
+  static const String partnerStatusRejected = 'Rejected';
+
   /// Retry after load failure (English).
   static const String partnerRetry = 'Retry';
 
@@ -912,6 +1066,24 @@ class AppStrings {
   /// Phase 3A editor shell strings.
   static const String chooseMannequin =
       'Choose your mannequin / اختر المانيكان';
+
+  /// Mannequin selector app bar (English).
+  static const String chooseMannequinEn = 'Choose your mannequin';
+
+  /// Mannequin selector: gallery picker (English).
+  static const String mannequinChooseFromGallery = 'Choose from gallery';
+
+  /// Mannequin selector: camera picker (English).
+  static const String mannequinTakePhoto = 'Take a photo';
+
+  /// Mannequin selector: upload custom body reference (English).
+  static const String mannequinUploadPhotoCta =
+      'Upload your photo (AI body reference)';
+
+  /// Mannequin selector: custom photo selected hint (English).
+  static const String mannequinCustomPhotoHint =
+      'Custom photo selected — used for AI output.';
+
   static const String startDesigningCta = 'Start designing / ابدأ التصميم';
   static const String editorTitle = 'Design editor / محرر التصميم';
   static const String editorSave = 'Save / حفظ';
@@ -983,6 +1155,81 @@ class AppStrings {
   static const String editorSketchOptional =
       'Optional silhouette sketch for AI / رسم اختياري';
   static const String editorSketchClear = 'Remove sketch';
+
+  static const String editorExit = 'Exit';
+  static const String editorOrder = 'Order';
+  static const String editorMoreMenu = 'More';
+  static const String editorSaveDesignTitle = 'Save design';
+  static const String editorDesignNameHint = 'Name shown in My designs';
+  static const String editorDesignNameRequired = 'Design name is required.';
+  static const String editorCurrentDesign = 'Current design';
+  static const String editorLookGeneratedSnack =
+      'Look generated — switch to the AI preview';
+  static const String editorLookGeneratedPreview =
+      'Look generated. Check preview above.';
+  static const String editorShareImage = 'Share image';
+  static const String editorSaveImage = 'Save image';
+  static const String editorShareToCommunity = 'Share to community';
+  static const String editorPublishEarn = 'Publish & earn';
+  static const String editorPublishShowcaseSubtitle =
+      'List on orderable Showcase';
+  static const String editorCapturePreviewFailed =
+      'Could not capture design preview.';
+  static const String editorShareImageCaption = 'My Lolipants design';
+  static const String editorSavedImageToPath = 'Saved to {path}';
+  static const String editorSaveBeforePublish =
+      'Save the design before publishing.';
+  static const String editorDone = 'Done';
+  static const String editorTextTypeHint = 'Type your text';
+  static const String editorTextAddToDesign = 'Add to design';
+  static const String editorTextLayers = 'Layers';
+  static const String editorTextFont = 'Font';
+  static const String editorTextSizePrefix = 'Size';
+  static const String editorTextRotationPrefix = 'Rotation';
+  static const String editorTextColour = 'Colour';
+  static const String editorTextDragHint =
+      'Drag the text on the garment to reposition';
+  static const String editorTextRemove = 'Remove text';
+  static const String editorPrintOnGarment = 'Print on garment';
+  static const String editorUploadImage = 'Upload image';
+  static const String editorUploadSketch = 'Upload sketch';
+  static const String editorPrintPlacementChest = 'Chest';
+  static const String editorPrintPlacementBack = 'Back';
+  static const String editorPrintPlacementFullFront = 'Full front';
+  static const String editorPrintOffsetHorizontal = 'Horizontal offset';
+  static const String editorPrintOffsetVertical = 'Vertical offset';
+  static const String editorPrintSizePercent = 'Size';
+  static const String editorApplyToDesign = 'Apply to design';
+  static const String editorAccessoriesUnavailable =
+      'Accessories are not available in this build.';
+  static const String editorAddAccessories = 'Add accessories';
+  static const String editorAccessoriesSubtitle =
+      'Optional items included with your garment order.';
+  static const String editorAccessoriesLoadError = 'Could not load accessories.';
+  static const String editorAccessoriesEmpty = 'No add-on accessories available.';
+  static const String editorStyleYourPiece = 'Style your piece';
+  static const String editorStyleColourHint =
+      'Choose a colour — changes apply to your design right away.';
+  static const String editorMoreColours = 'More colours…';
+  static const String editorQualityTier = 'Quality tier';
+  static const String editorQualityStandard = 'Standard';
+  static const String editorQualityPremium = 'Premium';
+  static const String editorQualitySuitGrade = 'Suit grade';
+  static const String editorCustomColour = 'Custom colour';
+  static const String editorTapToFineTune = 'Tap to fine-tune';
+  static const String editorBuildCatalogError = 'Could not load build catalogue.';
+  static const String editorDesignCatalogError =
+      'Could not load design catalogue.';
+  static const String editorNoOptionsForCombination =
+      'No options available for this combination.';
+  static const String editorBackToParts = 'Back to parts';
+  static const String editorEnhanceWithAi = 'Enhance with AI';
+  static const String editorAiRequestFailed = 'AI request failed';
+  static const String editorAiApplyFailed = 'Could not apply AI suggestion.';
+  static const String editorShareCommunityPrefillNew =
+      'Check out my new {garmentType} design.';
+  static const String editorShareCommunityPrefillNamed =
+      'Just designed {name}.';
 
   /// Phase 3C sizing title.
   static const String sizingOptions = 'Sizing options / خيارات القياس';
@@ -1719,6 +1966,107 @@ class AppStrings {
   /// Arabic: [musicPlayerLabel].
   static const String musicPlayerLabelAr = 'مشغّل الموسيقى';
 
+  /// Arabic: [musicNoTracksYet].
+  static const String musicNoTracksYetAr = 'لا توجد موسيقى بعد';
+
+  /// Arabic: [musicEmptyQueueBody].
+  static const String musicEmptyQueueBodyAr =
+      'اختر ملفات MP3 أو صوتاً أخرى مخزّنة على هذا الجهاز. '
+      'سيُتذكّر اختيارك في المرة القادمة.';
+
+  /// Arabic: [musicChooseFiles].
+  static const String musicChooseFilesAr = 'اختر ملفات';
+
+  /// Arabic: [musicNoTrackLoaded].
+  static const String musicNoTrackLoadedAr = 'لم يُحمَّل أي مقطع.';
+
+  /// Arabic: [musicAddMusic].
+  static const String musicAddMusicAr = 'أضف موسيقى';
+
+  /// Arabic: [accessoriesLoadError].
+  static const String accessoriesLoadErrorAr = 'تعذّر تحميل الإكسسوارات.';
+
+  /// Arabic: [accessoriesEmptyCategory].
+  static const String accessoriesEmptyCategoryAr =
+      'لا توجد إكسسوارات في هذه الفئة بعد.';
+
+  /// Arabic: [accessoryFilterAll].
+  static const String accessoryFilterAllAr = 'الكل';
+
+  /// Arabic: [accessoryFilterScarves].
+  static const String accessoryFilterScarvesAr = 'أوشحة';
+
+  /// Arabic: [accessoryFilterBags].
+  static const String accessoryFilterBagsAr = 'حقائب';
+
+  /// Arabic: [accessoryFilterJewellery].
+  static const String accessoryFilterJewelleryAr = 'مجوهرات';
+
+  /// Arabic: [accessoryFilterOther].
+  static const String accessoryFilterOtherAr = 'أخرى';
+
+  /// Arabic: [accessoryNotFound].
+  static const String accessoryNotFoundAr = 'لم يُعثر على الإكسسوار';
+
+  /// Arabic: [errorApiBaseUrlMissing].
+  static const String errorApiBaseUrlMissingAr =
+      'لا يمكن للتطبيق الوصول إلى واجهة البرمجة: أضف API_BASE_URL إلى ملف .env '
+      'في جذر المشروع (راجع .env.example)، ثم أعد تشغيل التطبيق.';
+
+  /// Arabic: [errorApiBaseUrlSameAsAuth].
+  static const String errorApiBaseUrlSameAsAuthAr =
+      'يجب أن يشير API_BASE_URL إلى عنوان عامل lolipants-api (الطلبات، المجتمع، '
+      'طلبات الشراكة). لا يمكن أن يكون نفس BETTER_AUTH_BASE_URL. راجع .env.example.';
+
+  /// Arabic: [partnerCouldNotLoadRequests].
+  static const String partnerCouldNotLoadRequestsAr = 'تعذّر تحميل الطلبات.';
+
+  /// Arabic: [partnerNetworkError].
+  static const String partnerNetworkErrorAr =
+      'مشكلة في الشبكة. تحقق من اتصالك وحاول مجدداً.';
+
+  /// Arabic: [partnerSessionExpiredError].
+  static const String partnerSessionExpiredErrorAr =
+      'انتهت الجلسة. سجّل الدخول مجدداً للمتابعة.';
+
+  /// Arabic: [partnerRequestFailed].
+  static const String partnerRequestFailedAr = 'فشل إرسال الطلب.';
+
+  /// Arabic: [partnerNetworkErrorShort].
+  static const String partnerNetworkErrorShortAr = 'مشكلة في الشبكة.';
+
+  /// Arabic: [partnerSessionIssueShort].
+  static const String partnerSessionIssueShortAr = 'مشكلة في الجلسة.';
+
+  /// Arabic: [partnerReviewRolePrefix].
+  static const String partnerReviewRolePrefixAr = 'الدور';
+
+  /// Arabic: [partnerStatusPending].
+  static const String partnerStatusPendingAr = 'قيد المراجعة';
+
+  /// Arabic: [partnerStatusApproved].
+  static const String partnerStatusApprovedAr = 'مقبول';
+
+  /// Arabic: [partnerStatusRejected].
+  static const String partnerStatusRejectedAr = 'مرفوض';
+
+  /// Arabic: [chooseMannequinEn].
+  static const String chooseMannequinAr = 'اختر المانيكان';
+
+  /// Arabic: [mannequinChooseFromGallery].
+  static const String mannequinChooseFromGalleryAr = 'اختر من المعرض';
+
+  /// Arabic: [mannequinTakePhoto].
+  static const String mannequinTakePhotoAr = 'التقط صورة';
+
+  /// Arabic: [mannequinUploadPhotoCta].
+  static const String mannequinUploadPhotoCtaAr =
+      'ارفع صورتك (مرجع جسم للذكاء الاصطناعي)';
+
+  /// Arabic: [mannequinCustomPhotoHint].
+  static const String mannequinCustomPhotoHintAr =
+      'تم اختيار صورة مخصصة — تُستخدم لمخرجات الذكاء الاصطناعي.';
+
   /// Arabic: [homeExploreAll].
   static const String homeExploreAllAr = 'استكشف الكل';
 
@@ -1787,6 +2135,9 @@ class AppStrings {
 
   /// Arabic: [partnerFieldWorkshopName].
   static const String partnerFieldWorkshopNameAr = 'اسم الورشة أو الاستوديو (اختياري)';
+
+  /// Arabic: [partnerFieldPortfolioUrl].
+  static const String partnerFieldPortfolioUrlAr = 'معرض أعمال أو موقع (اختياري)';
 
   /// Arabic: [partnerFieldVehicle].
   static const String partnerFieldVehicleAr = 'نوع المركبة';
@@ -2115,6 +2466,16 @@ class AppStrings {
   /// Arabic: [aiPromptLabel].
   static const String aiPromptLabelAr = 'صف الإطلالة التي تريدها';
 
+  /// Arabic: [aiGenerating].
+  static const String aiGeneratingAr = 'جاري توليد التصميم...';
+
+  /// Arabic: [aiAppliedToDesign].
+  static const String aiAppliedToDesignAr = 'تم التطبيق على التصميم';
+
+  /// Arabic: [aiDraftCreated].
+  static const String aiDraftCreatedAr =
+      'تم إنشاء مسودة بالذكاء الاصطناعي في تصاميمي';
+
   /// Arabic: [aiApply].
   static const String aiApplyAr = 'تطبيق';
 
@@ -2156,5 +2517,218 @@ class AppStrings {
 
   /// Arabic: [permissionAudioDeniedTitle].
   static const String permissionAudioDeniedTitleAr = 'تم رفض إذن الميكروفون';
+
+  /// Arabic: [editorExitConfirm].
+  static const String editorExitConfirmAr = 'الخروج بدون حفظ؟';
+
+  /// Arabic: [editorBuildColorPrimary].
+  static const String editorBuildColorPrimaryAr = 'لون القماش';
+
+  /// Arabic: [editorSketchOptional].
+  static const String editorSketchOptionalAr = 'رسم اختياري للذكاء الاصطناعي';
+
+  /// Arabic: [editorExit].
+  static const String editorExitAr = 'خروج';
+
+  /// Arabic: [editorOrder].
+  static const String editorOrderAr = 'اطلب';
+
+  /// Arabic: [editorMoreMenu].
+  static const String editorMoreMenuAr = 'المزيد';
+
+  /// Arabic: [editorSaveDesignTitle].
+  static const String editorSaveDesignTitleAr = 'حفظ التصميم';
+
+  /// Arabic: [editorDesignNameHint].
+  static const String editorDesignNameHintAr = 'الاسم المعروض في تصاميمي';
+
+  /// Arabic: [editorDesignNameRequired].
+  static const String editorDesignNameRequiredAr = 'اسم التصميم مطلوب.';
+
+  /// Arabic: [editorCurrentDesign].
+  static const String editorCurrentDesignAr = 'التصميم الحالي';
+
+  /// Arabic: [editorLookGeneratedSnack].
+  static const String editorLookGeneratedSnackAr =
+      'تم إنشاء الإطلالة — انتقل إلى معاينة الذكاء الاصطناعي';
+
+  /// Arabic: [editorLookGeneratedPreview].
+  static const String editorLookGeneratedPreviewAr =
+      'تم إنشاء الإطلالة. راجع المعاينة أعلاه.';
+
+  /// Arabic: [editorShareImage].
+  static const String editorShareImageAr = 'مشاركة الصورة';
+
+  /// Arabic: [editorSaveImage].
+  static const String editorSaveImageAr = 'حفظ الصورة';
+
+  /// Arabic: [editorShareToCommunity].
+  static const String editorShareToCommunityAr = 'مشاركة في المجتمع';
+
+  /// Arabic: [editorPublishEarn].
+  static const String editorPublishEarnAr = 'انشر واربح';
+
+  /// Arabic: [editorPublishShowcaseSubtitle].
+  static const String editorPublishShowcaseSubtitleAr =
+      'أدرج في المعرض القابل للطلب';
+
+  /// Arabic: [editorCapturePreviewFailed].
+  static const String editorCapturePreviewFailedAr =
+      'تعذّر التقاط معاينة التصميم.';
+
+  /// Arabic: [editorShareImageCaption].
+  static const String editorShareImageCaptionAr = 'تصميمي في لوليبانتس';
+
+  /// Arabic: [editorSavedImageToPath].
+  static const String editorSavedImageToPathAr = 'تم الحفظ في {path}';
+
+  /// Arabic: [editorSaveBeforePublish].
+  static const String editorSaveBeforePublishAr =
+      'احفظ التصميم قبل النشر.';
+
+  /// Arabic: [editorDone].
+  static const String editorDoneAr = 'تم';
+
+  /// Arabic: [editorTextTypeHint].
+  static const String editorTextTypeHintAr = 'اكتب نصك';
+
+  /// Arabic: [editorTextAddToDesign].
+  static const String editorTextAddToDesignAr = 'أضف إلى التصميم';
+
+  /// Arabic: [editorTextLayers].
+  static const String editorTextLayersAr = 'الطبقات';
+
+  /// Arabic: [editorTextFont].
+  static const String editorTextFontAr = 'الخط';
+
+  /// Arabic: [editorTextSizePrefix].
+  static const String editorTextSizePrefixAr = 'الحجم';
+
+  /// Arabic: [editorTextRotationPrefix].
+  static const String editorTextRotationPrefixAr = 'الدوران';
+
+  /// Arabic: [editorTextColour].
+  static const String editorTextColourAr = 'اللون';
+
+  /// Arabic: [editorTextDragHint].
+  static const String editorTextDragHintAr =
+      'اسحب النص على الملبس لتغيير موضعه';
+
+  /// Arabic: [editorTextRemove].
+  static const String editorTextRemoveAr = 'حذف النص';
+
+  /// Arabic: [editorPrintOnGarment].
+  static const String editorPrintOnGarmentAr = 'طباعة على الملبس';
+
+  /// Arabic: [editorUploadImage].
+  static const String editorUploadImageAr = 'ارفع صورة';
+
+  /// Arabic: [editorUploadSketch].
+  static const String editorUploadSketchAr = 'ارفع السكتش';
+
+  /// Arabic: [editorPrintPlacementChest].
+  static const String editorPrintPlacementChestAr = 'الصدر';
+
+  /// Arabic: [editorPrintPlacementBack].
+  static const String editorPrintPlacementBackAr = 'الظهر';
+
+  /// Arabic: [editorPrintPlacementFullFront].
+  static const String editorPrintPlacementFullFrontAr = 'الواجهة كاملة';
+
+  /// Arabic: [editorPrintOffsetHorizontal].
+  static const String editorPrintOffsetHorizontalAr = 'إزاحة أفقية';
+
+  /// Arabic: [editorPrintOffsetVertical].
+  static const String editorPrintOffsetVerticalAr = 'إزاحة عمودية';
+
+  /// Arabic: [editorPrintSizePercent].
+  static const String editorPrintSizePercentAr = 'الحجم';
+
+  /// Arabic: [editorApplyToDesign].
+  static const String editorApplyToDesignAr = 'تطبيق على التصميم';
+
+  /// Arabic: [editorAccessoriesUnavailable].
+  static const String editorAccessoriesUnavailableAr =
+      'الإكسسوارات غير متاحة في هذا الإصدار.';
+
+  /// Arabic: [editorAddAccessories].
+  static const String editorAddAccessoriesAr = 'إضافة إكسسوارات';
+
+  /// Arabic: [editorAccessoriesSubtitle].
+  static const String editorAccessoriesSubtitleAr =
+      'عناصر اختيارية تُضمّن مع طلب الملبس.';
+
+  /// Arabic: [editorAccessoriesLoadError].
+  static const String editorAccessoriesLoadErrorAr =
+      'تعذّر تحميل الإكسسوارات.';
+
+  /// Arabic: [editorAccessoriesEmpty].
+  static const String editorAccessoriesEmptyAr =
+      'لا توجد إكسسوارات إضافية متاحة.';
+
+  /// Arabic: [editorStyleYourPiece].
+  static const String editorStyleYourPieceAr = 'صمّم قطعتك';
+
+  /// Arabic: [editorStyleColourHint].
+  static const String editorStyleColourHintAr =
+      'اختر لوناً — التغييرات تُطبَّق على تصميمك فوراً.';
+
+  /// Arabic: [editorMoreColours].
+  static const String editorMoreColoursAr = 'المزيد من الألوان…';
+
+  /// Arabic: [editorQualityTier].
+  static const String editorQualityTierAr = 'درجة الجودة';
+
+  /// Arabic: [editorQualityStandard].
+  static const String editorQualityStandardAr = 'قياسي';
+
+  /// Arabic: [editorQualityPremium].
+  static const String editorQualityPremiumAr = 'مميز';
+
+  /// Arabic: [editorQualitySuitGrade].
+  static const String editorQualitySuitGradeAr = 'درجة البدلة';
+
+  /// Arabic: [editorCustomColour].
+  static const String editorCustomColourAr = 'لون مخصص';
+
+  /// Arabic: [editorTapToFineTune].
+  static const String editorTapToFineTuneAr = 'اضغط للضبط الدقيق';
+
+  /// Arabic: [editorBuildCatalogError].
+  static const String editorBuildCatalogErrorAr =
+      'تعذّر تحميل كتالوج البناء.';
+
+  /// Arabic: [editorDesignCatalogError].
+  static const String editorDesignCatalogErrorAr =
+      'تعذّر تحميل كتالوج التصاميم.';
+
+  /// Arabic: [editorNoOptionsForCombination].
+  static const String editorNoOptionsForCombinationAr =
+      'لا توجد خيارات متاحة لهذا التركيب.';
+
+  /// Arabic: [editorBackToParts].
+  static const String editorBackToPartsAr = 'العودة إلى الأجزاء';
+
+  /// Arabic: [editorEnhanceWithAi].
+  static const String editorEnhanceWithAiAr = 'تحسين بالذكاء الاصطناعي';
+
+  /// Arabic: [editorAiRequestFailed].
+  static const String editorAiRequestFailedAr = 'فشل طلب الذكاء الاصطناعي';
+
+  /// Arabic: [editorAiApplyFailed].
+  static const String editorAiApplyFailedAr =
+      'تعذّر تطبيق اقتراح الذكاء الاصطناعي.';
+
+  /// Arabic: [editorShareCommunityPrefillNew].
+  static const String editorShareCommunityPrefillNewAr =
+      'شاهدوا تصميمي الجديد لـ {garmentType}.';
+
+  /// Arabic: [editorShareCommunityPrefillNamed].
+  static const String editorShareCommunityPrefillNamedAr =
+      'صمّمتُ للتو {name}.';
+
+  /// Arabic: [aiCreateFailed].
+  static const String aiCreateFailedAr =
+      'تعذّر إنشاء التصميم. حاول مرة أخرى.';
 
 }

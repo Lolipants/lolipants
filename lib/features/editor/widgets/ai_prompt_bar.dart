@@ -1,3 +1,5 @@
+import 'dart:ui' show Locale;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -20,6 +22,7 @@ import 'package:lolipants/features/editor/utils/ai_colour_parse.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
 import 'package:lolipants/shared/widgets/lolipants_text_field.dart';
 import 'package:lolipants/core/l10n/app_localization.dart';
+import 'package:lolipants/features/settings/providers/settings_provider.dart';
 
 final aiDesignServiceProvider = Provider<AiDesignService>(
   (ref) => AiDesignService(
@@ -98,18 +101,30 @@ class _AiPromptBarState extends ConsumerState<AiPromptBar> {
 
   @override
   Widget build(BuildContext context) {
+    final locale = ref.watch(settingsLocaleProvider);
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-          Text('AI · ذكاء اصطناعي', style: AppTextStyles.labelGold),
+          Text(
+            localizedFromLocale(
+              locale,
+              AppStrings.editorTabAi,
+              AppStrings.editorTabAiAr,
+            ),
+            style: AppTextStyles.labelGold,
+          ),
           const SizedBox(height: AppSpacing.sm),
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Expanded(
                 child: LolipantsTextField(
-                  label: AppStrings.aiPromptLabel,
+                  label: localizedFromLocale(
+                    locale,
+                    AppStrings.aiPromptLabel,
+                    AppStrings.aiPromptLabelAr,
+                  ),
                   controller: _promptController,
                 ),
               ),
@@ -172,7 +187,13 @@ class _AiPromptBarState extends ConsumerState<AiPromptBar> {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 ),
                 const SizedBox(width: AppSpacing.sm),
-                Text(pickSlashFromContext(context, AppStrings.aiGenerating)),
+                Text(
+                  localizedFromLocale(
+                    locale,
+                    AppStrings.aiGenerating,
+                    AppStrings.aiGeneratingAr,
+                  ),
+                ),
               ],
             )
           else if (_error != null)
@@ -182,6 +203,7 @@ class _AiPromptBarState extends ConsumerState<AiPromptBar> {
             )
           else if (_suggestion != null)
             _SuggestionPreview(
+              locale: locale,
               suggestion: _suggestion!,
               onApply: _applyToDesign,
               onTryAgain: () {
@@ -238,7 +260,15 @@ class _AiPromptBarState extends ConsumerState<AiPromptBar> {
       });
       if (result.success && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Look generated. Check preview above.')),
+          SnackBar(
+            content: Text(
+              localizedFromLocale(
+                ref.read(settingsLocaleProvider),
+                AppStrings.editorLookGeneratedPreview,
+                AppStrings.editorLookGeneratedPreviewAr,
+              ),
+            ),
+          ),
         );
       }
       return;
@@ -278,7 +308,14 @@ class _AiPromptBarState extends ConsumerState<AiPromptBar> {
     result.fold(
       (e) => setState(() {
         _isLoading = false;
-        _error = designErrorMessage(e, fallback: 'AI request failed');
+        _error = designErrorMessage(
+          e,
+          fallback: localizedFromLocale(
+            ref.read(settingsLocaleProvider),
+            AppStrings.editorAiRequestFailed,
+            AppStrings.editorAiRequestFailedAr,
+          ),
+        );
       }),
       (suggestion) => setState(() {
         _isLoading = false;
@@ -300,7 +337,11 @@ class _AiPromptBarState extends ConsumerState<AiPromptBar> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            pickSlashFromContext(context, AppStrings.aiAppliedToDesign),
+            localizedFromLocale(
+              ref.read(settingsLocaleProvider),
+              AppStrings.aiAppliedToDesign,
+              AppStrings.aiAppliedToDesignAr,
+            ),
           ),
         ),
       );
@@ -326,17 +367,10 @@ class _AiPromptBarState extends ConsumerState<AiPromptBar> {
         'mannequinId': canonicalMannequinIdForApi(mannequinId) ?? mannequinId,
         'primaryColour': suggestion.primaryColour,
         'accentColour': suggestion.accentColour,
-        'fabricId': suggestion.fabricId,
-        'patternId': suggestion.patternId,
         'renderMetadata': {
           'editorMannequinId': mannequinId,
           'garmentType': _garmentType,
-          'primaryColour': suggestion.primaryColour,
-          'accentColour': suggestion.accentColour,
-          'fabricId': suggestion.fabricId,
-          'patternId': suggestion.patternId,
           'aiLookUserPrompt': prompt,
-          'buildStyleMode': 'configurator',
           'aiHomeDraft': true,
           if ((suggestion.description ?? '').trim().isNotEmpty)
             'aiSuggestionDescription': suggestion.description!.trim(),
@@ -350,7 +384,11 @@ class _AiPromptBarState extends ConsumerState<AiPromptBar> {
           content: Text(
             designErrorMessage(
               error,
-              fallback: 'Could not apply AI suggestion.',
+              fallback: localizedFromLocale(
+                ref.read(settingsLocaleProvider),
+                AppStrings.editorAiApplyFailed,
+                AppStrings.editorAiApplyFailedAr,
+              ),
             ),
           ),
         ),
@@ -365,7 +403,11 @@ class _AiPromptBarState extends ConsumerState<AiPromptBar> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              pickSlashFromContext(context, AppStrings.aiDraftCreated),
+              localizedFromLocale(
+                ref.read(settingsLocaleProvider),
+                AppStrings.aiDraftCreated,
+                AppStrings.aiDraftCreatedAr,
+              ),
             ),
           ),
         );
@@ -376,11 +418,13 @@ class _AiPromptBarState extends ConsumerState<AiPromptBar> {
 
 class _SuggestionPreview extends StatelessWidget {
   const _SuggestionPreview({
+    required this.locale,
     required this.suggestion,
     required this.onApply,
     required this.onTryAgain,
   });
 
+  final Locale locale;
   final GarmentDesignSuggestion suggestion;
   final VoidCallback onApply;
   final VoidCallback onTryAgain;
@@ -412,14 +456,24 @@ class _SuggestionPreview extends StatelessWidget {
           children: [
             Expanded(
               child: LolipantsButton(
-                label: AppStrings.aiApply,
+                label: localizedFromLocale(
+                  locale,
+                  AppStrings.aiApply,
+                  AppStrings.aiApplyAr,
+                ),
                 onPressed: onApply,
               ),
             ),
             const SizedBox(width: AppSpacing.sm),
             TextButton(
               onPressed: onTryAgain,
-              child: Text(pickSlashFromContext(context, AppStrings.aiTryAgain)),
+              child: Text(
+                localizedFromLocale(
+                  locale,
+                  AppStrings.aiTryAgain,
+                  AppStrings.aiTryAgainAr,
+                ),
+              ),
             ),
           ],
         ),

@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/constants/tailor_strings.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
+import 'package:lolipants/features/settings/providers/settings_provider.dart';
 import 'package:lolipants/features/tailor/providers/tailor_providers.dart';
 import 'package:lolipants/features/tailor/widgets/tailor_order_row.dart';
 
@@ -12,7 +15,6 @@ class TailorQueueScaffold extends ConsumerWidget {
   const TailorQueueScaffold({
     required this.bucket,
     required this.detailSubPath,
-    required this.emptyMessage,
     super.key,
   });
 
@@ -22,11 +24,9 @@ class TailorQueueScaffold extends ConsumerWidget {
   /// Sub-path used to deep-link into the detail screen (e.g. `incoming`).
   final String detailSubPath;
 
-  /// Message shown when the queue is empty.
-  final String emptyMessage;
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final locale = ref.watch(settingsLocaleProvider);
     final queue = ref.watch(tailorQueueProvider(bucket));
     return RefreshIndicator(
       onRefresh: () =>
@@ -40,7 +40,11 @@ class TailorQueueScaffold extends ConsumerWidget {
             const Icon(Icons.error_outline, size: 32),
             const SizedBox(height: AppSpacing.sm),
             Text(
-              'Could not load orders. Pull to retry.',
+              localizedFromLocale(
+                locale,
+                TailorStrings.couldNotLoadOrdersRetry,
+                TailorStrings.couldNotLoadOrdersRetryAr,
+              ),
               style: AppTextStyles.bodyMedium,
             ),
             const SizedBox(height: AppSpacing.sm),
@@ -54,7 +58,10 @@ class TailorQueueScaffold extends ConsumerWidget {
               children: [
                 const SizedBox(height: AppSpacing.xxl),
                 Center(
-                  child: Text(emptyMessage, style: AppTextStyles.bodyMedium),
+                  child: Text(
+                    TailorStrings.emptyMessageForBucket(bucket, locale),
+                    style: AppTextStyles.bodyMedium,
+                  ),
                 ),
               ],
             );
