@@ -17,6 +17,7 @@ import 'package:lolipants/features/editor/data/built_in_mannequin_assets.dart';
 import 'package:lolipants/features/browse/logic/region_preset_editor.dart';
 import 'package:lolipants/features/editor/models/editor_preset_args.dart';
 import 'package:lolipants/features/home/models/home_flow_selection.dart';
+import 'package:lolipants/features/wedding/models/wedding_flow_args.dart';
 import 'package:lolipants/features/home/providers/home_flow_provider.dart';
 import 'package:lolipants/features/editor/providers/editor_provider.dart';
 import 'package:lolipants/features/editor/widgets/bundled_mannequin_image.dart';
@@ -255,6 +256,20 @@ class _MannequinSelectorScreenState
                   onPressed: () {
                     final pending = widget.pendingPreset;
                     final homeFlow = widget.homeFlow;
+                    if (homeFlow != null &&
+                        homeFlow.isComplete &&
+                        homeFlow.style == HomeStyleLane.wedding &&
+                        homeFlow.weddingFulfillment != null &&
+                        kFeatureWeddingFlow) {
+                      context.push(
+                        '/wedding/dresses',
+                        extra: WeddingFlowArgs(
+                          fulfillment: homeFlow.weddingFulfillment,
+                          mannequinId: _selectedId,
+                        ),
+                      );
+                      return;
+                    }
                     final preset = pending != null
                         ? editorPresetWithMannequin(pending, _selectedId)
                         : null;
@@ -288,10 +303,6 @@ class _MannequinSelectorScreenState
 
 String? _initialTabForFlow(HomeFlowSelection? flow) {
   if (flow == null || !flow.isComplete) return null;
-  if (flow.style == HomeStyleLane.wedding &&
-      flow.serviceType == HomeServiceType.finishProduct) {
-    return 'wedding';
-  }
   if (flow.serviceType == HomeServiceType.designYourself) {
     return 'build';
   }

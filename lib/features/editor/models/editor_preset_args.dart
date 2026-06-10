@@ -85,7 +85,7 @@ class EditorBootstrapArgs {
   /// Local file path from image picker; used as AI / mannequin body reference.
   final String? customMannequinImagePath;
 
-  /// Optional editor bottom tab: `designs`, `build`, or `wedding`.
+  /// Optional editor bottom tab: `designs` or `build`.
   final String? initialTab;
 
   /// Home wizard selections when [source] is `home_flow`.

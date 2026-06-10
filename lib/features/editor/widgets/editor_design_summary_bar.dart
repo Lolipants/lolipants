@@ -21,8 +21,6 @@ class EditorDesignSummaryBar extends ConsumerWidget {
     final catalogAsync = ref.watch(configuratorCatalogProvider);
     final estimateAsync = ref.watch(editorEstimateProvider);
 
-    if (editor.isWeddingTab) return const SizedBox.shrink();
-
     if (editor.buildStyleMode == EditorBuildStyleMode.catalog) {
       final path = editor.selectedCatalogDesignPath.trim();
       final summaryLine = path.isNotEmpty

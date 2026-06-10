@@ -59,7 +59,7 @@ FabricOption? selectedFabricOption({
 }
 
 /// Default on-screen width of one swatch tile in logical pixels.
-const double kFabricPreviewTileLogicalPx = 36;
+const double kFabricPreviewTileLogicalPx = 60;
 
 /// Matches [Image] / [paintImage] placement for configurator hero layers.
 Rect configuratorLayerDestRect({
@@ -240,7 +240,7 @@ class _MaskedFabricTilePainter extends CustomPainter {
       canvas,
       dest,
       Paint()
-        ..blendMode = BlendMode.multiply
+        ..blendMode = BlendMode.srcATop
         ..filterQuality = FilterQuality.medium,
     );
 
@@ -277,8 +277,8 @@ class _MaskedFabricTilePainter extends CustomPainter {
 
     final tilePaint = Paint()
       ..blendMode = paint.blendMode
-      ..filterQuality = FilterQuality.none
-      ..isAntiAlias = false;
+      ..filterQuality = FilterQuality.medium
+      ..isAntiAlias = true;
 
     final cols = (dest.width / tileW).ceil() + 1;
     final rows = (dest.height / tileH).ceil() + 1;

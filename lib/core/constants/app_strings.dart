@@ -518,6 +518,44 @@ class AppStrings {
   static const String homeFlowMeasurementsNoteAr =
       'ستضيف مقاساتك قبل أن نبدأ بتفصيل طلبك';
 
+  /// Wedding service step title (English).
+  static const String homeFlowStepWeddingFulfillment =
+      'How would you like to get your dress?';
+
+  /// Wedding service step title (Arabic).
+  static const String homeFlowStepWeddingFulfillmentAr =
+      'كيف تريد الحصول على فستانك؟';
+
+  /// Wedding rent choice body (English).
+  static const String homeFlowWeddingRentBody =
+      'Rent for your event and return the dress after';
+
+  /// Wedding rent choice body (Arabic).
+  static const String homeFlowWeddingRentBodyAr =
+      'استأجري الفستان لمناسبتك وأعيديه بعدها';
+
+  /// Wedding buy choice body (English).
+  static const String homeFlowWeddingBuyBody =
+      'Purchase and keep the dress forever';
+
+  /// Wedding buy choice body (Arabic).
+  static const String homeFlowWeddingBuyBodyAr =
+      'اشترِي الفستان واحتفظي به';
+
+  /// Wedding confirm CTA (English).
+  static const String homeFlowBrowseDresses = 'Browse dresses';
+
+  /// Wedding confirm CTA (Arabic).
+  static const String homeFlowBrowseDressesAr = 'تصفح الفساتين';
+
+  /// Wedding confirm note (English).
+  static const String homeFlowWeddingMeasurementsNote =
+      'You will pick a dress, then add your measurements before checkout';
+
+  /// Wedding confirm note (Arabic).
+  static const String homeFlowWeddingMeasurementsNoteAr =
+      'ستختارين فستاناً ثم تضيفين مقاساتك قبل إتمام الطلب';
+
   /// Sign-up gender label (English).
   static const String signupGenderLabel = 'I design for';
 

@@ -51,11 +51,14 @@ const bool kFeatureConfiguratorBuild = bool.fromEnvironment(
   defaultValue: true,
 );
 
-/// Editor **Wedding** tab: read-only wedding/bridesmaid catalogue + rent/buy.
-const bool kFeatureWeddingTab = bool.fromEnvironment(
+/// Standalone wedding dress catalogue + checkout flow.
+const bool kFeatureWeddingFlow = bool.fromEnvironment(
   'FEATURE_WEDDING_TAB',
   defaultValue: true,
 );
+
+/// @deprecated Use [kFeatureWeddingFlow]. Kept for existing build flags.
+const bool kFeatureWeddingTab = kFeatureWeddingFlow;
 
 /// Accessories browse shop, standalone checkout, and editor garment add-ons.
 const bool kFeatureAccessories = bool.fromEnvironment(

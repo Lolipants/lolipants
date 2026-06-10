@@ -10,8 +10,8 @@ import 'package:lolipants/features/editor/widgets/fabric_swatch_image.dart';
 class EditorHeroFabricRail extends ConsumerWidget {
   const EditorHeroFabricRail({super.key});
 
-  static const double _thumbSize = 48;
-  static const double _railWidth = 56;
+  static const double _thumbSize = 64;
+  static const double _railWidth = 72;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

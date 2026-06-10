@@ -14,9 +14,6 @@ import 'package:lolipants/features/editor/utils/fabric_texture_overlay.dart';
 import 'package:lolipants/features/editor/widgets/catalog_design_preview.dart';
 import 'package:lolipants/features/editor/widgets/configurator_option_image.dart';
 import 'package:lolipants/features/editor/widgets/fabric_textured_garment_layer.dart';
-import 'package:lolipants/features/editor/widgets/editor_wedding_hero.dart';
-import 'package:lolipants/features/wedding/models/wedding_dress.dart';
-import 'package:lolipants/features/wedding/providers/wedding_providers.dart';
 
 /// Hero: mannequin + configurator layers (unified design); AI look when set.
 class EditorHeroPreview extends ConsumerWidget {
@@ -32,11 +29,6 @@ class EditorHeroPreview extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final editor = ref.watch(editorProvider);
-    final tab = activeTab;
-
-    if (tab == EditorTab.wedding) {
-      return _WeddingHeroBody(state: editor);
-    }
 
     // AI Look tab: refined render only (catalogue flat-lay is Compose / layers).
     if (editor.heroMode == EditorHeroMode.look) {
@@ -50,7 +42,6 @@ class EditorHeroPreview extends ConsumerWidget {
     }
 
     if (kFeatureConfiguratorBuild &&
-        tab != EditorTab.wedding &&
         editor.heroMode == EditorHeroMode.compose) {
       final catalog = ref.watch(configuratorCatalogProvider);
 
@@ -91,36 +82,6 @@ class EditorHeroPreview extends ConsumerWidget {
     }
 
     return const SizedBox.shrink();
-  }
-}
-
-class _WeddingHeroBody extends ConsumerWidget {
-  const _WeddingHeroBody({required this.state});
-
-  final EditorState state;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final asyncDresses =
-        ref.watch(weddingDressesProvider(state.weddingCategoryFilter));
-    return asyncDresses.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (_, __) => const EditorWeddingHero(dress: null),
-      data: (dresses) {
-        WeddingDress? selected;
-        final id = state.selectedWeddingDressId;
-        if (id != null) {
-          for (final d in dresses) {
-            if (d.id == id) {
-              selected = d;
-              break;
-            }
-          }
-        }
-        selected ??= dresses.isNotEmpty ? dresses.first : null;
-        return EditorWeddingHero(dress: selected);
-      },
-    );
   }
 }
 

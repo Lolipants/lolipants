@@ -11,6 +11,8 @@ import 'package:lolipants/features/home/models/home_flow_selection.dart';
 import 'package:lolipants/features/home/providers/home_flow_provider.dart';
 import 'package:lolipants/features/home/widgets/home_flow_choice_button.dart';
 import 'package:lolipants/features/settings/providers/settings_provider.dart';
+import 'package:lolipants/features/wedding/models/wedding_dress.dart';
+import 'package:lolipants/features/wedding/widgets/wedding_fulfillment_choices.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
 
 /// Guided home flow: one centered step at a time with transitions.
@@ -89,6 +91,7 @@ class HomeDesignFlow extends ConsumerWidget {
                 onGender: notifier.setGender,
                 onStyle: notifier.setStyle,
                 onService: notifier.setServiceType,
+                onWeddingFulfillment: notifier.setWeddingFulfillment,
                 onStart: () => openHomeDesignFlow(context, selection),
               ),
             ),
@@ -109,6 +112,7 @@ class _StepPanel extends StatelessWidget {
     required this.onGender,
     required this.onStyle,
     required this.onService,
+    required this.onWeddingFulfillment,
     required this.onStart,
     super.key,
   });
@@ -121,6 +125,7 @@ class _StepPanel extends StatelessWidget {
   final Future<void> Function(String gender) onGender;
   final void Function(HomeStyleLane style) onStyle;
   final void Function(HomeServiceType serviceType) onService;
+  final void Function(WeddingFulfillment fulfillment) onWeddingFulfillment;
   final VoidCallback onStart;
 
   @override
@@ -154,16 +159,28 @@ class _StepPanel extends StatelessWidget {
           AppStrings.homeFlowStepStyle,
           AppStrings.homeFlowStepStyleAr,
         ),
-      HomeFlowStep.service => localizedFromLocale(
-          locale,
-          AppStrings.homeFlowStepService,
-          AppStrings.homeFlowStepServiceAr,
-        ),
-      HomeFlowStep.confirm => localizedFromLocale(
-          locale,
-          AppStrings.homeFlowStartDesigning,
-          AppStrings.homeFlowStartDesigningAr,
-        ),
+      HomeFlowStep.service => selection.isWeddingStyle
+          ? localizedFromLocale(
+              locale,
+              AppStrings.homeFlowStepWeddingFulfillment,
+              AppStrings.homeFlowStepWeddingFulfillmentAr,
+            )
+          : localizedFromLocale(
+              locale,
+              AppStrings.homeFlowStepService,
+              AppStrings.homeFlowStepServiceAr,
+            ),
+      HomeFlowStep.confirm => selection.isWeddingStyle
+          ? localizedFromLocale(
+              locale,
+              AppStrings.homeFlowBrowseDresses,
+              AppStrings.homeFlowBrowseDressesAr,
+            )
+          : localizedFromLocale(
+              locale,
+              AppStrings.homeFlowStartDesigning,
+              AppStrings.homeFlowStartDesigningAr,
+            ),
     };
   }
 
@@ -233,47 +250,60 @@ class _StepPanel extends StatelessWidget {
             ),
           ],
         ],
-      HomeFlowStep.service => [
-          HomeFlowChoiceButton(
-            buttonWidth: choiceWidth,
-            isAr: isAr,
-            icon: Icons.palette_outlined,
-            label: localizedFromLocale(
-              locale,
-              AppStrings.homeFlowDesignYourself,
-              AppStrings.homeFlowDesignYourselfAr,
-            ),
-            subtitle: localizedFromLocale(
-              locale,
-              AppStrings.homeFlowDesignYourselfBody,
-              AppStrings.homeFlowDesignYourselfBodyAr,
-            ),
-            onTap: () => onService(HomeServiceType.designYourself),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          HomeFlowChoiceButton(
-            buttonWidth: choiceWidth,
-            isAr: isAr,
-            icon: Icons.checkroom_outlined,
-            label: localizedFromLocale(
-              locale,
-              AppStrings.homeFlowFinishProduct,
-              AppStrings.homeFlowFinishProductAr,
-            ),
-            subtitle: localizedFromLocale(
-              locale,
-              AppStrings.homeFlowFinishProductBody,
-              AppStrings.homeFlowFinishProductBodyAr,
-            ),
-            onTap: () => onService(HomeServiceType.finishProduct),
-          ),
-        ],
+      HomeFlowStep.service => selection.isWeddingStyle
+          ? [
+              WeddingFulfillmentChoices(
+                choiceWidth: choiceWidth,
+                isAr: isAr,
+                onRent: () => onWeddingFulfillment(WeddingFulfillment.rent),
+                onBuy: () => onWeddingFulfillment(WeddingFulfillment.buy),
+              ),
+            ]
+          : [
+              HomeFlowChoiceButton(
+                buttonWidth: choiceWidth,
+                isAr: isAr,
+                icon: Icons.palette_outlined,
+                label: localizedFromLocale(
+                  locale,
+                  AppStrings.homeFlowDesignYourself,
+                  AppStrings.homeFlowDesignYourselfAr,
+                ),
+                subtitle: localizedFromLocale(
+                  locale,
+                  AppStrings.homeFlowDesignYourselfBody,
+                  AppStrings.homeFlowDesignYourselfBodyAr,
+                ),
+                onTap: () => onService(HomeServiceType.designYourself),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              HomeFlowChoiceButton(
+                buttonWidth: choiceWidth,
+                isAr: isAr,
+                icon: Icons.checkroom_outlined,
+                label: localizedFromLocale(
+                  locale,
+                  AppStrings.homeFlowFinishProduct,
+                  AppStrings.homeFlowFinishProductAr,
+                ),
+                subtitle: localizedFromLocale(
+                  locale,
+                  AppStrings.homeFlowFinishProductBody,
+                  AppStrings.homeFlowFinishProductBodyAr,
+                ),
+                onTap: () => onService(HomeServiceType.finishProduct),
+              ),
+            ],
       HomeFlowStep.confirm => [
           Text(
             localizedFromLocale(
               locale,
-              AppStrings.homeFlowMeasurementsNote,
-              AppStrings.homeFlowMeasurementsNoteAr,
+              selection.isWeddingStyle
+                  ? AppStrings.homeFlowWeddingMeasurementsNote
+                  : AppStrings.homeFlowMeasurementsNote,
+              selection.isWeddingStyle
+                  ? AppStrings.homeFlowWeddingMeasurementsNoteAr
+                  : AppStrings.homeFlowMeasurementsNoteAr,
             ),
             style: (isAr ? AppTextStyles.arabicBody : AppTextStyles.bodySmall)
                 .copyWith(color: AppColors.fog, fontSize: 12),
@@ -286,8 +316,12 @@ class _StepPanel extends StatelessWidget {
             child: LolipantsButton(
               label: localizedFromLocale(
                 locale,
-                AppStrings.homeFlowStartDesigning,
-                AppStrings.homeFlowStartDesigningAr,
+                selection.isWeddingStyle
+                    ? AppStrings.homeFlowBrowseDresses
+                    : AppStrings.homeFlowStartDesigning,
+                selection.isWeddingStyle
+                    ? AppStrings.homeFlowBrowseDressesAr
+                    : AppStrings.homeFlowStartDesigningAr,
               ),
               fullWidth: true,
               onPressed: onStart,

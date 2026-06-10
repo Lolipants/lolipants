@@ -37,9 +37,6 @@ import 'package:lolipants/features/editor/providers/configurator_providers.dart'
 import 'package:lolipants/features/editor/widgets/editor_catalog_compose_hero.dart';
 import 'package:lolipants/features/editor/widgets/editor_hero_preview.dart';
 import 'package:lolipants/features/editor/widgets/editor_style_picker_sheet.dart';
-import 'package:lolipants/features/orders/models/wedding_order_draft.dart';
-import 'package:lolipants/features/wedding/models/wedding_dress.dart';
-import 'package:lolipants/features/wedding/providers/wedding_providers.dart';
 import 'package:lolipants/features/editor/widgets/image_print_panel.dart';
 import 'package:lolipants/features/editor/widgets/text_tool_panel.dart';
 import 'package:lolipants/features/orders/models/order_design_draft.dart';
@@ -136,9 +133,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
     _seededSession = true;
     notifier.loadFabrics();
     final tabName = widget.bootstrap?.initialTab?.trim().toLowerCase();
-    if (tabName == 'wedding' && kFeatureWeddingTab) {
-      notifier.setInitialTab(EditorTab.wedding);
-    } else if (tabName == 'build' ||
+    if (tabName == 'build' ||
         tabName == 'designs' ||
         tabName == 'design') {
       if (kFeatureConfiguratorBuild) {
@@ -220,7 +215,6 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
     final quotaAsync = ref.watch(aiRenderQuotaProvider);
     final canGenerateLook =
         !editor.lookGenerating && (quotaAsync.valueOrNull?.canRender ?? true);
-    final isWedding = editor.isWeddingTab;
     final showCatalogComposeHero = showsCatalogComposeHero(editor);
 
     return PopScope(
@@ -244,22 +238,14 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                   children: [
                     _EditorTopBar(
                       onBack: () => _confirmExit(context),
-                      onSave: isWedding ? null : () => _saveDesign(context),
-                      onOrder: isWedding
-                          ? () => _orderWeddingDress(context)
-                          : () => _orderNow(context),
-                      onShare:
-                          isWedding ? null : () => _showShareOptions(context),
+                      onSave: () => _saveDesign(context),
+                      onOrder: () => _orderNow(context),
+                      onShare: () => _showShareOptions(context),
                       onSizing: () => context.push('/sizing'),
                       saving: editor.isSaving,
                       heroMode: editor.heroMode,
                       onHeroModeChanged: notifier.setHeroMode,
                       aiLookEnabled: hasConfigurator,
-                      isWeddingTab: isWedding,
-                      weddingOrderLabel:
-                          editor.weddingFulfillment == WeddingFulfillment.rent
-                              ? AppStrings.weddingRentDress
-                              : AppStrings.weddingBuyDress,
                     ),
                     Expanded(
                       child: Column(
@@ -331,15 +317,11 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                                             ),
                                           ),
                                         ),
-                                      if (!isWedding &&
-                                          editor.heroMode ==
-                                              EditorHeroMode.compose &&
-                                          editor.buildStyleMode !=
-                                              EditorBuildStyleMode.catalog)
+                                      if (editor.heroMode ==
+                                          EditorHeroMode.compose)
                                         const EditorHeroFabricRail(),
-                                      if (!isWedding &&
-                                          editor.heroMode ==
-                                              EditorHeroMode.compose)
+                                      if (editor.heroMode ==
+                                          EditorHeroMode.compose)
                                         EditorComposeToolRail(
                                           editor: editor,
                                           onPalette: () =>
@@ -349,8 +331,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                                           onAddImage: () =>
                                               _showImagePrintSheet(context),
                                         ),
-                                      if (!isWedding)
-                                        EditorRefineFab(
+                                      EditorRefineFab(
                                           onPressed: canGenerateLook
                                               ? () => _generateLook(context)
                                               : null,
@@ -422,11 +403,11 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                               ),
                             ),
                           ),
-                          if (!isWedding) const EditorDesignSummaryBar(),
+                          const EditorDesignSummaryBar(),
                         ],
                       ),
                     ),
-                    if (kFeatureConfiguratorBuild || kFeatureWeddingTab)
+                    if (kFeatureConfiguratorBuild)
                       EditorBottomPanel(
                         height: bottomPanelHeight,
                         onGenerateAi: () => _generateLook(context),
@@ -722,41 +703,6 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
         SnackBar(content: Text(result.message!)),
       );
     }
-  }
-
-  Future<void> _orderWeddingDress(BuildContext context) async {
-    final editor = ref.read(editorProvider);
-    final dressId = editor.selectedWeddingDressId?.trim();
-    if (dressId == null || dressId.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text(AppStrings.weddingSelectDressHint)),
-      );
-      return;
-    }
-
-    final dresses = await ref.read(
-      weddingDressesProvider(editor.weddingCategoryFilter).future,
-    );
-    WeddingDress? dress;
-    for (final d in dresses) {
-      if (d.id == dressId) {
-        dress = d;
-        break;
-      }
-    }
-    if (!mounted || dress == null) return;
-
-    context.push(
-      '/order/wedding-summary',
-      extra: WeddingOrderDraft(
-        dressId: dress.id,
-        dressLabel: dress.labelEn,
-        dressImageUrl: dress.imageUrl,
-        category: dress.category,
-        fulfillment: editor.weddingFulfillment,
-        rentalDays: editor.rentalDays,
-      ),
-    );
   }
 
   Future<void> _orderNow(BuildContext context) async {
@@ -1216,21 +1162,17 @@ class _EditorTopBar extends StatelessWidget {
     required this.heroMode,
     required this.onHeroModeChanged,
     this.aiLookEnabled = true,
-    this.isWeddingTab = false,
-    this.weddingOrderLabel,
   });
 
   final VoidCallback onBack;
-  final VoidCallback? onSave;
+  final VoidCallback onSave;
   final VoidCallback onOrder;
-  final VoidCallback? onShare;
+  final VoidCallback onShare;
   final VoidCallback onSizing;
   final bool saving;
   final EditorHeroMode heroMode;
   final ValueChanged<EditorHeroMode> onHeroModeChanged;
   final bool aiLookEnabled;
-  final bool isWeddingTab;
-  final String? weddingOrderLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -1238,12 +1180,6 @@ class _EditorTopBar extends StatelessWidget {
     final narrow = width < 400;
 
     Widget modeControl() {
-      if (isWeddingTab) {
-        return Text(
-          AppStrings.editorTabWedding,
-          style: AppTextStyles.titleSmall,
-        );
-      }
       return SegmentedButton<EditorHeroMode>(
         segments: [
           ButtonSegment<EditorHeroMode>(
@@ -1308,7 +1244,7 @@ class _EditorTopBar extends StatelessWidget {
               onSelected: (id) {
                 switch (id) {
                   case 'share':
-                    onShare?.call();
+                    onShare();
                   case 'save':
                     onSave?.call();
                   case 'sizing':
@@ -1331,33 +1267,31 @@ class _EditorTopBar extends StatelessWidget {
                     ],
                   ),
                 ),
-                if (onShare != null)
-                  PopupMenuItem<String>(
-                    value: 'share',
-                    child: Row(
-                      children: [
-                        const Icon(Icons.ios_share, size: 20),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            'Share to community',
-                            style: AppTextStyles.bodyMedium,
-                          ),
+                PopupMenuItem<String>(
+                  value: 'share',
+                  child: Row(
+                    children: [
+                      const Icon(Icons.ios_share, size: 20),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Share to community',
+                          style: AppTextStyles.bodyMedium,
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                if (onSave != null)
-                  PopupMenuItem<String>(
-                    value: 'save',
-                    child: Row(
-                      children: [
-                        const Icon(Icons.save_outlined, size: 20),
-                        const SizedBox(width: 12),
-                        Text('Save', style: AppTextStyles.bodyMedium),
-                      ],
-                    ),
+                ),
+                PopupMenuItem<String>(
+                  value: 'save',
+                  child: Row(
+                    children: [
+                      const Icon(Icons.save_outlined, size: 20),
+                      const SizedBox(width: 12),
+                      Text('Save', style: AppTextStyles.bodyMedium),
+                    ],
                   ),
+                ),
               ],
               child: const Padding(
                 padding: EdgeInsets.all(8),
@@ -1370,24 +1304,20 @@ class _EditorTopBar extends StatelessWidget {
               onPressed: onSizing,
               icon: const Icon(Icons.straighten),
             ),
-            if (onShare != null)
-              IconButton(
-                tooltip: 'Share to community',
-                onPressed: onShare,
-                icon: const Icon(Icons.ios_share),
-              ),
-            if (onSave != null)
-              IconButton(
-                onPressed: onSave,
-                icon: const Icon(Icons.save_outlined),
-              ),
+            IconButton(
+              tooltip: 'Share to community',
+              onPressed: onShare,
+              icon: const Icon(Icons.ios_share),
+            ),
+            IconButton(
+              onPressed: onSave,
+              icon: const Icon(Icons.save_outlined),
+            ),
           ],
           SizedBox(
             width: narrow ? 110 : 130,
             child: LolipantsButton(
-              label: isWeddingTab
-                  ? (weddingOrderLabel ?? AppStrings.weddingRentDress)
-                  : (narrow ? 'Order' : 'Order / اطلب'),
+              label: narrow ? 'Order' : 'Order / اطلب',
               onPressed: onOrder,
               loading: saving,
               fullWidth: false,

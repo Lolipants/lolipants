@@ -9,7 +9,6 @@ import 'package:lolipants/features/browse/data/preset_gender_filter.dart';
 import 'package:lolipants/features/browse/data/region_presets.dart';
 import 'package:lolipants/features/browse/providers/preset_providers.dart';
 import 'package:lolipants/features/browse/widgets/region_style_button.dart';
-import 'package:lolipants/features/editor/models/editor_preset_args.dart';
 import 'package:lolipants/features/accessories/screens/accessories_browse_section.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
 import 'package:lolipants/shared/widgets/lolipants_button.dart';
@@ -121,16 +120,10 @@ class CategoryDetailScreen extends ConsumerWidget {
                       AppSpacing.xxl,
                     ),
                     children: [
-                      if (key == 'wedding' && kFeatureWeddingTab) ...[
+                      if (key == 'wedding' && kFeatureWeddingFlow) ...[
                         LolipantsButton(
                           label: 'Wedding & bridesmaid dresses',
-                          onPressed: () => context.push(
-                            '/editor',
-                            extra: const EditorBootstrapArgs(
-                              source: 'browse_wedding',
-                              initialTab: 'wedding',
-                            ),
-                          ),
+                          onPressed: () => context.push('/wedding/fulfillment'),
                         ),
                         const SizedBox(height: AppSpacing.lg),
                         Text(

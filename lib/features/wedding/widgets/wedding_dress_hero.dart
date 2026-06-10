@@ -10,9 +10,9 @@ import 'package:lolipants/core/l10n/localized_label.dart';
 import 'package:lolipants/features/settings/providers/settings_provider.dart';
 import 'package:lolipants/features/wedding/models/wedding_dress.dart';
 
-/// Read-only full-bleed preview of the selected wedding catalogue dress.
-class EditorWeddingHero extends ConsumerWidget {
-  const EditorWeddingHero({
+/// Full-bleed preview of a wedding catalogue dress.
+class WeddingDressHero extends ConsumerWidget {
+  const WeddingDressHero({
     required this.dress,
     super.key,
   });

@@ -29,22 +29,28 @@ class FabricSwatchImage extends StatelessWidget {
         : '?';
 
     if (assetPath != null) {
-      return Image.asset(
-        assetPath,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) =>
-            _MonogramFallback(monogram: monogram, colour: fallbackColour),
+      return Padding(
+        padding: const EdgeInsets.all(2),
+        child: Image.asset(
+          assetPath,
+          fit: BoxFit.contain,
+          errorBuilder: (_, __, ___) =>
+              _MonogramFallback(monogram: monogram, colour: fallbackColour),
+        ),
       );
     }
     if (networkUrl != null) {
-      return CachedNetworkImage(
-        imageUrl: networkUrl,
-        fit: BoxFit.cover,
-        placeholder: (_, __) => ColoredBox(
-          color: fallbackColour.withValues(alpha: 0.35),
+      return Padding(
+        padding: const EdgeInsets.all(2),
+        child: CachedNetworkImage(
+          imageUrl: networkUrl,
+          fit: BoxFit.contain,
+          placeholder: (_, __) => ColoredBox(
+            color: fallbackColour.withValues(alpha: 0.35),
+          ),
+          errorWidget: (_, __, ___) =>
+              _MonogramFallback(monogram: monogram, colour: fallbackColour),
         ),
-        errorWidget: (_, __, ___) =>
-            _MonogramFallback(monogram: monogram, colour: fallbackColour),
       );
     }
     return _MonogramFallback(monogram: monogram, colour: fallbackColour);

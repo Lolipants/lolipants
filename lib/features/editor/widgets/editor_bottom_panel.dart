@@ -1,15 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lolipants/core/config/app_features.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
-import 'package:lolipants/features/editor/providers/configurator_providers.dart';
-import 'package:lolipants/features/editor/providers/editor_provider.dart';
 import 'package:lolipants/features/editor/widgets/editor_design_panel.dart';
-import 'package:lolipants/features/editor/widgets/editor_panel_tabs.dart';
-import 'package:lolipants/features/editor/widgets/editor_wedding_panel.dart';
 
-/// Unified bottom shell: Design / Wedding tabs + panel content.
+/// Unified bottom shell for the design editor panel.
 class EditorBottomPanel extends ConsumerWidget {
   const EditorBottomPanel({
     required this.height,
@@ -22,12 +17,6 @@ class EditorBottomPanel extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final editor = ref.watch(editorProvider);
-    final notifier = ref.read(editorProvider.notifier);
-    final hasConfigurator = ref.watch(mannequinHasConfiguratorBuildProvider);
-    final isWedding =
-        editor.activeTab == EditorTab.wedding && kFeatureWeddingTab;
-
     return SizedBox(
       height: height,
       child: DecoratedBox(
@@ -51,26 +40,11 @@ class EditorBottomPanel extends ConsumerWidget {
                 ),
               ),
             ),
-            if (kFeatureConfiguratorBuild || kFeatureWeddingTab)
-              EditorPanelTabs(
-                activeTab: editor.activeTab,
-                onTabChanged: notifier.setTab,
-                weddingTabEnabled: hasConfigurator,
-              ),
             Expanded(
-              child: isWedding
-                  ? EditorWeddingPanel(
-                      embedded: true,
-                      state: editor,
-                      onDressSelected: notifier.setWeddingDressId,
-                      onCategoryChanged: notifier.setWeddingCategoryFilter,
-                      onFulfillmentChanged: notifier.setWeddingFulfillment,
-                      onRentalDaysChanged: notifier.setRentalDays,
-                    )
-                  : EditorDesignPanel(
-                      embedded: true,
-                      onGenerateAi: onGenerateAi,
-                    ),
+              child: EditorDesignPanel(
+                embedded: true,
+                onGenerateAi: onGenerateAi,
+              ),
             ),
           ],
         ),

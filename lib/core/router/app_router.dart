@@ -58,6 +58,10 @@ import 'package:lolipants/features/orders/screens/order_accessory_summary_screen
 import 'package:lolipants/features/orders/screens/order_summary_screen.dart';
 import 'package:lolipants/features/orders/screens/order_wedding_quote_review_screen.dart';
 import 'package:lolipants/features/orders/screens/order_wedding_summary_screen.dart';
+import 'package:lolipants/features/wedding/models/wedding_flow_args.dart';
+import 'package:lolipants/features/wedding/screens/wedding_dress_browse_screen.dart';
+import 'package:lolipants/features/wedding/screens/wedding_dress_detail_screen.dart';
+import 'package:lolipants/features/wedding/screens/wedding_fulfillment_screen.dart';
 import 'package:lolipants/features/orders/screens/orders_screen.dart';
 import 'package:lolipants/features/orders/screens/payment_screen.dart';
 import 'package:lolipants/features/orders/screens/size_confirmation_screen.dart';
@@ -335,6 +339,45 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final slug = state.pathParameters['category']!;
           return CategoryDetailScreen(category: slug);
+        },
+      ),
+      GoRoute(
+        path: '/wedding/fulfillment',
+        name: 'weddingFulfillment',
+        builder: (context, state) => const WeddingFulfillmentScreen(),
+      ),
+      GoRoute(
+        path: '/wedding/dresses',
+        name: 'weddingDresses',
+        builder: (context, state) {
+          final extra = state.extra;
+          final flowArgs = extra is WeddingFlowArgs ? extra : null;
+          return WeddingDressBrowseScreen(flowArgs: flowArgs);
+        },
+      ),
+      GoRoute(
+        path: '/wedding/dress',
+        name: 'weddingDressDetail',
+        builder: (context, state) {
+          final extra = state.extra;
+          if (extra is WeddingDressDetailArgs) {
+            return WeddingDressDetailScreen(
+              dress: extra.dress,
+              fulfillment: extra.fulfillment,
+            );
+          }
+          final locale = ref.read(settingsLocaleProvider);
+          return Scaffold(
+            body: Center(
+              child: Text(
+                localizedFromLocale(
+                  locale,
+                  AppStrings.weddingSelectDressHint,
+                  AppStrings.weddingSelectDressHintAr,
+                ),
+              ),
+            ),
+          );
         },
       ),
       GoRoute(

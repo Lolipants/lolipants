@@ -6,7 +6,6 @@ import 'package:lolipants/features/editor/providers/editor_provider.dart';
 /// (modest abaya, western dress, etc.) is active, even if
 /// [EditorState.selectedCatalogDesignPath] is still set from a prior session.
 bool showsCatalogComposeHero(EditorState editor) {
-  if (editor.activeTab == EditorTab.wedding) return false;
   if (editor.heroMode != EditorHeroMode.compose) return false;
   return editor.buildStyleMode == EditorBuildStyleMode.catalog;
 }

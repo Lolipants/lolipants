@@ -38,13 +38,12 @@ import 'package:lolipants/features/editor/logic/mannequin_gender.dart';
 import 'package:lolipants/features/editor/logic/editor_print_reference.dart';
 import 'package:lolipants/features/editor/logic/refined_look_source_key.dart';
 import 'package:lolipants/features/editor/models/configurator_catalog.dart';
-import 'package:lolipants/features/wedding/models/wedding_dress.dart';
 
 /// Editor interaction tools shown in the side rail.
 enum EditorTool { colour, text, image, sizing }
 
 /// Bottom panel tabs for the editor shell.
-enum EditorTab { designs, build, wedding, ai }
+enum EditorTab { designs, build, ai }
 
 /// Hero preview: schematic compose vs Gemini-refined look.
 enum EditorHeroMode { compose, look }
@@ -123,10 +122,6 @@ class EditorState {
     required this.configuratorSummary,
     required this.configuratorAiLayerNotes,
     required this.activeConfiguratorSlotIndex,
-    required this.selectedWeddingDressId,
-    required this.weddingCategoryFilter,
-    required this.weddingFulfillment,
-    required this.rentalDays,
     required this.selectedAccessoryIds,
     required this.accessoriesSummary,
     required this.preferCatalogBuild,
@@ -176,10 +171,6 @@ class EditorState {
       configuratorSummary: '',
       configuratorAiLayerNotes: '',
       activeConfiguratorSlotIndex: 0,
-      selectedWeddingDressId: null,
-      weddingCategoryFilter: WeddingCategoryFilter.all,
-      weddingFulfillment: WeddingFulfillment.rent,
-      rentalDays: 3,
       selectedAccessoryIds: const [],
       accessoriesSummary: '',
       preferCatalogBuild: false,
@@ -262,13 +253,6 @@ class EditorState {
   /// Active slot chip index in the unified design panel.
   final int activeConfiguratorSlotIndex;
 
-  /// Selected catalogue dress on the Wedding tab.
-  final String? selectedWeddingDressId;
-
-  final WeddingCategoryFilter weddingCategoryFilter;
-  final WeddingFulfillment weddingFulfillment;
-  final int rentalDays;
-
   /// Garment order add-on accessory ids.
   final List<String> selectedAccessoryIds;
 
@@ -280,8 +264,6 @@ class EditorState {
 
   /// Catalogue ref to restore when [preferCatalogBuild] is set.
   final String? pinnedBrowseCatalogPath;
-
-  bool get isWeddingTab => activeTab == EditorTab.wedding;
 
   /// True when the user has explicitly picked a fabric from the catalogue.
   bool get isFabricSelected => selectedFabricId.trim().isNotEmpty;
@@ -348,11 +330,6 @@ class EditorState {
     String? configuratorSummary,
     String? configuratorAiLayerNotes,
     int? activeConfiguratorSlotIndex,
-    String? selectedWeddingDressId,
-    bool unsetSelectedWeddingDressId = false,
-    WeddingCategoryFilter? weddingCategoryFilter,
-    WeddingFulfillment? weddingFulfillment,
-    int? rentalDays,
     List<String>? selectedAccessoryIds,
     String? accessoriesSummary,
     bool? preferCatalogBuild,
@@ -413,13 +390,6 @@ class EditorState {
           configuratorAiLayerNotes ?? this.configuratorAiLayerNotes,
       activeConfiguratorSlotIndex:
           activeConfiguratorSlotIndex ?? this.activeConfiguratorSlotIndex,
-      selectedWeddingDressId: unsetSelectedWeddingDressId
-          ? null
-          : (selectedWeddingDressId ?? this.selectedWeddingDressId),
-      weddingCategoryFilter:
-          weddingCategoryFilter ?? this.weddingCategoryFilter,
-      weddingFulfillment: weddingFulfillment ?? this.weddingFulfillment,
-      rentalDays: rentalDays ?? this.rentalDays,
       selectedAccessoryIds:
           selectedAccessoryIds ?? this.selectedAccessoryIds,
       accessoriesSummary: accessoriesSummary ?? this.accessoriesSummary,
@@ -479,9 +449,6 @@ class EditorNotifier extends StateNotifier<EditorState> {
       if (state.buildStyleMode == EditorBuildStyleMode.catalog) return;
       ensureDefaultConfiguratorTemplate(mannequinTemplates);
       return;
-    }
-    if (state.activeTab == EditorTab.wedding) {
-      setTab(EditorTab.build);
     }
     if (state.heroMode == EditorHeroMode.look) {
       setHeroMode(EditorHeroMode.compose);
@@ -603,9 +570,6 @@ class EditorNotifier extends StateNotifier<EditorState> {
     if (tab == EditorTab.ai && !kFeatureAiEditorTab) {
       next = EditorTab.build;
     }
-    if (tab == EditorTab.wedding && !kFeatureWeddingTab) {
-      next = EditorTab.build;
-    }
     state = state.copyWith(activeTab: next);
   }
 
@@ -617,10 +581,6 @@ class EditorNotifier extends StateNotifier<EditorState> {
 
   void setInitialTab(EditorTab tab) {
     setTab(tab);
-  }
-
-  void setWeddingDressId(String? dressId) {
-    state = state.copyWith(selectedWeddingDressId: dressId);
   }
 
   void setSelectedAccessories({
@@ -640,18 +600,6 @@ class EditorNotifier extends StateNotifier<EditorState> {
       accessoriesSummary: '',
       hasUnsavedChanges: true,
     );
-  }
-
-  void setWeddingCategoryFilter(WeddingCategoryFilter filter) {
-    state = state.copyWith(weddingCategoryFilter: filter);
-  }
-
-  void setWeddingFulfillment(WeddingFulfillment fulfillment) {
-    state = state.copyWith(weddingFulfillment: fulfillment);
-  }
-
-  void setRentalDays(int days) {
-    state = state.copyWith(rentalDays: days < 1 ? 1 : days);
   }
 
   /// Applies [kDefaultConfiguratorTemplateId] when build has no valid template.
@@ -963,10 +911,6 @@ class EditorNotifier extends StateNotifier<EditorState> {
       configuratorSummary: '',
       configuratorAiLayerNotes: '',
       activeConfiguratorSlotIndex: 0,
-      selectedWeddingDressId: initial.selectedWeddingDressId,
-      weddingCategoryFilter: initial.weddingCategoryFilter,
-      weddingFulfillment: initial.weddingFulfillment,
-      rentalDays: initial.rentalDays,
       selectedAccessoryIds: initial.selectedAccessoryIds,
       accessoriesSummary: initial.accessoriesSummary,
       preferCatalogBuild: false,
