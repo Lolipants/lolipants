@@ -58,8 +58,59 @@ FabricOption? selectedFabricOption({
   return null;
 }
 
-/// Default on-screen width of one swatch tile in logical pixels.
-const double kFabricPreviewTileLogicalPx = 60;
+/// Minimum / maximum on-screen fabric tile width in logical pixels.
+const double kFabricTileMinLogicalPx = 32;
+const double kFabricTileMaxLogicalPx = 48;
+
+/// Evenly-divided tile grid for a garment [dest] rect.
+class FabricTileGrid {
+  const FabricTileGrid({
+    required this.tileW,
+    required this.tileH,
+    required this.cols,
+    required this.rows,
+  });
+
+  final double tileW;
+  final double tileH;
+  final int cols;
+  final int rows;
+}
+
+/// Computes tile dimensions that evenly divide [dest] with ~[targetRepeats] across
+/// the shorter garment edge.
+FabricTileGrid fabricTileGridForDest(
+  Rect dest,
+  double fabricAspect, {
+  int targetRepeats = 5,
+}) {
+  if (dest.width <= 0 || dest.height <= 0 || fabricAspect <= 0) {
+    return const FabricTileGrid(tileW: 40, tileH: 40, cols: 1, rows: 1);
+  }
+
+  final shorter = dest.width < dest.height ? dest.width : dest.height;
+  var tileW = (shorter / targetRepeats).clamp(
+    kFabricTileMinLogicalPx,
+    kFabricTileMaxLogicalPx,
+  );
+
+  final cols = (dest.width / tileW).round().clamp(2, 999);
+  tileW = dest.width / cols;
+
+  final rawTileH = tileW * fabricAspect;
+  final rows = (dest.height / rawTileH).round().clamp(2, 999);
+  final tileH = dest.height / rows;
+
+  return FabricTileGrid(tileW: tileW, tileH: tileH, cols: cols, rows: rows);
+}
+
+/// Slight lift so [BlendMode.multiply] patterns stay visible on shaded masks.
+const ColorFilter kFabricMultiplyBrightnessFilter = ColorFilter.matrix(<double>[
+  1.12, 0, 0, 0, 16,
+  0, 1.12, 0, 0, 16,
+  0, 0, 1.12, 0, 16,
+  0, 0, 0, 1, 0,
+]);
 
 /// Matches [Image] / [paintImage] placement for configurator hero layers.
 Rect configuratorLayerDestRect({
@@ -87,7 +138,7 @@ class FabricTextureOverlay extends StatefulWidget {
     required this.fabricImageProvider,
     this.fit = BoxFit.contain,
     this.alignment = Alignment.center,
-    this.tileLogicalPixels = kFabricPreviewTileLogicalPx,
+    this.targetRepeats = 5,
     this.loadingChild,
     super.key,
   });
@@ -96,7 +147,9 @@ class FabricTextureOverlay extends StatefulWidget {
   final ImageProvider fabricImageProvider;
   final BoxFit fit;
   final Alignment alignment;
-  final double tileLogicalPixels;
+
+  /// Approximate swatch repeats across the shorter garment edge.
+  final int targetRepeats;
 
   /// Placeholder while mask and fabric images decode.
   final Widget? loadingChild;
@@ -189,7 +242,7 @@ class _FabricTextureOverlayState extends State<FabricTextureOverlay> {
         fabric: _fabricImage!,
         fit: widget.fit,
         alignment: widget.alignment,
-        tileLogicalPixels: widget.tileLogicalPixels,
+        targetRepeats: widget.targetRepeats,
       ),
       child: const SizedBox.expand(),
     );
@@ -203,7 +256,7 @@ class _MaskedFabricTilePainter extends CustomPainter {
     required this.fabric,
     required this.fit,
     required this.alignment,
-    required this.tileLogicalPixels,
+    required this.targetRepeats,
   });
 
   final ui.Image mask;
@@ -211,7 +264,7 @@ class _MaskedFabricTilePainter extends CustomPainter {
   final ui.Image fabric;
   final BoxFit fit;
   final Alignment alignment;
-  final double tileLogicalPixels;
+  final int targetRepeats;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -240,7 +293,7 @@ class _MaskedFabricTilePainter extends CustomPainter {
       canvas,
       dest,
       Paint()
-        ..blendMode = BlendMode.srcATop
+        ..blendMode = BlendMode.multiply
         ..filterQuality = FilterQuality.medium,
     );
 
@@ -258,12 +311,16 @@ class _MaskedFabricTilePainter extends CustomPainter {
   }
 
   void _paintTiledFabric(Canvas canvas, Rect dest, Paint paint) {
-    final tileW = tileLogicalPixels;
-    final tileH = tileW * fabric.height / fabric.width;
+    final fabricAspect = fabric.height / fabric.width;
+    final grid = fabricTileGridForDest(
+      dest,
+      fabricAspect,
+      targetRepeats: targetRepeats,
+    );
 
     // Skip compressed JPEG border pixels (cause white/dark seam grids when tiled).
     // Stretch the inner swatch to each tile — no dest overlap (overlap + multiply = dark bands).
-    const borderSkip = 2.0;
+    const borderSkip = 4.0;
     final innerW = fabric.width.toDouble() - (borderSkip * 2);
     final innerH = fabric.height.toDouble() - (borderSkip * 2);
     final fabricSrc = innerW > 0 && innerH > 0
@@ -277,24 +334,27 @@ class _MaskedFabricTilePainter extends CustomPainter {
 
     final tilePaint = Paint()
       ..blendMode = paint.blendMode
+      ..colorFilter = kFabricMultiplyBrightnessFilter
       ..filterQuality = FilterQuality.medium
       ..isAntiAlias = true;
 
-    final cols = (dest.width / tileW).ceil() + 1;
-    final rows = (dest.height / tileH).ceil() + 1;
+    final startCol = (dest.left / grid.tileW).floor();
+    final endCol = ((dest.right - 0.001) / grid.tileW).ceil();
+    final startRow = (dest.top / grid.tileH).floor();
+    final endRow = ((dest.bottom - 0.001) / grid.tileH).ceil();
 
     canvas.save();
     canvas.clipRect(dest);
-    for (var row = 0; row < rows; row++) {
-      for (var col = 0; col < cols; col++) {
+    for (var row = startRow; row <= endRow; row++) {
+      for (var col = startCol; col <= endCol; col++) {
         canvas.drawImageRect(
           fabric,
           fabricSrc,
           Rect.fromLTWH(
-            dest.left + (col * tileW),
-            dest.top + (row * tileH),
-            tileW,
-            tileH,
+            col * grid.tileW,
+            row * grid.tileH,
+            grid.tileW,
+            grid.tileH,
           ),
           tilePaint,
         );
@@ -310,6 +370,6 @@ class _MaskedFabricTilePainter extends CustomPainter {
         oldDelegate.fabric != fabric ||
         oldDelegate.fit != fit ||
         oldDelegate.alignment != alignment ||
-        oldDelegate.tileLogicalPixels != tileLogicalPixels;
+        oldDelegate.targetRepeats != targetRepeats;
   }
 }

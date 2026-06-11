@@ -6,11 +6,9 @@ import 'package:lolipants/features/editor/data/editor_text_fonts.dart';
 import 'package:lolipants/features/editor/logic/editor_print_reference.dart';
 import 'package:lolipants/features/editor/providers/design_catalog_providers.dart';
 import 'package:lolipants/features/editor/providers/editor_provider.dart';
-import 'package:lolipants/features/editor/utils/fabric_texture_overlay.dart';
 import 'package:lolipants/features/editor/widgets/catalog_design_preview.dart';
 import 'package:lolipants/features/editor/widgets/editor_layer_resize_wrapper.dart';
 import 'package:lolipants/features/editor/widgets/editor_print_overlay.dart';
-import 'package:lolipants/features/editor/widgets/fabric_textured_catalog_image.dart';
 
 /// Design-catalogue hero: flat-lay PNG with bounded layout (works for casual,
 /// traditional, and modern). Casual tees/hoodies/long sleeves also support
@@ -58,13 +56,6 @@ class DesignFlatlayCompose extends ConsumerWidget {
         userPrintPath.isNotEmpty || state.textLayers.isNotEmpty;
 
     final notifier = ref.read(editorProvider.notifier);
-    final selectedFabric = selectedFabricOption(
-      selectedFabricId: state.selectedFabricId,
-      availableFabrics: state.availableFabrics,
-    );
-    final fabricProvider = selectedFabric != null
-        ? fabricSwatchImageProvider(selectedFabric)
-        : null;
 
     Widget buildAtSize(double width, double height) {
       if (width <= 0 || height <= 0) {
@@ -75,36 +66,22 @@ class DesignFlatlayCompose extends ConsumerWidget {
       }
       final canvasSize = Size(width, height);
 
-      final errorWidget = Center(
-        child: Text(
-          'Design asset missing',
-          style: AppTextStyles.bodySmall,
+      final garment = CatalogDesignPreview(
+        key: ValueKey<String>(path),
+        imageSource: path,
+        width: width,
+        height: height,
+        fit: BoxFit.contain,
+        alignment: Alignment.bottomCenter,
+        backgroundColor: kCatalogPreviewBackground,
+        tintColor: customizable ? state.primaryColour : null,
+        errorWidget: Center(
+          child: Text(
+            'Design asset missing',
+            style: AppTextStyles.bodySmall,
+          ),
         ),
       );
-      final garment = fabricProvider != null
-          ? SizedBox(
-              width: width,
-              height: height,
-              child: FabricTexturedCatalogImage(
-                key: ValueKey<String>('fabric:$path:${state.selectedFabricId}'),
-                path: path,
-                fabricProvider: fabricProvider,
-                fit: BoxFit.contain,
-                alignment: Alignment.bottomCenter,
-                errorWidget: errorWidget,
-              ),
-            )
-          : CatalogDesignPreview(
-              key: ValueKey<String>(path),
-              imageSource: path,
-              width: width,
-              height: height,
-              fit: BoxFit.contain,
-              alignment: Alignment.bottomCenter,
-              backgroundColor: kCatalogPreviewBackground,
-              tintColor: customizable ? state.primaryColour : null,
-              errorWidget: errorWidget,
-            );
 
       return ColoredBox(
         color: kCatalogPreviewBackground,

@@ -121,12 +121,27 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
           customMannequinImagePath: widget.bootstrap?.customMannequinImagePath,
         );
       } else {
-        notifier.beginNewDesign(
-          mannequinId: initialMannequin,
-          customMannequinImagePath: widget.bootstrap?.customMannequinImagePath,
-        );
-        if (preset != null) {
-          notifier.loadPreset(preset);
+        final homeFlow = widget.bootstrap?.homeFlow;
+        final fromHomeFlow = widget.bootstrap?.source == 'home_flow' &&
+            homeFlow != null &&
+            homeFlow.isComplete &&
+            homeFlow.serviceType != null &&
+            homeFlow.style != null;
+        if (fromHomeFlow) {
+          notifier.bootstrapHomeFlow(
+            serviceType: homeFlow.serviceType!,
+            styleLane: homeFlow.style!,
+            mannequinId: initialMannequin,
+            customMannequinImagePath: widget.bootstrap?.customMannequinImagePath,
+          );
+        } else {
+          notifier.beginNewDesign(
+            mannequinId: initialMannequin,
+            customMannequinImagePath: widget.bootstrap?.customMannequinImagePath,
+          );
+          if (preset != null) {
+            notifier.loadPreset(preset);
+          }
         }
       }
     }
@@ -318,7 +333,9 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                                           ),
                                         ),
                                       if (editor.heroMode ==
-                                          EditorHeroMode.compose)
+                                              EditorHeroMode.compose &&
+                                          editor.buildStyleMode !=
+                                              EditorBuildStyleMode.catalog)
                                         const EditorHeroFabricRail(),
                                       if (editor.heroMode ==
                                           EditorHeroMode.compose)

@@ -10,8 +10,8 @@ import 'package:lolipants/features/editor/widgets/fabric_swatch_image.dart';
 class EditorHeroFabricRail extends ConsumerWidget {
   const EditorHeroFabricRail({super.key});
 
-  static const double _thumbSize = 64;
-  static const double _railWidth = 72;
+  static const double _thumbSize = 44;
+  static const double _railWidth = 52;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -44,7 +44,7 @@ class EditorHeroFabricRail extends ConsumerWidget {
                   horizontal: 4,
                 ),
                 itemCount: fabrics.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 6),
+                separatorBuilder: (_, __) => const SizedBox(height: 4),
                 itemBuilder: (context, index) {
                   final fabric = fabrics[index];
                   return _FabricSwatchTile(
@@ -134,7 +134,7 @@ class _FabricSwatchTile extends StatelessWidget {
                         padding: EdgeInsets.all(1.5),
                         child: Icon(
                           Icons.check,
-                          size: 10,
+                          size: 8,
                           color: AppColors.ink,
                         ),
                       ),

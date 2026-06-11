@@ -303,9 +303,6 @@ class _MannequinSelectorScreenState
 
 String? _initialTabForFlow(HomeFlowSelection? flow) {
   if (flow == null || !flow.isComplete) return null;
-  if (flow.serviceType == HomeServiceType.designYourself) {
-    return 'build';
-  }
   return 'build';
 }
 
