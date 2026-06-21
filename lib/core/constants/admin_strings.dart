@@ -35,6 +35,60 @@ class AdminStrings {
   static const String navCms = 'CMS';
   static const String navCmsAr = 'إدارة المحتوى';
 
+  static const String navNews = 'News';
+  static const String navNewsAr = 'الأخبار';
+
+  static const String newsTitle = 'Fashion news';
+  static const String newsTitleAr = 'أخبار الموضة';
+
+  static const String newsNewArticle = 'New article';
+  static const String newsNewArticleAr = 'مقال جديد';
+
+  static const String newsEditArticle = 'Edit article';
+  static const String newsEditArticleAr = 'تعديل المقال';
+
+  static const String newsTitleEn = 'Title (English)';
+  static const String newsTitleEnAr = 'العنوان (إنجليزي)';
+
+  static const String newsTitleArLabel = 'Title (Arabic)';
+  static const String newsTitleArLabelAr = 'العنوان (عربي)';
+
+  static const String newsSummaryEn = 'Summary (English)';
+  static const String newsSummaryEnAr = 'الملخص (إنجليزي)';
+
+  static const String newsSummaryArLabel = 'Summary (Arabic)';
+  static const String newsSummaryArLabelAr = 'الملخص (عربي)';
+
+  static const String newsBodyEn = 'Body (English)';
+  static const String newsBodyEnAr = 'المحتوى (إنجليزي)';
+
+  static const String newsBodyArLabel = 'Body (Arabic)';
+  static const String newsBodyArLabelAr = 'المحتوى (عربي)';
+
+  static const String newsPublished = 'Published';
+  static const String newsPublishedAr = 'منشور';
+
+  static const String newsFeatured = 'Featured hero';
+  static const String newsFeaturedAr = 'مقال مميز';
+
+  static const String newsCoverImage = 'Cover image';
+  static const String newsCoverImageAr = 'صورة الغلاف';
+
+  static const String newsPickImage = 'Pick image';
+  static const String newsPickImageAr = 'اختر صورة';
+
+  static const String newsNoArticles = 'No articles yet.';
+  static const String newsNoArticlesAr = 'لا توجد مقالات بعد.';
+
+  static const String newsDeleteConfirm = 'Delete this article?';
+  static const String newsDeleteConfirmAr = 'حذف هذا المقال؟';
+
+  static const String newsSaved = 'Article saved';
+  static const String newsSavedAr = 'تم حفظ المقال';
+
+  static const String newsDeleted = 'Article deleted';
+  static const String newsDeletedAr = 'تم حذف المقال';
+
   static const String sectionPeople = 'People';
   static const String sectionPeopleAr = 'الأشخاص';
 

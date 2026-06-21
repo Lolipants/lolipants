@@ -45,7 +45,7 @@ class LolipantsBottomNavBar extends ConsumerWidget {
     const community = _NavSpec(
       labelEn: AppStrings.navCommunity,
       labelAr: AppStrings.navCommunityAr,
-      icon: Icons.people_outline,
+      icon: Icons.newspaper_outlined,
     );
     const profile = _NavSpec(
       labelEn: AppStrings.navProfile,

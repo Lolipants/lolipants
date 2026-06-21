@@ -12,6 +12,7 @@ import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/features/settings/providers/settings_provider.dart';
 import 'package:lolipants/features/admin/providers/admin_providers.dart';
 import 'package:lolipants/features/admin/utils/admin_cms_helpers.dart';
+import 'package:lolipants/features/admin/widgets/admin_mannequin_asset_preview.dart';
 import 'package:lolipants/features/editor/providers/designs_providers.dart';
 import 'package:lolipants/shared/widgets/labeled_floating_action_button.dart';
 
@@ -59,7 +60,8 @@ class AdminConfiguratorCmsTab extends ConsumerStatefulWidget {
       _AdminConfiguratorCmsTabState();
 }
 
-class _AdminConfiguratorCmsTabState extends ConsumerState<AdminConfiguratorCmsTab>
+class _AdminConfiguratorCmsTabState
+    extends ConsumerState<AdminConfiguratorCmsTab>
     with SingleTickerProviderStateMixin {
   static const _resources = [
     'configurator_templates',
@@ -92,7 +94,8 @@ class _AdminConfiguratorCmsTabState extends ConsumerState<AdminConfiguratorCmsTa
     final templates = ref
             .watch(
               adminConfiguratorListProvider(
-                const AdminConfiguratorFilter(resource: 'configurator_templates'),
+                const AdminConfiguratorFilter(
+                    resource: 'configurator_templates'),
               ),
             )
             .valueOrNull ??
@@ -141,10 +144,12 @@ class _AdminConfiguratorCmsTabState extends ConsumerState<AdminConfiguratorCmsTa
               ),
             ),
             Tab(
-              text: localized(ref, AdminStrings.tabSlot, AdminStrings.tabSlotAr),
+              text:
+                  localized(ref, AdminStrings.tabSlot, AdminStrings.tabSlotAr),
             ),
             Tab(
-              text: localized(ref, AdminStrings.tabOptions, AdminStrings.tabOptionsAr),
+              text: localized(
+                  ref, AdminStrings.tabOptions, AdminStrings.tabOptionsAr),
             ),
           ],
         ),
@@ -237,7 +242,8 @@ class _AdminConfiguratorCmsTabState extends ConsumerState<AdminConfiguratorCmsTa
               error: (e, _) => ListView(
                 padding: const EdgeInsets.all(AppSpacing.xl),
                 children: [
-                  Text(formatAdminProviderError(e), style: AppTextStyles.bodySmall),
+                  Text(formatAdminProviderError(e),
+                      style: AppTextStyles.bodySmall),
                 ],
               ),
               data: (rows) {
@@ -303,8 +309,7 @@ class _AdminConfiguratorCmsTabState extends ConsumerState<AdminConfiguratorCmsTa
     final repo = ref.read(adminRepositoryProvider);
     final filter = AdminConfiguratorFilter(
       resource: resource,
-      templateId:
-          resource == 'configurator_slots' ? _filterTemplateId : null,
+      templateId: resource == 'configurator_slots' ? _filterTemplateId : null,
       slotId: resource == 'configurator_options' ? _filterSlotId : null,
     );
     final result = existing == null
@@ -374,13 +379,15 @@ class _ParentFilterBar extends ConsumerWidget {
               isExpanded: true,
               value: value != null && ids.contains(value) ? value : null,
               hint: Text(
-                localized(ref, AdminStrings.filterAll, AdminStrings.filterAllAr),
+                localized(
+                    ref, AdminStrings.filterAll, AdminStrings.filterAllAr),
               ),
               items: [
                 DropdownMenuItem<String?>(
                   value: null,
                   child: Text(
-                    localized(ref, AdminStrings.filterAll, AdminStrings.filterAllAr),
+                    localized(
+                        ref, AdminStrings.filterAll, AdminStrings.filterAllAr),
                   ),
                 ),
                 for (final option in options)
@@ -418,8 +425,8 @@ class _ConfiguratorRow extends ConsumerWidget {
         data['title_en']?.toString() ??
         data['label_en']?.toString() ??
         id;
-    final thumb = data['asset_url']?.toString() ??
-        data['preview_url']?.toString();
+    final thumb =
+        data['asset_url']?.toString() ?? data['preview_url']?.toString();
     return Card(
       child: ListTile(
         leading: thumb != null && thumb.startsWith('http')
@@ -463,7 +470,8 @@ class _ConfiguratorRow extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(
-          localizedFromContext(ctx, AdminStrings.deleteTitle, AdminStrings.deleteTitleAr),
+          localizedFromContext(
+              ctx, AdminStrings.deleteTitle, AdminStrings.deleteTitleAr),
         ),
         content: Text(
           localizedFromContext(
@@ -482,7 +490,8 @@ class _ConfiguratorRow extends ConsumerWidget {
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(
-              localizedFromContext(ctx, AdminStrings.delete, AdminStrings.deleteAr),
+              localizedFromContext(
+                  ctx, AdminStrings.delete, AdminStrings.deleteAr),
             ),
           ),
         ],
@@ -540,6 +549,8 @@ class _ConfiguratorFormDialogState
   late final Map<String, TextEditingController> _controllers;
   final Map<String, bool> _bools = {};
   String? _imageUrl;
+  _StagedConfiguratorUpload? _stagedUpload;
+  String _previewMannequinId = 'standard_female';
   bool _uploading = false;
   String? _selectedTemplateId;
   String? _selectedSlotId;
@@ -585,8 +596,8 @@ class _ConfiguratorFormDialogState
   void initState() {
     super.initState();
     _controllers = {};
-    _selectedTemplateId = widget.initial?['template_id']?.toString() ??
-        widget.defaultTemplateId;
+    _selectedTemplateId =
+        widget.initial?['template_id']?.toString() ?? widget.defaultTemplateId;
     _selectedSlotId =
         widget.initial?['slot_id']?.toString() ?? widget.defaultSlotId;
     for (final f in _fields) {
@@ -603,6 +614,7 @@ class _ConfiguratorFormDialogState
         );
       }
     }
+    _previewMannequinId = _defaultMannequinId();
   }
 
   @override
@@ -616,6 +628,14 @@ class _ConfiguratorFormDialogState
   @override
   Widget build(BuildContext context) {
     final isNew = widget.initial == null;
+    final mannequinRows =
+        ref.watch(adminCmsListProvider('mannequins')).valueOrNull ?? const [];
+    final previewMannequins = [
+      for (final row in mannequinRows)
+        if (_isActiveCmsRow(row) &&
+            (row['preview_url']?.toString().trim().isNotEmpty ?? false))
+          AdminPreviewMannequin.fromCmsRow(row),
+    ];
     return AlertDialog(
       title: Text(
         isNew
@@ -639,16 +659,27 @@ class _ConfiguratorFormDialogState
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      if (_imageUrl != null && _imageUrl!.startsWith('http'))
-                        CachedNetworkImage(
-                          imageUrl: _imageUrl!,
-                          height: 80,
-                          fit: BoxFit.contain,
-                          errorWidget: (_, __, ___) => const SizedBox(
-                            height: 80,
-                            child: Center(child: Icon(Icons.broken_image_outlined)),
-                          ),
+                      AdminMannequinAssetPreview(
+                        stagedFile: _stagedUpload?.file,
+                        uploadedUrl: _imageUrl,
+                        mannequinId: _previewMannequinId,
+                        mannequins: previewMannequins,
+                        onMannequinChanged: (id) =>
+                            setState(() => _previewMannequinId = id),
+                        onReplace: () => _pickImage(
+                          toCatalog: _stagedUpload?.toCatalog ??
+                              widget.resource == 'configurator_options',
                         ),
+                        onRemove: () => setState(() {
+                          _stagedUpload = null;
+                          _imageUrl = null;
+                        }),
+                        onConfirmUpload: () => _uploadStagedImage(),
+                        isConfiguratorLayer:
+                            widget.resource == 'configurator_options',
+                        uploading: _uploading,
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
                       Row(
                         children: [
                           if (widget.resource == 'configurator_options')
@@ -681,8 +712,8 @@ class _ConfiguratorFormDialogState
                                 ? const SizedBox(
                                     width: 16,
                                     height: 16,
-                                    child:
-                                        CircularProgressIndicator(strokeWidth: 2),
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2),
                                   )
                                 : const Icon(Icons.upload),
                             label: Text(
@@ -707,6 +738,19 @@ class _ConfiguratorFormDialogState
                           ),
                         ],
                       ),
+                      if (_stagedUpload != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: AppSpacing.xs),
+                          child: Text(
+                            _stagedUpload!.toCatalog
+                                ? 'Staged for configurator catalog upload'
+                                : 'Staged for general upload',
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(color: AppColors.fog),
+                          ),
+                        ),
                     ],
                   )
                 else if (f.key == 'metadata_json' &&
@@ -763,13 +807,14 @@ class _ConfiguratorFormDialogState
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(context),
+          onPressed: _uploading ? null : () => Navigator.pop(context),
           child: Text(
-            localizedFromContext(context, AppStrings.cancel, AppStrings.cancelAr),
+            localizedFromContext(
+                context, AppStrings.cancel, AppStrings.cancelAr),
           ),
         ),
         FilledButton(
-          onPressed: _submit,
+          onPressed: _uploading ? null : () => _submit(),
           child: Text(localized(ref, AdminStrings.save, AdminStrings.saveAr)),
         ),
       ],
@@ -807,33 +852,64 @@ class _ConfiguratorFormDialogState
     if (!granted) return;
     final file = await ImagePicker().pickImage(source: ImageSource.gallery);
     if (file == null) return;
+    setState(() {
+      _stagedUpload = _StagedConfiguratorUpload(
+        file: file,
+        toCatalog: toCatalog,
+      );
+      _imageUrl = null;
+      _previewMannequinId = _defaultMannequinId(file.name);
+    });
+  }
+
+  Future<bool> _uploadStagedImage() async {
+    final staged = _stagedUpload;
+    if (staged == null) return true;
     setState(() => _uploading = true);
     try {
-      if (toCatalog) {
+      if (staged.toCatalog) {
         final res = await ref.read(adminRepositoryProvider).uploadCatalogAsset(
-              filePath: file.path,
+              filePath: staged.file.path,
               category: 'configurator',
-              filename: file.name,
+              filename: staged.file.name,
             );
-        if (!mounted) return;
+        if (!mounted) return false;
         final locale = ref.read(settingsLocaleProvider);
-        res.fold(
-          (err) => ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(formatAdminCmsError(err, locale: locale))),
-          ),
-          (url) => setState(() => _imageUrl = url),
+        return res.fold(
+          (err) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(formatAdminCmsError(err, locale: locale))),
+            );
+            return false;
+          },
+          (url) {
+            setState(() {
+              _imageUrl = url;
+              _stagedUpload = null;
+            });
+            return true;
+          },
         );
       } else {
         final res = await ref
             .read(designsRepositoryProvider)
-            .uploadPrintImage(filePath: file.path);
-        if (!mounted) return;
+            .uploadPrintImage(filePath: staged.file.path);
+        if (!mounted) return false;
         final locale = ref.read(settingsLocaleProvider);
-        res.fold(
-          (err) => ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(formatAdminCmsError(err, locale: locale))),
-          ),
-          (url) => setState(() => _imageUrl = url),
+        return res.fold(
+          (err) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(formatAdminCmsError(err, locale: locale))),
+            );
+            return false;
+          },
+          (url) {
+            setState(() {
+              _imageUrl = url;
+              _stagedUpload = null;
+            });
+            return true;
+          },
         );
       }
     } finally {
@@ -841,7 +917,9 @@ class _ConfiguratorFormDialogState
     }
   }
 
-  void _submit() {
+  Future<void> _submit() async {
+    if (!await _uploadStagedImage()) return;
+    if (!mounted) return;
     final out = <String, dynamic>{};
     if (widget.resource == 'configurator_slots' &&
         _selectedTemplateId != null &&
@@ -874,6 +952,37 @@ class _ConfiguratorFormDialogState
     }
     Navigator.pop(context, out);
   }
+
+  String _defaultMannequinId([String? filename]) {
+    final haystack = [
+      filename ?? '',
+      _controllers['option_key']?.text ?? '',
+      _controllers['label_en']?.text ?? '',
+      _controllers['metadata_json']?.text ?? '',
+    ].join(' ').toLowerCase();
+    if (haystack.contains('men') ||
+        haystack.contains('male') ||
+        haystack.contains('thobe')) {
+      return 'standard_male';
+    }
+    return haystack.contains('petite') ? 'petite_female' : 'standard_female';
+  }
+}
+
+class _StagedConfiguratorUpload {
+  const _StagedConfiguratorUpload(
+      {required this.file, required this.toCatalog});
+
+  final XFile file;
+  final bool toCatalog;
+}
+
+bool _isActiveCmsRow(Map<String, dynamic> row) {
+  final raw = row['is_active'] ?? row['isActive'];
+  if (raw == null) return true;
+  if (raw is bool) return raw;
+  if (raw is num) return raw != 0;
+  return raw.toString().toLowerCase() == 'true' || raw.toString() == '1';
 }
 
 class _CfgField {

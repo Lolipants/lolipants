@@ -417,6 +417,7 @@ class _RoleEditDialogState extends ConsumerState<_RoleEditDialog> {
     AdminScopes.payouts,
     AdminScopes.moderation,
     AdminScopes.cms,
+    AdminScopes.news,
     AdminScopes.complaints,
     AdminScopes.tailorMgmt,
     AdminScopes.deliveryMgmt,

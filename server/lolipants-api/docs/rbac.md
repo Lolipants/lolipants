@@ -25,6 +25,7 @@ dashboard tab:
 | `moderation`        | Content moderation         |
 | `cms`               | Mannequins/fabrics/presets |
 | `complaints`        | User complaints            |
+| `news`              | Fashion news publishing    |
 | `tailor_mgmt`       | (reserved for sub-admins)  |
 | `delivery_mgmt`     | (reserved for sub-admins)  |
 

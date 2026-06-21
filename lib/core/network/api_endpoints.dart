@@ -81,6 +81,9 @@ abstract final class ApiEndpoints {
   /// Posts root path.
   static const String posts = '/posts';
 
+  /// Published fashion news articles.
+  static const String news = '/news';
+
   /// Bookings root path.
   static const String bookings = '/bookings';
 
@@ -140,4 +143,7 @@ abstract final class ApiEndpoints {
 
   /// Admin upload into R2 catalog/{designs|configurator}/ (under [admin]).
   static const String adminUploadCatalogAsset = '/upload/catalog-asset';
+
+  /// Admin upload for fashion news cover images (under [admin]).
+  static const String adminUploadNewsAsset = '/upload/news-asset';
 }

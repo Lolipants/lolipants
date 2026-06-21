@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
+import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/features/editor/data/render_preview_repository.dart';
 import 'package:lolipants/features/editor/providers/designs_providers.dart';
 import 'package:lolipants/features/editor/providers/editor_provider.dart';
+import 'package:lolipants/features/settings/providers/settings_provider.dart';
 
 /// Compact floating refine control on the hero preview with quota indicator.
 class EditorRefineFab extends ConsumerWidget {
@@ -19,6 +22,7 @@ class EditorRefineFab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final editor = ref.watch(editorProvider);
+    final locale = ref.watch(settingsLocaleProvider);
     final quotaAsync = ref.watch(aiRenderQuotaProvider);
     final quota = quotaAsync.valueOrNull;
     final fabricOk =
@@ -30,10 +34,29 @@ class EditorRefineFab extends ConsumerWidget {
 
     final quotaLabel = _quotaCompactLabel(quota);
     final tooltip = !fabricOk
-        ? 'Pick a fabric first'
+        ? localizedFromLocale(
+            locale,
+            AppStrings.editorPickFabricForRefine,
+            AppStrings.editorPickFabricForRefineAr,
+          )
         : !hasQuota
-            ? 'No AI renders left this week'
-            : 'Refine on mannequin with AI';
+            ? localizedFromLocale(
+                locale,
+                AppStrings.editorAiRenderQuotaTooltip,
+                AppStrings.editorAiRenderQuotaTooltipAr,
+              )
+            : localizedFromLocale(
+                locale,
+                AppStrings.editorRefineTooltip,
+                AppStrings.editorRefineTooltipAr,
+              );
+
+    final isAr = locale.languageCode == 'ar';
+    final refineLabel = localizedFromLocale(
+      locale,
+      AppStrings.editorRefineLabel,
+      AppStrings.editorRefineLabelAr,
+    );
 
     return Positioned(
       right: 8,
@@ -80,12 +103,16 @@ class EditorRefineFab extends ConsumerWidget {
                     ),
                   const SizedBox(width: 6),
                   Text(
-                    'Refine',
+                    refineLabel,
                     style: AppTextStyles.bodySmall.copyWith(
                       color: enabled ? AppColors.ink : AppColors.fog,
                       fontWeight: FontWeight.w700,
                       fontSize: 12,
+                      fontFamily: isAr
+                          ? AppTextStyles.arabicBody.fontFamily
+                          : null,
                     ),
+                    textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
                   ),
                   const SizedBox(width: 8),
                   Container(

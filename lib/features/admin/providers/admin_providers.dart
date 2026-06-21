@@ -62,6 +62,18 @@ final adminComplaintsProvider = FutureProvider.autoDispose
   );
 });
 
+/// Fashion news articles for the admin News screen.
+final adminNewsProvider = FutureProvider.autoDispose<List<Map<String, dynamic>>>(
+  (ref) async {
+    final repo = ref.watch(adminRepositoryProvider);
+    final result = await repo.listNews();
+    return result.fold<List<Map<String, dynamic>>>(
+      (e) => throw AdminProviderException(e),
+      (list) => list,
+    );
+  },
+);
+
 /// Partner role request queue (optional [status]: pending, approved, rejected).
 final adminRoleRequestsProvider = FutureProvider.autoDispose
     .family<List<Map<String, dynamic>>, String?>((ref, status) async {

@@ -191,7 +191,6 @@ class AdminRepository {
     return _patch('/cms/$resource/$id', body);
   }
 
-  /// Uploads a PNG into R2 `catalog/{category}/` for CMS catalogue assets.
   Future<Either<AppException, String>> uploadCatalogAsset({
     required String filePath,
     required String category,
@@ -230,6 +229,77 @@ class AdminRepository {
       headers['Authorization'] = 'Bearer $token';
     }
     return Options(headers: headers);
+  }
+
+  Future<Either<AppException, List<Map<String, dynamic>>>> listNews() {
+    return _getList('/news');
+  }
+
+  Future<Either<AppException, Map<String, dynamic>>> createNews(
+    Map<String, dynamic> body,
+  ) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '${ApiEndpoints.admin}/news',
+        data: body,
+        options: await _authOptions(),
+      );
+      return right(response.data ?? const <String, dynamic>{});
+    } on DioException catch (e) {
+      return left(_mapDio(e));
+    } on Exception {
+      return left(const UnknownException());
+    }
+  }
+
+  Future<Either<AppException, Map<String, dynamic>>> updateNews(
+    String id,
+    Map<String, dynamic> body,
+  ) {
+    return _patch('/news/$id', body);
+  }
+
+  Future<Either<AppException, void>> deleteNews(String id) async {
+    try {
+      await _dio.delete<dynamic>(
+        '${ApiEndpoints.admin}/news/$id',
+        options: await _authOptions(),
+      );
+      return right(null);
+    } on DioException catch (e) {
+      return left(_mapDio(e));
+    } on Exception {
+      return left(const UnknownException());
+    }
+  }
+
+  Future<Either<AppException, String>> uploadNewsAsset({
+    required String filePath,
+    String? filename,
+  }) async {
+    try {
+      final form = FormData.fromMap({
+        'file': await MultipartFile.fromFile(
+          filePath,
+          filename: filename ?? 'news-cover.png',
+        ),
+        if (filename != null && filename.trim().isNotEmpty) 'filename': filename,
+      });
+      final response = await _dio.post<Map<String, dynamic>>(
+        '${ApiEndpoints.admin}${ApiEndpoints.adminUploadNewsAsset}',
+        data: form,
+        options: await _authOptionsMultipart(),
+      );
+      final url = response.data?['url']?.toString() ?? '';
+      if (url.isEmpty) {
+        return left(const ServerException(500, 'Upload response missing URL'));
+      }
+      return right(url);
+    } on DioException catch (e) {
+      return left(_mapDio(e));
+    } on Exception {
+      return left(const UnknownException());
+    }
   }
 
   Future<Either<AppException, void>> deleteCms(String resource, String id) async {

@@ -24,6 +24,7 @@ import 'package:lolipants/features/community/providers/community_providers.dart'
 import 'package:lolipants/features/editor/data/bundled_design_assets.dart';
 import 'package:lolipants/features/editor/data/editor_design_restore.dart';
 import 'package:lolipants/features/editor/logic/catalog_compose_hero.dart';
+import 'package:lolipants/features/editor/logic/pick_custom_mannequin_photo.dart';
 import 'package:lolipants/features/editor/widgets/catalog_design_preview.dart';
 import 'package:lolipants/features/editor/models/configurator_catalog.dart';
 import 'package:lolipants/features/editor/providers/editor_provider.dart';
@@ -38,8 +39,10 @@ import 'package:lolipants/features/editor/widgets/editor_catalog_compose_hero.da
 import 'package:lolipants/features/editor/widgets/editor_hero_preview.dart';
 import 'package:lolipants/features/editor/widgets/editor_style_picker_sheet.dart';
 import 'package:lolipants/features/editor/widgets/image_print_panel.dart';
+import 'package:lolipants/features/editor/widgets/refine_body_reference_sheet.dart';
 import 'package:lolipants/features/editor/widgets/text_tool_panel.dart';
 import 'package:lolipants/features/orders/models/order_design_draft.dart';
+import 'package:lolipants/features/settings/providers/settings_provider.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:lolipants/shared/widgets/arabesque_background.dart';
@@ -350,7 +353,10 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                                         ),
                                       EditorRefineFab(
                                           onPressed: canGenerateLook
-                                              ? () => _generateLook(context)
+                                              ? () => _generateLook(
+                                                    context,
+                                                    promptBodyReference: true,
+                                                  )
                                               : null,
                                         ),
                                       if (editor.heroMode ==
@@ -628,11 +634,31 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
     );
   }
 
-  Future<void> _generateLook(BuildContext context) async {
+  Future<void> _generateLook(
+    BuildContext context, {
+    bool promptBodyReference = false,
+  }) async {
+    final notifier = ref.read(editorProvider.notifier);
+
+    if (promptBodyReference) {
+      final choice = await showRefineBodyReferenceSheet(context, ref);
+      if (choice == null || !context.mounted) return;
+
+      switch (choice) {
+        case RefineBodyReference.mannequin:
+          notifier.setCustomMannequinImagePath(null);
+          await WidgetsBinding.instance.endOfFrame;
+        case RefineBodyReference.customPhoto:
+          final path = await pickCustomMannequinPhoto(context, ref);
+          if (path == null || !context.mounted) return;
+          notifier.setCustomMannequinImagePath(path);
+          await WidgetsBinding.instance.endOfFrame;
+      }
+    }
+
     final allowed = await AiDataSharingConsent.ensure(context, ref);
     if (!allowed || !context.mounted) return;
 
-    final notifier = ref.read(editorProvider.notifier);
     final editor = ref.read(editorProvider);
     if (editor.heroMode != EditorHeroMode.compose) {
       notifier.setHeroMode(EditorHeroMode.compose);
@@ -646,9 +672,19 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
     );
     if (!context.mounted) return;
     if (result.success) {
+      final locale = ref.read(settingsLocaleProvider);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Look generated — switch to the AI preview'),
+        SnackBar(
+          content: Text(
+            localizedFromLocale(
+              locale,
+              AppStrings.editorLookGeneratedSnack,
+              AppStrings.editorLookGeneratedSnackAr,
+            ),
+            textDirection: locale.languageCode == 'ar'
+                ? TextDirection.rtl
+                : TextDirection.ltr,
+          ),
         ),
       );
     } else if (result.message != null && result.message!.trim().isNotEmpty) {

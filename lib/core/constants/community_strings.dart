@@ -2,8 +2,26 @@
 class CommunityStrings {
   CommunityStrings._();
 
-  static const String tabFeed = 'Feed';
-  static const String tabFeedAr = 'الخلاصة';
+  static const String tabFeed = 'News';
+  static const String tabFeedAr = 'الأخبار';
+
+  static const String newsSectionTitle = 'Fashion news';
+  static const String newsSectionTitleAr = 'أخبار الموضة';
+
+  static const String newsReadMore = 'Read more';
+  static const String newsReadMoreAr = 'اقرأ المزيد';
+
+  static const String newsEmptyHero = 'Fashion news coming soon.';
+  static const String newsEmptyHeroAr = 'أخبار الموضة قريباً.';
+
+  static const String communityPostsSection = 'Community posts';
+  static const String communityPostsSectionAr = 'منشورات المجتمع';
+
+  static const String newsArticleTitle = 'Article';
+  static const String newsArticleTitleAr = 'مقال';
+
+  static const String newsLoadError = 'Could not load this article.';
+  static const String newsLoadErrorAr = 'تعذّر تحميل هذا المقال.';
 
   static const String tabShowcase = 'Showcase';
   static const String tabShowcaseAr = 'المعرض';

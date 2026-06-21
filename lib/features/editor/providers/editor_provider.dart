@@ -307,6 +307,7 @@ class EditorState {
     String? printImagePath,
     String? sketchImagePath,
     String? customMannequinImagePath,
+    bool clearCustomMannequinImagePath = false,
     String? selectedCatalogDesignPath,
     DesignCatalogFilter? catalogFilter,
     String? aiLookUserPrompt,
@@ -357,8 +358,9 @@ class EditorState {
           isPrintOverlaySelected ?? this.isPrintOverlaySelected,
       printImagePath: printImagePath ?? this.printImagePath,
       sketchImagePath: sketchImagePath ?? this.sketchImagePath,
-      customMannequinImagePath:
-          customMannequinImagePath ?? this.customMannequinImagePath,
+      customMannequinImagePath: clearCustomMannequinImagePath
+          ? null
+          : (customMannequinImagePath ?? this.customMannequinImagePath),
       selectedCatalogDesignPath:
           selectedCatalogDesignPath ?? this.selectedCatalogDesignPath,
       catalogFilter: catalogFilter ?? this.catalogFilter,
@@ -459,8 +461,15 @@ class EditorNotifier extends StateNotifier<EditorState> {
   }
 
   void setCustomMannequinImagePath(String? path) {
+    if (path == null || path.trim().isEmpty) {
+      state = state.copyWith(
+        clearCustomMannequinImagePath: true,
+        hasUnsavedChanges: true,
+      );
+      return;
+    }
     state = state.copyWith(
-      customMannequinImagePath: path,
+      customMannequinImagePath: path.trim(),
       hasUnsavedChanges: true,
     );
   }

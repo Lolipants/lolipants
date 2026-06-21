@@ -9,6 +9,7 @@ import 'package:lolipants/core/router/role_routing.dart';
 export 'package:lolipants/core/router/role_routing.dart'
     show homeForRole, postAuthLocation;
 import 'package:lolipants/features/admin/screens/admin_complaints_screen.dart';
+import 'package:lolipants/features/admin/screens/admin_news_screen.dart';
 import 'package:lolipants/features/admin/screens/admin_cms_screen.dart';
 import 'package:lolipants/features/admin/screens/admin_moderation_screen.dart';
 import 'package:lolipants/features/admin/screens/admin_orders_screen.dart';
@@ -32,6 +33,7 @@ import 'package:lolipants/features/browse/screens/browse_screen.dart';
 import 'package:lolipants/features/browse/screens/category_detail_screen.dart';
 import 'package:lolipants/features/browse/screens/garment_style_screen.dart';
 import 'package:lolipants/features/browse/screens/mannequin_selector_screen.dart';
+import 'package:lolipants/features/community/screens/news_article_detail_screen.dart';
 import 'package:lolipants/features/community/screens/community_screen.dart';
 import 'package:lolipants/features/community/screens/create_post_screen.dart';
 import 'package:lolipants/features/community/screens/post_detail_screen.dart';
@@ -143,6 +145,7 @@ const List<_AdminScopeRoute> _adminScopeRoutes = <_AdminScopeRoute>[
   _AdminScopeRoute(AdminScopes.ordersOversight, '/admin/orders'),
   _AdminScopeRoute(AdminScopes.payouts, '/admin/payouts'),
   _AdminScopeRoute(AdminScopes.moderation, '/admin/moderation'),
+  _AdminScopeRoute(AdminScopes.news, '/admin/news'),
   _AdminScopeRoute(AdminScopes.cms, '/admin/cms'),
   _AdminScopeRoute(AdminScopes.complaints, '/admin/complaints'),
 ];
@@ -678,6 +681,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const AdminModerationScreen(),
           ),
           GoRoute(
+            path: '/admin/news',
+            name: 'adminNews',
+            builder: (context, state) => const AdminNewsScreen(),
+          ),
+          GoRoute(
             path: '/admin/cms',
             name: 'adminCms',
             builder: (context, state) => const AdminCmsScreen(),
@@ -788,6 +796,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                         key: state.pageKey,
                         child: CreatePostScreen(prefill: prefill),
                       );
+                    },
+                  ),
+                  GoRoute(
+                    path: 'news/:articleId',
+                    name: 'communityNewsArticle',
+                    parentNavigatorKey: rootNavigatorKey,
+                    builder: (context, state) {
+                      final id = state.pathParameters['articleId']!;
+                      return NewsArticleDetailScreen(articleId: id);
                     },
                   ),
                   GoRoute(

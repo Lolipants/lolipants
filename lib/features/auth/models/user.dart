@@ -48,6 +48,9 @@ abstract final class AdminScopes {
 
   /// Sub-scope: manage delivery accounts only.
   static const String deliveryMgmt = 'delivery_mgmt';
+
+  /// Publish and manage fashion news articles.
+  static const String news = 'news';
 }
 
 /// Signed-in user snapshot cached locally and returned from Better Auth.

@@ -26,6 +26,7 @@ export const AdminScopes = {
   complaints: "complaints",
   tailorMgmt: "tailor_mgmt",
   deliveryMgmt: "delivery_mgmt",
+  news: "news",
 } as const;
 
 export type AdminScope = typeof AdminScopes[keyof typeof AdminScopes];

@@ -30,7 +30,7 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen>
     _TabSpec(
       en: CommunityStrings.tabFeed,
       ar: CommunityStrings.tabFeedAr,
-      icon: Icons.dynamic_feed,
+      icon: Icons.newspaper_outlined,
     ),
     _TabSpec(
       en: CommunityStrings.tabShowcase,

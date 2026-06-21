@@ -3,8 +3,6 @@ import 'dart:ui' show Locale;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:lolipants/core/permissions/device_permission_prompt.dart';
 import 'package:lolipants/core/config/app_features.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
@@ -56,57 +54,6 @@ class _MannequinSelectorScreenState
       .toList(growable: false);
 
   late String _selectedId;
-  String? _customPhotoPath;
-
-  Future<void> _pickPhoto() async {
-    final locale = ref.read(settingsLocaleProvider);
-    final picker = ImagePicker();
-    final source = await showModalBottomSheet<ImageSource>(
-      context: context,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.photo_library_outlined),
-              title: Text(
-                localizedFromLocale(
-                  locale,
-                  AppStrings.mannequinChooseFromGallery,
-                  AppStrings.mannequinChooseFromGalleryAr,
-                ),
-              ),
-              onTap: () => Navigator.of(context).pop(ImageSource.gallery),
-            ),
-            ListTile(
-              leading: const Icon(Icons.camera_alt_outlined),
-              title: Text(
-                localizedFromLocale(
-                  locale,
-                  AppStrings.mannequinTakePhoto,
-                  AppStrings.mannequinTakePhotoAr,
-                ),
-              ),
-              onTap: () => Navigator.of(context).pop(ImageSource.camera),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (source == null) return;
-    if (!mounted) return;
-    final granted = await DevicePermissionPrompt.ensureForImageSource(
-      context,
-      source,
-    );
-    if (!granted) return;
-    final picked = await picker.pickImage(source: source, imageQuality: 88);
-    if (picked == null) return;
-    setState(() {
-      _customPhotoPath = picked.path;
-      _selectedId = 'custom_photo';
-    });
-  }
 
   @override
   void initState() {
@@ -187,10 +134,7 @@ class _MannequinSelectorScreenState
                                 selected: selected,
                                 english: item.labelEn,
                                 arabic: item.labelAr,
-                                onTap: () => setState(() {
-                                  _selectedId = item.id;
-                                  _customPhotoPath = null;
-                                }),
+                                onTap: () => setState(() => _selectedId = item.id),
                                 child: () {
                                   final builtIn =
                                       builtInMannequinAssetPath(item.id);
@@ -215,31 +159,6 @@ class _MannequinSelectorScreenState
                             },
                           ),
                         ),
-                        const SizedBox(height: AppSpacing.md),
-                        OutlinedButton.icon(
-                          onPressed: _pickPhoto,
-                          icon: const Icon(Icons.add_a_photo_outlined),
-                          label: Text(
-                            localizedFromLocale(
-                              locale,
-                              AppStrings.mannequinUploadPhotoCta,
-                              AppStrings.mannequinUploadPhotoCtaAr,
-                            ),
-                          ),
-                        ),
-                        if (_customPhotoPath != null) ...[
-                          const SizedBox(height: AppSpacing.sm),
-                          Text(
-                            localizedFromLocale(
-                              locale,
-                              AppStrings.mannequinCustomPhotoHint,
-                              AppStrings.mannequinCustomPhotoHintAr,
-                            ),
-                            style: AppTextStyles.bodySmall.copyWith(
-                              color: AppColors.gold,
-                            ),
-                          ),
-                        ],
                       ],
                     ),
                   ],
@@ -282,7 +201,6 @@ class _MannequinSelectorScreenState
                       '/editor',
                       extra: EditorBootstrapArgs(
                         mannequinId: _selectedId,
-                        customMannequinImagePath: _customPhotoPath,
                         preset: preset,
                         source: source,
                         homeFlow: homeFlow,

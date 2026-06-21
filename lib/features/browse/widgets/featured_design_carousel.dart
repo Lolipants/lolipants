@@ -1,16 +1,19 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lolipants/core/constants/app_colors.dart';
 import 'package:lolipants/core/constants/app_spacing.dart';
 import 'package:lolipants/core/constants/app_strings.dart';
 import 'package:lolipants/core/constants/app_text_styles.dart';
+import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/features/browse/data/region_presets.dart';
 import 'package:lolipants/features/browse/logic/region_preset_editor.dart';
 import 'package:lolipants/features/browse/widgets/region_pattern_painter.dart';
 import 'package:lolipants/features/editor/models/editor_preset_args.dart';
 import 'package:lolipants/features/home/models/home_flow_selection.dart';
+import 'package:lolipants/features/settings/providers/settings_provider.dart';
 import 'package:lolipants/shared/widgets/catalog_image.dart';
 
 /// Choose a mannequin, then open the editor. Pass [preset] to land on that
@@ -97,13 +100,16 @@ class FeaturedDesignsSection extends StatelessWidget {
   }
 }
 
-class _SectionHeader extends StatelessWidget {
+class _SectionHeader extends ConsumerWidget {
   const _SectionHeader({this.onSeeAll});
 
   final VoidCallback? onSeeAll;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final locale = ref.watch(settingsLocaleProvider);
+    final isAr = locale.languageCode == 'ar';
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -118,11 +124,21 @@ class _SectionHeader extends StatelessWidget {
         const SizedBox(width: AppSpacing.md),
         Expanded(
           child: Text(
-            AppStrings.sectionFeaturedDesigns,
-            style: AppTextStyles.titleMedium.copyWith(
+            localizedFromLocale(
+              locale,
+              AppStrings.sectionFeaturedDesigns,
+              AppStrings.sectionFeaturedDesignsAr,
+            ),
+            style: (isAr
+                    ? AppTextStyles.titleMedium.copyWith(
+                        fontFamily: AppTextStyles.arabicBody.fontFamily,
+                      )
+                    : AppTextStyles.titleMedium)
+                .copyWith(
               letterSpacing: 0.6,
               fontWeight: FontWeight.w500,
             ),
+            textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
           ),
         ),
         if (onSeeAll != null)
@@ -134,10 +150,16 @@ class _SectionHeader extends StatelessWidget {
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
             child: Text(
-              AppStrings.seeAll,
+              localizedFromLocale(
+                locale,
+                AppStrings.seeAll,
+                AppStrings.seeAllAr,
+              ),
               style: AppTextStyles.labelGold.copyWith(
                 fontSize: 12,
                 letterSpacing: 0.4,
+                fontFamily:
+                    isAr ? AppTextStyles.arabicBody.fontFamily : null,
               ),
             ),
           ),

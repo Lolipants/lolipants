@@ -14,6 +14,7 @@ import 'package:lolipants/features/settings/providers/settings_provider.dart';
 import 'package:lolipants/features/admin/providers/admin_providers.dart';
 import 'package:lolipants/features/admin/screens/admin_configurator_cms_tab.dart';
 import 'package:lolipants/features/admin/utils/admin_cms_helpers.dart';
+import 'package:lolipants/features/admin/widgets/admin_mannequin_asset_preview.dart';
 import 'package:lolipants/features/editor/providers/designs_providers.dart';
 import 'package:lolipants/shared/widgets/labeled_floating_action_button.dart';
 
@@ -55,7 +56,8 @@ class _AdminCmsScreenState extends ConsumerState<AdminCmsScreen>
           controller: _sectionTabs,
           tabs: [
             Tab(
-              text: localized(ref, AdminStrings.tabAssets, AdminStrings.tabAssetsAr),
+              text: localized(
+                  ref, AdminStrings.tabAssets, AdminStrings.tabAssetsAr),
             ),
             Tab(
               text: localized(
@@ -65,7 +67,8 @@ class _AdminCmsScreenState extends ConsumerState<AdminCmsScreen>
               ),
             ),
             Tab(
-              text: localized(ref, AdminStrings.tabWedding, AdminStrings.tabWeddingAr),
+              text: localized(
+                  ref, AdminStrings.tabWedding, AdminStrings.tabWeddingAr),
             ),
             Tab(
               text: localized(
@@ -128,7 +131,10 @@ bool _isMannequinCmsReadOnly(String resource) =>
     case 'fabrics':
       return (AdminStrings.cmsHelpFabrics, AdminStrings.cmsHelpFabricsAr);
     case 'accessories':
-      return (AdminStrings.cmsHelpAccessories, AdminStrings.cmsHelpAccessoriesAr);
+      return (
+        AdminStrings.cmsHelpAccessories,
+        AdminStrings.cmsHelpAccessoriesAr
+      );
     default:
       return null;
   }
@@ -177,47 +183,48 @@ class _ResourceList extends ConsumerWidget {
             _CmsHelpBanner(messageEn: help.$1, messageAr: help.$2),
           Expanded(
             child: RefreshIndicator(
-        onRefresh: () async => ref.invalidate(adminCmsListProvider(resource)),
-        child: async.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, _) => ListView(
-            padding: const EdgeInsets.all(AppSpacing.xl),
-            children: [
-              Text(
-                formatAdminProviderError(error),
-                style: AppTextStyles.bodySmall,
-              ),
-            ],
-          ),
-          data: (rows) {
-            if (rows.isEmpty) {
-              return ListView(
-                padding: const EdgeInsets.all(AppSpacing.xl),
-                children: [
-                  Center(
-                    child: Text(
-                      '${localized(ref, AdminStrings.noResourcePrefix, AdminStrings.noResourcePrefixAr)}$resource${localized(ref, AdminStrings.noResourceSuffix, AdminStrings.noResourceSuffixAr)}',
-                      style: AppTextStyles.bodyMedium,
+              onRefresh: () async =>
+                  ref.invalidate(adminCmsListProvider(resource)),
+              child: async.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, _) => ListView(
+                  padding: const EdgeInsets.all(AppSpacing.xl),
+                  children: [
+                    Text(
+                      formatAdminProviderError(error),
+                      style: AppTextStyles.bodySmall,
                     ),
-                  ),
-                ],
-              );
-            }
-            return ListView.separated(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              itemCount: rows.length,
-              separatorBuilder: (_, __) =>
-                  const SizedBox(height: AppSpacing.sm),
-              itemBuilder: (context, i) => _ResourceRow(
-                resource: resource,
-                data: rows[i],
-                readOnly: readOnly,
-                onChanged: () =>
-                    ref.invalidate(adminCmsListProvider(resource)),
+                  ],
+                ),
+                data: (rows) {
+                  if (rows.isEmpty) {
+                    return ListView(
+                      padding: const EdgeInsets.all(AppSpacing.xl),
+                      children: [
+                        Center(
+                          child: Text(
+                            '${localized(ref, AdminStrings.noResourcePrefix, AdminStrings.noResourcePrefixAr)}$resource${localized(ref, AdminStrings.noResourceSuffix, AdminStrings.noResourceSuffixAr)}',
+                            style: AppTextStyles.bodyMedium,
+                          ),
+                        ),
+                      ],
+                    );
+                  }
+                  return ListView.separated(
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    itemCount: rows.length,
+                    separatorBuilder: (_, __) =>
+                        const SizedBox(height: AppSpacing.sm),
+                    itemBuilder: (context, i) => _ResourceRow(
+                      resource: resource,
+                      data: rows[i],
+                      readOnly: readOnly,
+                      onChanged: () =>
+                          ref.invalidate(adminCmsListProvider(resource)),
+                    ),
+                  );
+                },
               ),
-            );
-          },
-        ),
             ),
           ),
         ],
@@ -296,9 +303,8 @@ class _ResourceRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final id = data['id']?.toString() ?? '';
     final name = _displayName(ref);
-    final preview = data['preview_url']?.toString() ??
-        data['image_url']?.toString() ??
-        '';
+    final preview =
+        data['preview_url']?.toString() ?? data['image_url']?.toString() ?? '';
     return Card(
       child: ListTile(
         leading: preview.isNotEmpty
@@ -330,19 +336,19 @@ class _ResourceRow extends ConsumerWidget {
         trailing: readOnly
             ? null
             : Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              icon: const Icon(Icons.edit),
-              onPressed: () => _ResourceList(resource: resource)
-                  ._openForm(context, ref, data),
-            ),
-            IconButton(
-              icon: const Icon(Icons.delete),
-              onPressed: () => _delete(context, ref, id),
-            ),
-          ],
-        ),
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.edit),
+                    onPressed: () => _ResourceList(resource: resource)
+                        ._openForm(context, ref, data),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete),
+                    onPressed: () => _delete(context, ref, id),
+                  ),
+                ],
+              ),
       ),
     );
   }
@@ -352,7 +358,9 @@ class _ResourceRow extends ConsumerWidget {
       final section = data['section_title']?.toString();
       final label = data['label_en']?.toString();
       if (label != null && label.isNotEmpty) {
-        return section != null && section.isNotEmpty ? '$label · $section' : label;
+        return section != null && section.isNotEmpty
+            ? '$label · $section'
+            : label;
       }
     }
     final candidates = [
@@ -374,7 +382,8 @@ class _ResourceRow extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(
-          localizedFromContext(ctx, AdminStrings.deleteTitle, AdminStrings.deleteTitleAr),
+          localizedFromContext(
+              ctx, AdminStrings.deleteTitle, AdminStrings.deleteTitleAr),
         ),
         content: Text(
           localizedFromContext(
@@ -393,7 +402,8 @@ class _ResourceRow extends ConsumerWidget {
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
             child: Text(
-              localizedFromContext(ctx, AdminStrings.delete, AdminStrings.deleteAr),
+              localizedFromContext(
+                  ctx, AdminStrings.delete, AdminStrings.deleteAr),
             ),
           ),
         ],
@@ -401,8 +411,7 @@ class _ResourceRow extends ConsumerWidget {
     );
     if (confirm != true) return;
     final locale = ref.read(settingsLocaleProvider);
-    final res =
-        await ref.read(adminRepositoryProvider).deleteCms(resource, id);
+    final res = await ref.read(adminRepositoryProvider).deleteCms(resource, id);
     res.fold(
       (err) => _snack(context, formatAdminCmsError(err, locale: locale)),
       (_) {
@@ -443,13 +452,16 @@ class _CmsFormDialogState extends ConsumerState<_CmsFormDialog> {
   late final Map<String, TextEditingController> _controllers;
   late final Map<String, bool> _bools;
   String? _imageUrl;
+  _StagedCmsUpload? _stagedUpload;
+  String _previewMannequinId = 'standard_female';
   bool _uploading = false;
 
   List<_FieldSpec> get _fields {
     switch (widget.resource) {
       case 'design-catalog':
         return const [
-          _FieldSpec('section_title', 'Section (e.g. Modern, Traditional — Gulf)'),
+          _FieldSpec(
+              'section_title', 'Section (e.g. Modern, Traditional — Gulf)'),
           _FieldSpec('label_en', 'Label (EN)'),
           _FieldSpec('label_ar', 'Label (AR)'),
           _FieldSpec('garment_type', 'Garment type (abaya, thobe, dress…)'),
@@ -477,7 +489,8 @@ class _CmsFormDialogState extends ConsumerState<_CmsFormDialog> {
           _FieldSpec('quality', 'Quality'),
           _FieldSpec('garment_type', 'Garment type'),
           _FieldSpec('is_available', 'Available', isBool: true),
-          _FieldSpec('swatch_url', 'Fabric swatch (square photo)', isImage: true),
+          _FieldSpec('swatch_url', 'Fabric swatch (square photo)',
+              isImage: true),
         ];
       case 'patterns':
         return const [
@@ -507,7 +520,8 @@ class _CmsFormDialogState extends ConsumerState<_CmsFormDialog> {
           _FieldSpec('category', 'Category (wedding_dress / bridesmaid)'),
           _FieldSpec('rent_price_per_day', 'Rent / day (QAR)', isNumber: true),
           _FieldSpec('sale_price', 'Sale price (QAR)', isNumber: true),
-          _FieldSpec('insurance_deposit', 'Insurance deposit (QAR)', isNumber: true),
+          _FieldSpec('insurance_deposit', 'Insurance deposit (QAR)',
+              isNumber: true),
           _FieldSpec('sort_order', 'Sort order', isNumber: true),
           _FieldSpec('is_active', 'Active', isBool: true),
           _FieldSpec('image_url', 'Dress image', isImage: true),
@@ -548,6 +562,7 @@ class _CmsFormDialogState extends ConsumerState<_CmsFormDialog> {
             TextEditingController(text: value?.toString() ?? '');
       }
     }
+    _previewMannequinId = _defaultMannequinId();
   }
 
   @override
@@ -589,13 +604,14 @@ class _CmsFormDialogState extends ConsumerState<_CmsFormDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: _uploading ? null : () => Navigator.of(context).pop(),
           child: Text(
-            localizedFromContext(context, AppStrings.cancel, AppStrings.cancelAr),
+            localizedFromContext(
+                context, AppStrings.cancel, AppStrings.cancelAr),
           ),
         ),
         FilledButton(
-          onPressed: _uploading ? null : _submit,
+          onPressed: _uploading ? null : () => _submit(),
           child: Text(localized(ref, AdminStrings.save, AdminStrings.saveAr)),
         ),
       ],
@@ -611,6 +627,14 @@ class _CmsFormDialogState extends ConsumerState<_CmsFormDialog> {
       );
     }
     if (f.isImage) {
+      final mannequinRows =
+          ref.watch(adminCmsListProvider('mannequins')).valueOrNull ?? const [];
+      final previewMannequins = [
+        for (final row in mannequinRows)
+          if (_isActiveCmsRow(row) &&
+              (row['preview_url']?.toString().trim().isNotEmpty ?? false))
+            AdminPreviewMannequin.fromCmsRow(row),
+      ];
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -618,28 +642,35 @@ class _CmsFormDialogState extends ConsumerState<_CmsFormDialog> {
             padding: const EdgeInsets.only(top: AppSpacing.sm, bottom: 4),
             child: Text(f.label, style: AppTextStyles.titleSmall),
           ),
-          if (_imageUrl != null && _imageUrl!.isNotEmpty)
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: CachedNetworkImage(
-                imageUrl: _imageUrl!,
-                height: 120,
-                fit: BoxFit.cover,
-                errorWidget: (_, __, ___) => const SizedBox(
-                  height: 120,
-                  child: Center(child: Icon(Icons.broken_image_outlined)),
-                ),
-              ),
+          AdminMannequinAssetPreview(
+            stagedFile: _stagedUpload?.file,
+            uploadedUrl: _imageUrl,
+            mannequinId: _previewMannequinId,
+            mannequins: previewMannequins,
+            onMannequinChanged: (id) =>
+                setState(() => _previewMannequinId = id),
+            onReplace: () => _pickImage(
+              toCatalog: _stagedUpload?.toCatalog ?? _supportsCatalogUpload,
             ),
+            onRemove: () => setState(() {
+              _stagedUpload = null;
+              _imageUrl = null;
+            }),
+            onConfirmUpload: () => _uploadStagedImage(),
+            uploading: _uploading,
+          ),
+          const SizedBox(height: AppSpacing.sm),
           Row(
             children: [
               if (_supportsCatalogUpload)
                 OutlinedButton.icon(
-                  onPressed: _uploading ? null : () => _pickImage(toCatalog: true),
+                  onPressed:
+                      _uploading ? null : () => _pickImage(toCatalog: true),
                   icon: const Icon(Icons.cloud_upload_outlined),
                   label: Text(
                     _uploading
-                        ? localized(ref, AdminStrings.uploading, AdminStrings.uploadingAr)
+                        ? localized(ref, AdminStrings.uploading,
+                            AdminStrings.uploadingAr)
                         : localized(
                             ref,
                             AdminStrings.uploadToCatalog,
@@ -649,11 +680,13 @@ class _CmsFormDialogState extends ConsumerState<_CmsFormDialog> {
                 ),
               if (_supportsCatalogUpload) const SizedBox(width: 8),
               OutlinedButton.icon(
-                onPressed: _uploading ? null : () => _pickImage(toCatalog: false),
+                onPressed:
+                    _uploading ? null : () => _pickImage(toCatalog: false),
                 icon: const Icon(Icons.upload),
                 label: Text(
                   _uploading
-                      ? localized(ref, AdminStrings.uploading, AdminStrings.uploadingAr)
+                      ? localized(
+                          ref, AdminStrings.uploading, AdminStrings.uploadingAr)
                       : localized(
                           ref,
                           AdminStrings.uploadGeneral,
@@ -671,6 +704,16 @@ class _CmsFormDialogState extends ConsumerState<_CmsFormDialog> {
                 ),
             ],
           ),
+          if (_stagedUpload != null)
+            Padding(
+              padding: const EdgeInsets.only(top: AppSpacing.xs),
+              child: Text(
+                _stagedUpload!.toCatalog
+                    ? 'Staged for catalog upload'
+                    : 'Staged for general upload',
+                style: AppTextStyles.bodySmall.copyWith(color: AppColors.fog),
+              ),
+            ),
         ],
       );
     }
@@ -723,33 +766,61 @@ class _CmsFormDialogState extends ConsumerState<_CmsFormDialog> {
       imageQuality: 88,
     );
     if (file == null) return;
+    setState(() {
+      _stagedUpload = _StagedCmsUpload(file: file, toCatalog: toCatalog);
+      _imageUrl = null;
+      _previewMannequinId = _defaultMannequinId(file.name);
+    });
+  }
+
+  Future<bool> _uploadStagedImage() async {
+    final staged = _stagedUpload;
+    if (staged == null) return true;
     setState(() => _uploading = true);
     try {
-      if (toCatalog) {
+      if (staged.toCatalog) {
         final adminRepo = ref.read(adminRepositoryProvider);
         final res = await adminRepo.uploadCatalogAsset(
-          filePath: file.path,
+          filePath: staged.file.path,
           category: _catalogUploadCategory,
-          filename: file.name,
+          filename: staged.file.name,
         );
-        if (!mounted) return;
+        if (!mounted) return false;
         final locale = ref.read(settingsLocaleProvider);
-        res.fold(
-          (err) => ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(formatAdminCmsError(err, locale: locale))),
-          ),
-          (url) => setState(() => _imageUrl = url),
+        return res.fold(
+          (err) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(formatAdminCmsError(err, locale: locale))),
+            );
+            return false;
+          },
+          (url) {
+            setState(() {
+              _imageUrl = url;
+              _stagedUpload = null;
+            });
+            return true;
+          },
         );
       } else {
         final repo = ref.read(designsRepositoryProvider);
-        final res = await repo.uploadPrintImage(filePath: file.path);
-        if (!mounted) return;
+        final res = await repo.uploadPrintImage(filePath: staged.file.path);
+        if (!mounted) return false;
         final locale = ref.read(settingsLocaleProvider);
-        res.fold(
-          (err) => ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(formatAdminCmsError(err, locale: locale))),
-          ),
-          (url) => setState(() => _imageUrl = url),
+        return res.fold(
+          (err) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(formatAdminCmsError(err, locale: locale))),
+            );
+            return false;
+          },
+          (url) {
+            setState(() {
+              _imageUrl = url;
+              _stagedUpload = null;
+            });
+            return true;
+          },
         );
       }
     } finally {
@@ -757,7 +828,9 @@ class _CmsFormDialogState extends ConsumerState<_CmsFormDialog> {
     }
   }
 
-  void _submit() {
+  Future<void> _submit() async {
+    if (!await _uploadStagedImage()) return;
+    if (!mounted) return;
     final out = <String, dynamic>{};
     for (final f in _fields) {
       if (f.isBool) {
@@ -780,6 +853,38 @@ class _CmsFormDialogState extends ConsumerState<_CmsFormDialog> {
     }
     Navigator.of(context).pop(out);
   }
+
+  String _defaultMannequinId([String? filename]) {
+    final explicit = _controllers['gender_lane']?.text.trim().toLowerCase();
+    final haystack = [
+      if (explicit != null && explicit.isNotEmpty) explicit,
+      widget.resource,
+      filename ?? '',
+      _controllers['garment_type']?.text ?? '',
+      _controllers['category']?.text ?? '',
+    ].join(' ').toLowerCase();
+    if (haystack.contains('men') ||
+        haystack.contains('male') ||
+        haystack.contains('thobe')) {
+      return 'standard_male';
+    }
+    return haystack.contains('petite') ? 'petite_female' : 'standard_female';
+  }
+}
+
+class _StagedCmsUpload {
+  const _StagedCmsUpload({required this.file, required this.toCatalog});
+
+  final XFile file;
+  final bool toCatalog;
+}
+
+bool _isActiveCmsRow(Map<String, dynamic> row) {
+  final raw = row['is_active'] ?? row['isActive'];
+  if (raw == null) return true;
+  if (raw is bool) return raw;
+  if (raw is num) return raw != 0;
+  return raw.toString().toLowerCase() == 'true' || raw.toString() == '1';
 }
 
 class _FieldSpec {

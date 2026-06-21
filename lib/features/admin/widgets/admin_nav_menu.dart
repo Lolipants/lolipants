@@ -126,6 +126,15 @@ const List<AdminNavItem> kAdminNavItems = <AdminNavItem>[
     scope: AdminScopes.moderation,
   ),
   AdminNavItem(
+    labelEn: AdminStrings.navNews,
+    labelAr: AdminStrings.navNewsAr,
+    icon: Icons.newspaper_outlined,
+    selectedIcon: Icons.newspaper,
+    path: '/admin/news',
+    group: AdminNavGroup.platform,
+    scope: AdminScopes.news,
+  ),
+  AdminNavItem(
     labelEn: AdminStrings.navCms,
     labelAr: AdminStrings.navCmsAr,
     icon: Icons.inventory_2_outlined,

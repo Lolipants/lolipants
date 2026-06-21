@@ -8,6 +8,8 @@ import 'package:lolipants/core/constants/community_strings.dart';
 import 'package:lolipants/core/l10n/app_localization.dart';
 import 'package:lolipants/features/community/models/post.dart';
 import 'package:lolipants/features/community/providers/community_providers.dart';
+import 'package:lolipants/features/community/providers/news_providers.dart';
+import 'package:lolipants/features/community/widgets/news_hero_section.dart';
 import 'package:lolipants/features/community/widgets/post_card.dart';
 import 'package:lolipants/features/community/widgets/showcase_feed_slivers.dart';
 import 'package:lolipants/core/constants/app_strings.dart';
@@ -139,38 +141,62 @@ class _NewsFeedScreenState extends ConsumerState<NewsFeedScreen> {
         children: [
           const ArabesqueBackground(),
           SafeArea(
-            child: Column(
-              children: [
-                _FilterChips(
-                  active: _activeTag,
-                  onSelect: (tag) => setState(() => _activeTag = tag),
-                ),
-                Expanded(
-                  child: RefreshIndicator(
-                    color: AppColors.gold,
-                    backgroundColor: AppColors.ink,
-                    onRefresh: () async {
-                      await Future.wait([
-                        notifier.refresh(),
-                        ref.read(showcaseFeedProvider.notifier).refresh(),
-                      ]);
-                    },
-                    child: _FeedBody(
-                      state: state,
-                      controller: _scrollController,
-                      tagFilter: _tagFilter,
-                      onToggleReaction: (post, reaction) =>
-                          notifier.toggleReaction(post.id, reaction),
-                      onOpenDetail: (post) => context.push(
-                        '/community/posts/${post.id}',
-                        extra: post,
+            child: RefreshIndicator(
+              color: AppColors.gold,
+              backgroundColor: AppColors.ink,
+              onRefresh: () async {
+                ref.invalidate(fashionNewsProvider);
+                await Future.wait([
+                  notifier.refresh(),
+                  ref.read(showcaseFeedProvider.notifier).refresh(),
+                ]);
+              },
+              child: CustomScrollView(
+                controller: _scrollController,
+                slivers: [
+                  const SliverToBoxAdapter(child: NewsHeroSection()),
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.lg,
+                        AppSpacing.md,
+                        AppSpacing.lg,
+                        AppSpacing.xs,
                       ),
-                      onTapAuthor: (post) =>
-                          context.push('/community/designer/${post.authorId}'),
+                      child: Text(
+                        localizedFromContext(
+                          context,
+                          CommunityStrings.communityPostsSection,
+                          CommunityStrings.communityPostsSectionAr,
+                        ),
+                        style: AppTextStyles.titleSmall.copyWith(
+                          color: AppColors.sand,
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ],
+                  SliverToBoxAdapter(
+                    child: _FilterChips(
+                      active: _activeTag,
+                      onSelect: (tag) => setState(() => _activeTag = tag),
+                    ),
+                  ),
+                  ..._FeedBody.buildSlivers(
+                    context: context,
+                    ref: ref,
+                    state: state,
+                    tagFilter: _tagFilter,
+                    onToggleReaction: (post, reaction) =>
+                        notifier.toggleReaction(post.id, reaction),
+                    onOpenDetail: (post) => context.push(
+                      '/community/posts/${post.id}',
+                      extra: post,
+                    ),
+                    onTapAuthor: (post) =>
+                        context.push('/community/designer/${post.authorId}'),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -249,25 +275,18 @@ class _Chip extends StatelessWidget {
   }
 }
 
-class _FeedBody extends ConsumerWidget {
-  const _FeedBody({
-    required this.state,
-    required this.controller,
-    required this.tagFilter,
-    required this.onToggleReaction,
-    required this.onOpenDetail,
-    required this.onTapAuthor,
-  });
+class _FeedBody {
+  const _FeedBody._();
 
-  final FeedPostsState state;
-  final ScrollController controller;
-  final String? tagFilter;
-  final void Function(Post, ReactionType) onToggleReaction;
-  final ValueChanged<Post> onOpenDetail;
-  final ValueChanged<Post> onTapAuthor;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  static List<Widget> buildSlivers({
+    required BuildContext context,
+    required WidgetRef ref,
+    required FeedPostsState state,
+    required String? tagFilter,
+    required void Function(Post, ReactionType) onToggleReaction,
+    required ValueChanged<Post> onOpenDetail,
+    required ValueChanged<Post> onTapAuthor,
+  }) {
     final showcaseState = ref.watch(showcaseFeedProvider);
     final showcaseSlivers = buildShowcaseFeedSlivers(
       context,
@@ -280,9 +299,14 @@ class _FeedBody extends ConsumerWidget {
         state.posts.isEmpty &&
         showcaseState.loading &&
         !hasShowcase) {
-      return const Center(
-        child: CircularProgressIndicator(color: AppColors.gold),
-      );
+      return const [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: Center(
+            child: CircularProgressIndicator(color: AppColors.gold),
+          ),
+        ),
+      ];
     }
     if (state.error != null && state.posts.isEmpty && !hasShowcase) {
       final message = communityErrorMessage(
@@ -293,21 +317,26 @@ class _FeedBody extends ConsumerWidget {
           CommunityStrings.feedLoadErrorAr,
         ),
       );
-      return _ErrorRetry(
-        message: message,
-        onRetry: () =>
-            ref.read(feedPostsProvider(tagFilter).notifier).loadFirstPage(),
-      );
+      return [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: _ErrorRetry(
+            message: message,
+            onRetry: () =>
+                ref.read(feedPostsProvider(tagFilter).notifier).loadFirstPage(),
+          ),
+        ),
+      ];
     }
     if (state.posts.isEmpty && !hasShowcase) {
-      return ListView(
-        controller: controller,
-        children: [
-          const SizedBox(height: AppSpacing.xxl),
-          Center(
+      return [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: Center(
             child: Padding(
               padding: const EdgeInsets.all(AppSpacing.xl),
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   const Icon(
                     Icons.auto_awesome,
@@ -337,70 +366,67 @@ class _FeedBody extends ConsumerWidget {
               ),
             ),
           ),
-        ],
-      );
+        ),
+      ];
     }
 
-    return CustomScrollView(
-      controller: controller,
-      slivers: [
-        ...showcaseSlivers,
-        if (tagFilter == 'showcase' && state.posts.isNotEmpty)
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                AppSpacing.md,
-                AppSpacing.lg,
-                AppSpacing.xs,
-              ),
-              child: Text(
-                localizedFromContext(
-                  context,
-                  CommunityStrings.showcasePosts,
-                  CommunityStrings.showcasePostsAr,
-                ),
-                style: AppTextStyles.titleSmall,
-              ),
-            ),
-          ),
-        if (state.posts.isEmpty && hasShowcase)
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: Text(
-                localizedFromContext(
-                  context,
-                  CommunityStrings.noPostsForFilter,
-                  CommunityStrings.noPostsForFilterAr,
-                ),
-                textAlign: TextAlign.center,
-                style: AppTextStyles.bodyMedium,
-              ),
-            ),
-          ),
-        SliverPadding(
-          padding: const EdgeInsets.only(bottom: 168),
-          sliver: SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (context, index) {
-                final post = state.posts[index];
-                return PostCard(
-                  post: post,
-                  onToggleReaction: (r) => onToggleReaction(post, r),
-                  onOpenDetail: () => onOpenDetail(post),
-                  onTapAuthor: () => onTapAuthor(post),
-                );
-              },
-              childCount: state.posts.length,
-            ),
-          ),
-        ),
+    return [
+      ...showcaseSlivers,
+      if (tagFilter == 'showcase' && state.posts.isNotEmpty)
         SliverToBoxAdapter(
-          child: _FeedFooter(state: state),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              AppSpacing.md,
+              AppSpacing.lg,
+              AppSpacing.xs,
+            ),
+            child: Text(
+              localizedFromContext(
+                context,
+                CommunityStrings.showcasePosts,
+                CommunityStrings.showcasePostsAr,
+              ),
+              style: AppTextStyles.titleSmall,
+            ),
+          ),
         ),
-      ],
-    );
+      if (state.posts.isEmpty && hasShowcase)
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: Text(
+              localizedFromContext(
+                context,
+                CommunityStrings.noPostsForFilter,
+                CommunityStrings.noPostsForFilterAr,
+              ),
+              textAlign: TextAlign.center,
+              style: AppTextStyles.bodyMedium,
+            ),
+          ),
+        ),
+      SliverPadding(
+        padding: const EdgeInsets.only(bottom: 168),
+        sliver: SliverList(
+          delegate: SliverChildBuilderDelegate(
+            (context, index) {
+              final post = state.posts[index];
+              return PostCard(
+                post: post,
+                onToggleReaction: (r) => onToggleReaction(post, r),
+                onOpenDetail: () => onOpenDetail(post),
+                onTapAuthor: () => onTapAuthor(post),
+              );
+            },
+            childCount: state.posts.length,
+          ),
+        ),
+      ),
+      SliverToBoxAdapter(
+        child: _FeedFooter(state: state),
+      ),
+    ];
   }
 }
 

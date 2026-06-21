@@ -23,6 +23,7 @@ service = "lolipants-better-auth"
 ENVIRONMENT = "development"
 BETTER_AUTH_BASE_URL = "https://lolipants-better-auth.loli-pants.workers.dev"
 DESIGNER_COMMISSION_PCT = "10"
+APP_ALLOWED_ORIGINS = "http://localhost:3000,https://admin.lolipants.com,https://lolipants.com"
 
 [env.production]
 
@@ -44,3 +45,4 @@ service = "lolipants-better-auth"
 ENVIRONMENT = "production"
 BETTER_AUTH_BASE_URL = "https://lolipants-better-auth.loli-pants.workers.dev"
 DESIGNER_COMMISSION_PCT = "10"
+APP_ALLOWED_ORIGINS = "https://admin.lolipants.com,https://lolipants.com"

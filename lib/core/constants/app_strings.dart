@@ -247,10 +247,10 @@ class AppStrings {
   static const String ordersEmptyAr = 'لا توجد طلبات بعد';
 
   /// Community header (English).
-  static const String communityHeader = 'Community';
+  static const String communityHeader = 'News';
 
   /// Community header (Arabic).
-  static const String communityHeaderAr = 'المجتمع';
+  static const String communityHeaderAr = 'الأخبار';
 
   /// Profile log out (English).
   static const String logOut = 'Log out';
@@ -270,11 +270,11 @@ class AppStrings {
   /// Forgot password submit success (Arabic).
   static const String backToLoginAr = 'العودة لتسجيل الدخول';
 
-  /// Bottom nav: Community (English).
-  static const String navCommunity = 'Community';
+  /// Bottom nav: News (English).
+  static const String navCommunity = 'News';
 
-  /// Bottom nav: Community (Arabic).
-  static const String navCommunityAr = 'المجتمع';
+  /// Bottom nav: News (Arabic).
+  static const String navCommunityAr = 'الأخبار';
 
   /// Music player slot label (English).
   static const String musicPlayerLabel = 'Music player';
@@ -1122,6 +1122,34 @@ class AppStrings {
   static const String mannequinCustomPhotoHint =
       'Custom photo selected — used for AI output.';
 
+  /// Refine: body reference sheet title (English).
+  static const String refineBodyReferenceTitle =
+      'How should we refine your look?';
+
+  /// Refine: use bundled mannequin shape (English).
+  static const String refineBodyReferenceMannequin = 'Use mannequin';
+
+  /// Refine: mannequin option subtitle (English).
+  static const String refineBodyReferenceMannequinBody =
+      'Refine on your selected mannequin shape.';
+
+  /// Refine: upload photo option subtitle (English).
+  static const String refineBodyReferencePhotoBody =
+      'Your photo is used as the AI body reference for the refined look.';
+
+  /// Refine FAB tooltip (English).
+  static const String editorRefineTooltip = 'Refine with AI';
+
+  /// Refine FAB label (English).
+  static const String editorRefineLabel = 'Refine';
+
+  /// Refine blocked: fabric required (English).
+  static const String editorPickFabricForRefine = 'Pick a fabric first';
+
+  /// Refine blocked: quota empty, short tooltip (English).
+  static const String editorAiRenderQuotaTooltip =
+      'No AI renders left this week';
+
   static const String startDesigningCta = 'Start designing / ابدأ التصميم';
   static const String editorTitle = 'Design editor / محرر التصميم';
   static const String editorSave = 'Save / حفظ';
@@ -1207,7 +1235,7 @@ class AppStrings {
       'Look generated. Check preview above.';
   static const String editorShareImage = 'Share image';
   static const String editorSaveImage = 'Save image';
-  static const String editorShareToCommunity = 'Share to community';
+  static const String editorShareToCommunity = 'Share to News';
   static const String editorPublishEarn = 'Publish & earn';
   static const String editorPublishShowcaseSubtitle =
       'List on orderable Showcase';
@@ -2105,6 +2133,34 @@ class AppStrings {
   static const String mannequinCustomPhotoHintAr =
       'تم اختيار صورة مخصصة — تُستخدم لمخرجات الذكاء الاصطناعي.';
 
+  /// Arabic: [refineBodyReferenceTitle].
+  static const String refineBodyReferenceTitleAr =
+      'كيف تريد تحسين إطلالتك؟';
+
+  /// Arabic: [refineBodyReferenceMannequin].
+  static const String refineBodyReferenceMannequinAr = 'استخدم المانيكان';
+
+  /// Arabic: [refineBodyReferenceMannequinBody].
+  static const String refineBodyReferenceMannequinBodyAr =
+      'تحسين على شكل المانيكان المختار.';
+
+  /// Arabic: [refineBodyReferencePhotoBody].
+  static const String refineBodyReferencePhotoBodyAr =
+      'تُستخدم صورتك كمرجع جسم للذكاء الاصطناعي في الإطلالة المحسّنة.';
+
+  /// Arabic: [editorRefineTooltip].
+  static const String editorRefineTooltipAr = 'حسّن بالذكاء الاصطناعي';
+
+  /// Arabic: [editorRefineLabel].
+  static const String editorRefineLabelAr = 'حسّن';
+
+  /// Arabic: [editorPickFabricForRefine].
+  static const String editorPickFabricForRefineAr = 'اختر قماشاً أولاً';
+
+  /// Arabic: [editorAiRenderQuotaTooltip].
+  static const String editorAiRenderQuotaTooltipAr =
+      'لا معاينات متبقية هذا الأسبوع';
+
   /// Arabic: [homeExploreAll].
   static const String homeExploreAllAr = 'استكشف الكل';
 
@@ -2601,7 +2657,7 @@ class AppStrings {
   static const String editorSaveImageAr = 'حفظ الصورة';
 
   /// Arabic: [editorShareToCommunity].
-  static const String editorShareToCommunityAr = 'مشاركة في المجتمع';
+  static const String editorShareToCommunityAr = 'مشاركة في الأخبار';
 
   /// Arabic: [editorPublishEarn].
   static const String editorPublishEarnAr = 'انشر واربح';

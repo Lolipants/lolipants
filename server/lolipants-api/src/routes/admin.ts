@@ -1161,6 +1161,251 @@ adminRoutes.get("/render-metrics", requireAdmin(), async (c) => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// Fashion news CMS (scoped to AdminScopes.news)
+// ---------------------------------------------------------------------------
+
+type FashionNewsRow = {
+  id: string;
+  title_en: string;
+  title_ar: string;
+  summary_en: string;
+  summary_ar: string;
+  body_en: string;
+  body_ar: string;
+  cover_image_url: string | null;
+  is_published: number;
+  is_featured: number;
+  published_at: string | null;
+  author_id: string;
+  created_at: string;
+  updated_at: string;
+};
+
+function shapeAdminNewsRow(row: FashionNewsRow) {
+  return {
+    id: row.id,
+    titleEn: row.title_en,
+    titleAr: row.title_ar,
+    summaryEn: row.summary_en,
+    summaryAr: row.summary_ar,
+    bodyEn: row.body_en,
+    bodyAr: row.body_ar,
+    coverImageUrl: row.cover_image_url ?? null,
+    isPublished: Boolean(row.is_published),
+    isFeatured: Boolean(row.is_featured),
+    publishedAt: row.published_at,
+    authorId: row.author_id,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function asBool(value: unknown): boolean {
+  if (value === true || value === 1 || value === "1") return true;
+  if (typeof value === "string") return value.toLowerCase() === "true";
+  return false;
+}
+
+adminRoutes.get("/news", requireAdmin(AdminScopes.news), async (c) => {
+  const { results } = await c.env.DB.prepare(
+    `SELECT * FROM fashion_news ORDER BY created_at DESC LIMIT 200`,
+  ).all<FashionNewsRow>();
+  return c.json((results ?? []).map(shapeAdminNewsRow));
+});
+
+adminRoutes.post("/news", requireAdmin(AdminScopes.news), async (c) => {
+  const authorId = c.get("userId") as string;
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+  const titleEn = String(body.titleEn ?? body.title_en ?? "").trim();
+  const titleAr = String(body.titleAr ?? body.title_ar ?? "").trim();
+  if (!titleEn || !titleAr) {
+    return apiError(c, 400, "VALIDATION", "titleEn and titleAr are required");
+  }
+
+  const id = uuidv4();
+  const now = new Date().toISOString();
+  const isPublished = asBool(body.isPublished ?? body.is_published);
+  const isFeatured = asBool(body.isFeatured ?? body.is_featured);
+  const publishedAt = isPublished ? now : null;
+
+  if (isFeatured) {
+    await c.env.DB.prepare("UPDATE fashion_news SET is_featured = 0").run();
+  }
+
+  await c.env.DB.prepare(
+    `INSERT INTO fashion_news (
+      id, title_en, title_ar, summary_en, summary_ar, body_en, body_ar,
+      cover_image_url, is_published, is_featured, published_at, author_id,
+      created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  )
+    .bind(
+      id,
+      titleEn,
+      titleAr,
+      String(body.summaryEn ?? body.summary_en ?? "").trim(),
+      String(body.summaryAr ?? body.summary_ar ?? "").trim(),
+      String(body.bodyEn ?? body.body_en ?? "").trim(),
+      String(body.bodyAr ?? body.body_ar ?? "").trim(),
+      body.coverImageUrl?.toString() ?? body.cover_image_url?.toString() ?? null,
+      isPublished ? 1 : 0,
+      isFeatured ? 1 : 0,
+      publishedAt,
+      authorId,
+      now,
+      now,
+    )
+    .run();
+
+  const row = await c.env.DB.prepare("SELECT * FROM fashion_news WHERE id = ?")
+    .bind(id)
+    .first<FashionNewsRow>();
+  return c.json(shapeAdminNewsRow(row!), 201);
+});
+
+adminRoutes.patch("/news/:id", requireAdmin(AdminScopes.news), async (c) => {
+  const id = c.req.param("id");
+  const existing = await c.env.DB.prepare("SELECT * FROM fashion_news WHERE id = ?")
+    .bind(id)
+    .first<FashionNewsRow>();
+  if (!existing) {
+    return apiError(c, 404, "NOT_FOUND", "News article not found");
+  }
+
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+  const now = new Date().toISOString();
+
+  const titleEn =
+    body.titleEn !== undefined || body.title_en !== undefined
+      ? String(body.titleEn ?? body.title_en ?? "").trim()
+      : existing.title_en;
+  const titleAr =
+    body.titleAr !== undefined || body.title_ar !== undefined
+      ? String(body.titleAr ?? body.title_ar ?? "").trim()
+      : existing.title_ar;
+  if (!titleEn || !titleAr) {
+    return apiError(c, 400, "VALIDATION", "titleEn and titleAr are required");
+  }
+
+  const isPublished =
+    body.isPublished !== undefined || body.is_published !== undefined
+      ? asBool(body.isPublished ?? body.is_published)
+      : Boolean(existing.is_published);
+  const isFeatured =
+    body.isFeatured !== undefined || body.is_featured !== undefined
+      ? asBool(body.isFeatured ?? body.is_featured)
+      : Boolean(existing.is_featured);
+
+  let publishedAt = existing.published_at;
+  if (isPublished && !publishedAt) {
+    publishedAt = now;
+  }
+  if (!isPublished) {
+    publishedAt = null;
+  }
+
+  if (isFeatured) {
+    await c.env.DB.prepare("UPDATE fashion_news SET is_featured = 0 WHERE id != ?")
+      .bind(id)
+      .run();
+  }
+
+  await c.env.DB.prepare(
+    `UPDATE fashion_news SET
+      title_en = ?, title_ar = ?,
+      summary_en = ?, summary_ar = ?,
+      body_en = ?, body_ar = ?,
+      cover_image_url = ?,
+      is_published = ?, is_featured = ?,
+      published_at = ?,
+      updated_at = ?
+     WHERE id = ?`,
+  )
+    .bind(
+      titleEn,
+      titleAr,
+      body.summaryEn !== undefined || body.summary_en !== undefined
+        ? String(body.summaryEn ?? body.summary_en ?? "").trim()
+        : existing.summary_en,
+      body.summaryAr !== undefined || body.summary_ar !== undefined
+        ? String(body.summaryAr ?? body.summary_ar ?? "").trim()
+        : existing.summary_ar,
+      body.bodyEn !== undefined || body.body_en !== undefined
+        ? String(body.bodyEn ?? body.body_en ?? "").trim()
+        : existing.body_en,
+      body.bodyAr !== undefined || body.body_ar !== undefined
+        ? String(body.bodyAr ?? body.body_ar ?? "").trim()
+        : existing.body_ar,
+      body.coverImageUrl !== undefined || body.cover_image_url !== undefined
+        ? body.coverImageUrl?.toString() ?? body.cover_image_url?.toString() ?? null
+        : existing.cover_image_url,
+      isPublished ? 1 : 0,
+      isFeatured ? 1 : 0,
+      publishedAt,
+      now,
+      id,
+    )
+    .run();
+
+  const row = await c.env.DB.prepare("SELECT * FROM fashion_news WHERE id = ?")
+    .bind(id)
+    .first<FashionNewsRow>();
+  return c.json(shapeAdminNewsRow(row!));
+});
+
+adminRoutes.delete("/news/:id", requireAdmin(AdminScopes.news), async (c) => {
+  const id = c.req.param("id");
+  const result = await c.env.DB.prepare("DELETE FROM fashion_news WHERE id = ?")
+    .bind(id)
+    .run();
+  if (!result.meta.changes) {
+    return apiError(c, 404, "NOT_FOUND", "News article not found");
+  }
+  return c.body(null, 204);
+});
+
+adminRoutes.post(
+  "/upload/news-asset",
+  requireAdmin(AdminScopes.news),
+  async (c) => {
+    const formData = await c.req.formData();
+    const file = formData.get("file") as File | null;
+    if (!file) return apiError(c, 400, "FILE_REQUIRED", "No file provided");
+
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+    if (!allowedTypes.includes(file.type)) {
+      return apiError(c, 400, "UNSUPPORTED_FILE_TYPE", "Unsupported file type");
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      return apiError(c, 400, "FILE_TOO_LARGE", "File exceeds 8MB limit");
+    }
+
+    const ext = file.type.split("/")[1] ?? "png";
+    const requestedName = formData.get("filename")?.toString().trim() ?? file.name;
+    const safeName = sanitizeCatalogFilename(
+      requestedName.includes(".") ? requestedName : `${requestedName}.${ext}`,
+    );
+    const key = `news/covers/${safeName}`;
+
+    await c.env.R2.put(key, await file.arrayBuffer(), {
+      httpMetadata: { contentType: file.type },
+    });
+
+    const url = buildR2PublicUrl(c.env, key);
+    if (!url) {
+      return apiError(
+        c,
+        503,
+        "R2_PUBLIC_URL_NOT_CONFIGURED",
+        "File storage is not configured (CLOUDFLARE_R2_BASE_URL).",
+      );
+    }
+
+    return c.json({ url, key }, 201);
+  },
+);
+
 function _failureCategory(errorMessage: string, providerStatus: string): string {
   const message = errorMessage.toLowerCase();
   if (providerStatus.toLowerCase() === "timeout" || message.includes("abort")) {

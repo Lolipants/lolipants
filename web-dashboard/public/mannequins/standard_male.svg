@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 520" role="img" aria-label="Standard male mannequin">
+  <rect width="220" height="520" fill="none"/>
+  <g fill="#d8d0c3" stroke="#a99f91" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="110" cy="56" r="34"/>
+    <path d="M76 102h68l25 118-25 74 25 170h-38l-21-137-21 137H51l25-170-25-74z"/>
+    <path d="M61 144 27 275"/>
+    <path d="M159 144 193 275"/>
+  </g>
+</svg>
